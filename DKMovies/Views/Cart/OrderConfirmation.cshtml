@@ -1,0 +1,51 @@
+﻿@model DKMovies.Models.Sale
+
+@{
+    ViewData["Title"] = "Xác nhận đơn hàng";
+    var total = Model.SaleDetails.Sum(d => d.UnitPrice * d.Quantity);
+}
+
+<div class="container py-5">
+    <h2 class="mb-4 text-center">🎉 Đơn hàng đã được tạo thành công!</h2>
+
+    <div class="mb-4 text-center">
+        <strong>Mã đơn hàng:</strong> @Model.ID <br />
+        <strong>Thời gian đặt:</strong> @Model.CreatedAt.ToString("dd/MM/yyyy HH:mm") <br />
+        <strong>Trạng thái:</strong> @Model.Status
+    </div>
+
+    <table class="table table-bordered shadow-sm">
+        <thead class="table-light">
+            <tr>
+                <th>Món ăn</th>
+                <th>Rạp</th>
+                <th>Đơn giá</th>
+                <th>Số lượng</th>
+                <th>Thành tiền</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var item in Model.SaleDetails)
+            {
+                    <tr>
+                        <td>@item.TheaterConcession.Concession.Name</td>
+                        <td>@item.TheaterConcession.Theater.Name</td>
+                        <td>@item.UnitPrice.ToString("n0") VND</td>
+                        <td>@item.Quantity</td>
+                        <td>@(item.UnitPrice * item.Quantity).ToString("n0") VND</td>
+                    </tr>
+            }
+        </tbody>
+        <tfoot>
+            <tr>
+                <td colspan="4" class="text-end fw-bold">Tổng cộng:</td>
+                <td class="fw-bold text-danger">@total.ToString("n0") VND</td>
+            </tr>
+        </tfoot>
+    </table>
+
+    <div class="text-center mt-4">
+        <a href="@Url.Action("Menu", "Concessions")" class="btn btn-outline-primary rounded-pill px-4">Tiếp tục đặt món</a>
+        <a href="@Url.Action("Index", "Home")" class="btn btn-primary rounded-pill px-4 ms-2">Về trang chủ</a>
+    </div>
+</div>

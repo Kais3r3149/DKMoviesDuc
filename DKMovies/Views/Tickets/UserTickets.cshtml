@@ -1,0 +1,598 @@
+﻿@model List<DKMovies.Models.Ticket>
+
+@{
+    ViewData["Title"] = "Lịch sử đặt vé";
+    var search = ViewData["Search"] as string;
+    var status = ViewData["Status"] as string;
+    var sort = ViewData["Sort"] as string;
+    var currentPage = ViewData["CurrentPage"] as int? ?? 1;
+    var totalPages = ViewData["TotalPages"] as int? ?? 1;
+    var totalCount = ViewData["TotalCount"] as int? ?? 0;
+}
+
+<style>
+    .page-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 2rem 0;
+        margin-bottom: 2rem;
+        border-radius: 0 0 20px 20px;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    }
+
+        .page-header h2 {
+            margin: 0;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            font-weight: 700;
+        }
+
+    .filter-bar {
+        background: white;
+        border-radius: 15px;
+        padding: 1.5rem;
+        margin-bottom: 2rem;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+        border: 1px solid rgba(0,0,0,0.05);
+    }
+
+    .ticket-card {
+        background: white;
+        border-radius: 20px;
+        overflow: hidden;
+        margin-bottom: 1.5rem;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+        transition: all 0.3s ease;
+        border: 1px solid rgba(0,0,0,0.05);
+    }
+
+        .ticket-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.12);
+        }
+
+    .ticket-header {
+        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+        padding: 1rem 1.5rem;
+        border-bottom: 1px solid rgba(0,0,0,0.05);
+    }
+
+    .ticket-body {
+        padding: 1.5rem;
+    }
+
+    .movie-poster {
+        width: 80px;
+        height: 120px;
+        object-fit: cover;
+        border-radius: 10px;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+    }
+
+    .status-badge {
+        padding: 0.4rem 0.8rem;
+        border-radius: 20px;
+        font-size: 0.8rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .status-pending {
+        background: #fff3cd;
+        color: #856404;
+        border: 1px solid #ffeaa7;
+    }
+
+    .status-confirmed {
+        background: #d1edff;
+        color: #0c5460;
+        border: 1px solid #bee5eb;
+    }
+
+    .status-cancelled {
+        background: #f8d7da;
+        color: #721c24;
+        border: 1px solid #f5c6cb;
+    }
+
+    .info-item {
+        display: flex;
+        align-items: center;
+        margin-bottom: 0.5rem;
+        font-size: 0.9rem;
+    }
+
+        .info-item i {
+            width: 20px;
+            margin-right: 0.5rem;
+            color: #6c757d;
+        }
+
+    .seat-tags {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.3rem;
+        margin-top: 0.5rem;
+    }
+
+    .seat-tag {
+        background: #e9ecef;
+        color: #495057;
+        padding: 0.2rem 0.5rem;
+        border-radius: 12px;
+        font-size: 0.75rem;
+        font-weight: 500;
+    }
+
+    .price-display {
+        font-size: 1.1rem;
+        font-weight: 700;
+        color: #e74c3c;
+    }
+
+    .btn-cancel {
+        background: linear-gradient(45deg, #dc3545, #c82333);
+        border: none;
+        border-radius: 20px;
+        padding: 0.5rem 1rem;
+        color: white;
+        font-size: 0.8rem;
+        font-weight: 500;
+        transition: all 0.3s ease;
+        box-shadow: 0 2px 8px rgba(220, 53, 69, 0.3);
+    }
+
+        .btn-cancel:hover {
+            background: linear-gradient(45deg, #c82333, #bd2130);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(220, 53, 69, 0.4);
+            color: white;
+        }
+
+    .empty-state {
+        text-align: center;
+        padding: 4rem 2rem;
+        background: white;
+        border-radius: 20px;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+    }
+
+    .empty-icon {
+        font-size: 4rem;
+        margin-bottom: 1.5rem;
+        opacity: 0.3;
+    }
+
+    .pagination-wrapper {
+        background: white;
+        border-radius: 15px;
+        padding: 1.5rem;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+        margin-top: 2rem;
+    }
+
+    .pagination .page-link {
+        border: none;
+        border-radius: 8px;
+        margin: 0 2px;
+        color: #667eea;
+        font-weight: 500;
+        transition: all 0.3s ease;
+    }
+
+        .pagination .page-link:hover {
+            background: #667eea;
+            color: white;
+            transform: translateY(-1px);
+        }
+
+    .pagination .page-item.active .page-link {
+        background: linear-gradient(45deg, #667eea, #764ba2);
+        border: none;
+        box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+    }
+
+    .stats-card {
+        background: rgba(255,255,255,0.1);
+        backdrop-filter: blur(10px);
+        border-radius: 15px;
+        padding: 1rem 1.5rem;
+        border: 1px solid rgba(255,255,255,0.2);
+        text-align: center;
+    }
+
+
+    {
+        padding: 1.5rem 0;
+    }
+
+    .filter-bar {
+        padding: 1rem;
+    }
+
+    .ticket-body {
+        padding: 1rem;
+    }
+
+    .movie-poster {
+        width: 60px;
+        height: 90px;
+    }
+
+    }</style>
+
+<div class="page-header">
+    <div class="container">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <h2>
+                    <i class="bi bi-ticket-perforated me-2"></i>
+                    Lịch sử đặt vé
+                </h2>
+                @if (totalCount > 0)
+                {
+                    <div class="stats-card mt-3">
+                        <strong>@totalCount</strong> vé đã đặt
+                    </div>
+                }
+            </div>
+            <div class="col-md-4 text-md-end mt-3 mt-md-0">
+                <a href="@Url.Action("Index", "MoviesList")" class="btn btn-light btn-lg rounded-pill">
+                    <i class="bi bi-plus-circle me-2"></i>
+                    Đặt vé mới
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="container pb-5">
+    <!-- Filter Bar -->
+    <div class="filter-bar">
+        <form method="get" class="row g-3 align-items-end">
+            <div class="col-md-4">
+                <label class="form-label fw-semibold">
+                    <i class="bi bi-search me-1"></i>
+                    Tìm kiếm theo phim hoặc rạp
+                </label>
+                <input type="text" name="search" value="@search" class="form-control"
+                       placeholder="Nhập tên phim hoặc rạp chiếu..." />
+            </div>
+            <div class="col-md-3">
+                <label class="form-label fw-semibold">
+                    <i class="bi bi-funnel me-1"></i>
+                    Trạng thái
+                </label>
+                <select name="status" class="form-select">
+                    <option value="">Tất cả</option>
+                    <option value="PENDING" selected="@("PENDING" == status)">Chờ xác nhận</option>
+                    <option value="CONFIRMED" selected="@("CONFIRMED" == status)">Đã xác nhận</option>
+                    <option value="CANCELLED" selected="@("CANCELLED" == status)">Đã hủy</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label fw-semibold">
+                    <i class="bi bi-sort-down me-1"></i>
+                    Sắp xếp theo
+                </label>
+                <select name="sort" class="form-select">
+                    <option value="">Mới nhất</option>
+                    <option value="date_asc" selected="@("date_asc" == sort)">Cũ nhất</option>
+                    <option value="showtime_asc" selected="@("showtime_asc" == sort)">Suất chiếu sớm nhất</option>
+                    <option value="showtime_desc" selected="@("showtime_desc" == sort)">Suất chiếu muộn nhất</option>
+                    <option value="price_asc" selected="@("price_asc" == sort)">Giá thấp đến cao</option>
+                    <option value="price_desc" selected="@("price_desc" == sort)">Giá cao đến thấp</option>
+                </select>
+            </div>
+            <div class="col-md-2 d-grid">
+                <button type="submit" class="btn btn-primary rounded-pill">
+                    <i class="bi bi-funnel me-1"></i>
+                    Lọc
+                </button>
+            </div>
+        </form>
+    </div>
+
+    @if (!Model.Any())
+    {
+        <div class="empty-state">
+            <div class="empty-icon">🎫</div>
+            <h4 class="mb-3">Chưa có vé nào được đặt</h4>
+            <p class="text-muted mb-4">
+                Bạn chưa đặt vé xem phim nào. Hãy khám phá những bộ phim đang chiếu và đặt vé ngay!
+            </p>
+            <a href="@Url.Action("Index", "MoviesList")" class="btn btn-primary btn-lg rounded-pill">
+                <i class="bi bi-film me-2"></i>
+                Xem phim đang chiếu
+            </a>
+        </div>
+    }
+    else
+    {
+        <!-- Tickets List -->
+        @foreach (var ticket in Model)
+        {
+            var showtime = ticket.ShowTime;
+            var movie = showtime.Movie;
+            var auditorium = showtime.Auditorium;
+            var theater = auditorium.Theater;
+            var seatLabels = ticket.TicketSeats
+            .OrderBy(s => s.Seat.RowLabel)
+            .ThenBy(s => s.Seat.SeatNumber)
+            .Select(s => $"{s.Seat.RowLabel}{s.Seat.SeatNumber}")
+            .ToList();
+
+            var posterPath = string.IsNullOrWhiteSpace(movie.PosterImagePath)
+            ? Url.Content("~/assets/images/movie_posters/default.jpg")
+            : Url.Content($"~/assets/images/movie_posters/{movie.PosterImagePath}");
+
+            var statusClass = ticket.Status switch
+            {
+                TicketStatus.PENDING => "status-pending",
+                TicketStatus.CONFIRMED => "status-confirmed",
+                TicketStatus.CANCELLED => "status-cancelled",
+                _ => "status-pending"
+            };
+
+            var statusText = ticket.Status switch
+            {
+                TicketStatus.PENDING => "Chờ xác nhận",
+                TicketStatus.CONFIRMED => "Đã xác nhận",
+                TicketStatus.CANCELLED => "Đã hủy",
+                _ => "Không xác định"
+            };
+
+            <div class="ticket-card">
+                <div class="ticket-header">
+                    <div class="row align-items-center">
+                        <div class="col-md-8">
+                            <h5 class="mb-1">@movie.Title</h5>
+                            <div class="d-flex align-items-center gap-3">
+                                <span class="status-badge @statusClass">@statusText</span>
+                                <small class="text-muted">
+                                    <i class="bi bi-calendar me-1"></i>
+                                    Đặt ngày @ticket.PurchaseTime.ToString("dd/MM/yyyy HH:mm")
+                                </small>
+                            </div>
+                        </div>
+                        <div class="col-md-4 text-md-end">
+                            <div class="price-display">@ticket.TotalPrice.ToString("N0") ₫</div>
+                            <small class="text-muted">@seatLabels.Count ghế</small>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="ticket-body">
+                    <div class="row">
+                        <div class="col-md-2 text-center">
+                            <img src="@posterPath" alt="@movie.Title" class="movie-poster" />
+                        </div>
+                        <div class="col-md-7">
+                            <div class="info-item">
+                                <i class="bi bi-building"></i>
+                                <strong>Rạp:</strong>&nbsp;@theater.Name - @theater.Location
+                            </div>
+                            <div class="info-item">
+                                <i class="bi bi-camera-reels"></i>
+                                <strong>Phòng:</strong>&nbsp;@auditorium.Name
+                            </div>
+                            <div class="info-item">
+                                <i class="bi bi-clock"></i>
+                                <strong>Suất chiếu:</strong>&nbsp;@showtime.StartTime.ToString("dddd, dd/MM/yyyy - HH:mm")
+                            </div>
+                            <div class="info-item">
+                                <i class="bi bi-geo-alt"></i>
+                                <strong>Ghế ngồi:</strong>
+                            </div>
+                            <div class="seat-tags">
+                                @foreach (var seatLabel in seatLabels)
+                                {
+                                    <span class="seat-tag">@seatLabel</span>
+                                }
+                            </div>
+                        </div>
+                        <div class="col-md-3 text-md-end">
+                            @if (ticket.Status == TicketStatus.PENDING && ticket.ShowTime.StartTime > DateTime.Now.AddHours(2))
+                            {
+                                <form asp-action="CancelTicket" method="post" class="cancel-form"
+                                      data-movie-title="@movie.Title">
+                                    @Html.AntiForgeryToken()
+                                    <input type="hidden" name="ticketId" value="@ticket.ID" />
+                                    <button type="button" class="btn-cancel cancel-btn">
+                                        <i class="bi bi-x-circle me-1"></i>
+                                        Hủy vé
+                                    </button>
+                                </form>
+                            }
+                            else if (ticket.Status == TicketStatus.CONFIRMED)
+                            {
+                                <div class="text-success">
+                                    <i class="bi bi-check-circle me-1"></i>
+                                    Vé đã được xác nhận
+                                </div>
+                                @if (showtime.StartTime > DateTime.Now)
+                                {
+                                    <small class="text-muted d-block mt-1">
+                                        Còn @((showtime.StartTime - DateTime.Now).Days) ngày @((showtime.StartTime - DateTime.Now).Hours) giờ
+                                    </small>
+                                }
+                            }
+                            else if (ticket.Status == TicketStatus.CANCELLED)
+                            {
+                                <div class="text-danger">
+                                    <i class="bi bi-x-circle me-1"></i>
+                                    Vé đã được hủy
+                                </div>
+                            }
+                            else if (ticket.ShowTime.StartTime <= DateTime.Now.AddHours(2))
+                            {
+                                <small class="text-muted">
+                                    Không thể hủy<br>
+                                    (Gần giờ chiếu)
+                                </small>
+                            }
+
+                            <div class="mt-2">
+                                <a href="@Url.Action("OrderConfirmation", new { ticketId = ticket.ID })"
+                                   class="btn btn-outline-primary btn-sm rounded-pill">
+                                    <i class="bi bi-eye me-1"></i>
+                                    Xem chi tiết
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+
+        <!-- Pagination -->
+        @if (totalPages > 1)
+        {
+            <div class="pagination-wrapper">
+                <nav aria-label="Ticket pagination">
+                    <ul class="pagination justify-content-center mb-0">
+                        @if (currentPage > 1)
+                        {
+                            <li class="page-item">
+                                <a class="page-link" href="@Url.Action("UserTickets", new { search, status, sort, page = currentPage - 1 })">
+                                    <i class="bi bi-chevron-left"></i>
+                                </a>
+                            </li>
+                        }
+
+                        @{
+                            int startPage = Math.Max(1, currentPage - 2);
+                            int endPage = Math.Min(totalPages, currentPage + 2);
+                        }
+
+                        @if (startPage > 1)
+                        {
+                            <li class="page-item">
+                                <a class="page-link" href="@Url.Action("UserTickets", new { search, status, sort, page = 1 })">1</a>
+                            </li>
+                            @if (startPage > 2)
+                            {
+                                <li class="page-item disabled">
+                                    <span class="page-link">...</span>
+                                </li>
+                            }
+                        }
+
+                        @for (int i = startPage; i <= endPage; i++)
+                        {
+                            <li class="page-item @(i == currentPage ? "active" : "")">
+                                <a class="page-link" href="@Url.Action("UserTickets", new { search, status, sort, page = i })">@i</a>
+                            </li>
+                        }
+
+                        @if (endPage < totalPages)
+                        {
+                            @if (endPage < totalPages - 1)
+                            {
+                                <li class="page-item disabled">
+                                    <span class="page-link">...</span>
+                                </li>
+                            }
+                            <li class="page-item">
+                                <a class="page-link" href="@Url.Action("UserTickets", new { search, status, sort, page = totalPages })">@totalPages</a>
+                            </li>
+                        }
+
+                        @if (currentPage < totalPages)
+                        {
+                            <li class="page-item">
+                                <a class="page-link" href="@Url.Action("UserTickets", new { search, status, sort, page = currentPage + 1 })">
+                                    <i class="bi bi-chevron-right"></i>
+                                </a>
+                            </li>
+                        }
+                    </ul>
+                </nav>
+
+                <div class="text-center mt-3">
+                    <small class="text-muted">
+                        Hiển thị trang @currentPage / @totalPages - Tổng @totalCount vé
+                    </small>
+                </div>
+            </div>
+        }
+    }
+</div>
+
+<!-- Cancel Confirmation Modal -->
+<div class="modal fade" id="cancelModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg" style="border-radius: 20px;">
+            <div class="modal-header border-0 pb-0">
+                <h5 class="modal-title text-danger">
+                    <i class="bi bi-exclamation-triangle me-2"></i>
+                    Xác nhận hủy vé
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body pt-0">
+                <p class="mb-0">Bạn có chắc chắn muốn hủy vé xem phim <strong id="movieToCancel"></strong>?</p>
+                <div class="alert alert-warning mt-3 mb-0">
+                    <small>
+                        <i class="bi bi-info-circle me-1"></i>
+                        Vé đã hủy không thể khôi phục lại được.
+                    </small>
+                </div>
+            </div>
+            <div class="modal-footer border-0 pt-0">
+                <button type="button" class="btn btn-secondary rounded-pill" data-bs-dismiss="modal">
+                    <i class="bi bi-x-circle me-1"></i>Không hủy
+                </button>
+                <button type="button" class="btn btn-danger rounded-pill" id="confirmCancel">
+                    <i class="bi bi-trash me-1"></i>Xác nhận hủy
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        let currentCancelForm = null;
+        const cancelModal = new bootstrap.Modal(document.getElementById('cancelModal'));
+        const movieToCancelSpan = document.getElementById('movieToCancel');
+        const confirmCancelBtn = document.getElementById('confirmCancel');
+
+        // Cancel button functionality
+        const cancelButtons = document.querySelectorAll('.cancel-btn');
+        cancelButtons.forEach(btn => {
+            btn.addEventListener('click', function(e) {
+                e.preventDefault();
+
+                const form = this.closest('.cancel-form');
+                const movieTitle = form.dataset.movieTitle;
+
+                movieToCancelSpan.textContent = movieTitle;
+                currentCancelForm = form;
+                cancelModal.show();
+            });
+        });
+
+        // Confirm cancel
+        if (confirmCancelBtn) {
+            confirmCancelBtn.addEventListener('click', function() {
+                if (currentCancelForm) {
+                    // Add loading state
+                    this.innerHTML = '<i class="bi bi-arrow-repeat spinning me-1"></i>Đang hủy...';
+                    this.disabled = true;
+
+                    currentCancelForm.submit();
+                }
+            });
+        }
+
+        // Add spinning animation
+        const style = document.createElement('style');
+        style.textContent = `
+            .spinning {
+                animation: spin 1s linear infinite;
+            }
+        `;
+        document.head.appendChild(style);
+    });
+</script>

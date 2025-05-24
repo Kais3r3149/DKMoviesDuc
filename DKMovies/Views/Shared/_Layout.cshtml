@@ -1,0 +1,420 @@
+﻿@using Microsoft.AspNetCore.Http
+@using System.Security.Claims
+@using DKMovies.Models.ViewModels;
+
+@{
+    var isAuthenticated = User.Identity.IsAuthenticated;
+    var role = User.FindFirst(ClaimTypes.Role)?.Value;
+    var searchModel = ViewBag.SearchModel as SearchModel ?? new SearchModel();
+    var today = DateTime.Today.ToString("yyyy-MM-dd");
+    var currentController = ViewContext.RouteData.Values["controller"]?.ToString()?.ToLower() ?? "";
+    var currentAction = ViewContext.RouteData.Values["action"]?.ToString()?.ToLower() ?? "";
+
+    // ✅ Handle null ViewBag collections
+    var layoutGenres = ViewBag.LayoutGenres as List<Genre> ?? new List<Genre>();
+    var layoutLanguages = ViewBag.LayoutLanguages as List<Language> ?? new List<Language>();
+    var layoutCountries = ViewBag.LayoutCountries as List<Country> ?? new List<Country>();
+}
+
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] - DKMovies</title>
+
+    <!-- Bootstrap CSS -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
+
+    <!-- Bootstrap Icons -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet">
+
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600&display=swap" rel="stylesheet" />
+
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/DKMovies.styles.css" asp-append-version="true" />
+
+    <style>
+        body {
+            font-family: 'Open Sans', sans-serif;
+        }
+
+        .navbar-custom {
+            background-color: rgba(255, 255, 255, 0.95);
+            box-shadow: 0 1px 5px rgba(0,0,0,0.1);
+        }
+
+        .navbar-brand span {
+            color: #dc3545;
+        }
+
+        .navbar-hover a {
+            position: relative;
+            color: inherit;
+            text-decoration: none;
+            padding-bottom: 2px;
+            border-bottom: 2px solid transparent;
+            transition: border-color 0.2s, color 0.2s;
+        }
+
+            .navbar-hover a:hover {
+                border-bottom-color: #0d6efd;
+                color: #0d6efd !important;
+            }
+
+        .movie-card {
+            position: relative;
+            overflow: hidden;
+            transition: transform 0.3s ease;
+            cursor: pointer;
+        }
+
+            .movie-card:hover {
+                transform: scale(1.02);
+            }
+
+            .movie-card img {
+                width: 100%;
+                height: auto;
+                display: block;
+            }
+
+        .movie-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.65);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .movie-card:hover .movie-overlay {
+            opacity: 1;
+        }
+
+        .movie-buttons a {
+            margin: 0.25rem;
+        }
+
+        .movie-age-badge {
+            position: absolute;
+            top: 0.5rem;
+            left: 0.5rem;
+            background-color: #ffc107;
+            color: black;
+            font-weight: bold;
+            padding: 2px 6px;
+            font-size: 0.75rem;
+            border-radius: 4px;
+        }
+
+        .movie-play-btn {
+            position: absolute;
+            top: 45%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 2rem;
+            color: white;
+            background-color: rgba(255, 0, 0, 0.8);
+            padding: 0.5rem 1rem;
+            border-radius: 50%;
+            display: none;
+        }
+
+        .movie-card:hover .movie-play-btn {
+            display: block;
+        }
+    </style>
+
+    @RenderSection("Styles", required: false)
+</head>
+<body>
+    <!-- TOP NAVBAR -->
+    <div class="bg-light small py-1" style="background-color: #f1ecdc;">
+        <div class="container d-flex justify-content-between">
+            <div class="d-flex gap-3">
+                <a href="#" class="text-dark text-decoration-none">
+                    <i class="bi bi-phone me-1"></i> DKMovies App
+                </a>
+                <a href="#" class="text-dark text-decoration-none">
+                    <i class="bi bi-facebook me-1"></i> DKMovies Facebook
+                </a>
+            </div>
+            <div class="d-flex gap-3 align-items-center">
+                @if (isAuthenticated)
+                {
+                    <div class="dropdown">
+                        <a class="dropdown-toggle text-dark text-decoration-none" href="#" role="button" data-bs-toggle="dropdown">
+                            <i class="bi bi-person-circle me-1"></i> @User.Identity.Name
+                        </a>
+                        <ul class="dropdown-menu dropdown-menu-end">
+                            @if (role == "User")
+                            {
+                                <li><a class="dropdown-item" href="@Url.Action("Index", "Users")">Thông tin cá nhân</a></li>
+                                <li><a class="dropdown-item" href="@Url.Action("OrderHistory", "Cart")">Lịch sử đặt vé</a></li>
+                                <li><a class="dropdown-item" href="@Url.Action("MyWatchlist", "Watchlist")">My Watchlist</a></li>
+                                <li><a class="dropdown-item" href="@Url.Action("UserTickets", "Tickets")">Tickets History</a></li>
+                            }
+                            else if (role == "Admin")
+                            {
+                                <li><a class="dropdown-item" href="@Url.Action("Profile", "Account")">Admin Info</a></li>
+                                <li><a class="dropdown-item" href="@Url.Action("Dashboard", "Admin")">Admin Dashboard</a></li>
+                            }
+                            <li><hr class="dropdown-divider" /></li>
+                            <li><a class="dropdown-item text-danger" href="@Url.Action("Logout", "Account")">Đăng xuất</a></li>
+                        </ul>
+                    </div>
+                }
+                else
+                {
+                    <a href="@Url.Action("Login", "Account")" class="btn btn-outline-primary btn-sm px-3 rounded-pill">
+                        <i class="bi bi-person-circle me-1"></i> Đăng ký / Đăng nhập
+                    </a>
+                }
+
+                <a href="@Url.Action("Support", "Home")" class="text-dark text-decoration-none">Hỗ trợ</a>
+
+                <select class="form-select form-select-sm w-auto">
+                    <option selected>VI</option>
+                    <option>EN</option>
+                </select>
+            </div>
+        </div>
+    </div>
+
+    <!-- MAIN NAVBAR -->
+    <header class="border-bottom" style="border-bottom: 2px solid #c9b57d;">
+        <div class="container py-3">
+            <div class="d-flex justify-content-between align-items-center">
+                <!-- Logo -->
+                <a class="navbar-brand d-flex align-items-center fw-bold fs-5 text-dark" href="@Url.Action("Index", "Home")">
+                    <span class="fs-4 me-2">🎬</span> DKMovies
+                </a>
+
+                
+
+                <!-- Toggle menu -->
+                <button class="navbar-toggler d-md-none" type="button" data-bs-toggle="collapse" data-bs-target="#mainNavCollapse">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+            </div>
+
+            <!-- Navigation Menu -->
+            <div class="collapse d-md-flex justify-content-center align-items-center mt-3 mt-md-0" id="mainNavCollapse">
+                <div class="navbar-hover d-flex flex-column flex-md-row align-items-center gap-3 gap-md-4 text-uppercase fw-semibold small">
+                    <a href="@Url.Action("Menu", "Concessions")"
+                       class="text-decoration-none @(currentController == "concessions" && currentAction == "menu" ? "text-info fw-bold" : "text-dark")">
+                        Concession
+                    </a>
+
+                    <a href="@Url.Action("MyWatchlist", "Watchlist")"
+                       class="text-decoration-none @(currentController == "watchlist" && currentAction == "mywatchlist" ? "text-info fw-bold" : "text-dark")">
+                        Watchlist
+                    </a>
+
+
+                    <a href="@Url.Action("Index", "MoviesList")"
+                       class="text-decoration-none @(currentController == "movieslist" && currentAction == "index" ? "text-info fw-bold" : "text-dark")">
+                        Phim
+                    </a>
+
+                    <a href="#" class="text-decoration-none text-dark d-none d-md-inline">|</a>
+
+                    <a href="@Url.Action("Cinemas", "Home")"
+                       class="text-decoration-none @(currentController == "home" && currentAction == "cinemas" ? "text-info fw-bold" : "text-dark")">
+                        Rạp chiếu
+                    </a>
+
+                    <a href="@Url.Action("Promotions", "Home")"
+                       class="text-decoration-none @(currentController == "home" && currentAction == "promotions" ? "text-info fw-bold" : "text-dark")">
+                        Khuyến mãi
+                    </a>
+
+                    <a href="@Url.Action("Contact", "Home")"
+                       class="text-decoration-none @(currentController == "home" && currentAction == "contact" ? "text-info fw-bold" : "text-dark")">
+                        Liên hệ
+                    </a>
+                </div>
+            </div>
+
+
+            <!-- Mobile Search Form -->
+            <form class="d-md-none mt-3" asp-controller="MoviesList" asp-action="Search" method="get">
+                <div class="input-group">
+                    <input class="form-control" type="search" name="query"
+                           placeholder="Search movies..." />
+                    <button class="btn btn-outline-primary" type="submit">
+                        <i class="bi bi-search"></i>
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <!-- Advanced Search Collapse - Only render if we have data -->
+        @if (layoutGenres.Any() || layoutLanguages.Any() || layoutCountries.Any())
+        {
+            <div class="collapse container mt-3" id="advancedSearchCollapse">
+                <form method="get" asp-controller="MoviesList" asp-action="Results" class="row g-3 bg-light p-3 rounded">
+                    <div class="col-md-6">
+                        <label class="form-label">Title</label>
+                        <input type="text" name="title" value="@searchModel.Title" class="form-control" />
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Director</label>
+                        <input type="text" name="director" value="@searchModel.Director" class="form-control" />
+                    </div>
+
+                    @if (layoutGenres.Any())
+                    {
+                        <div class="col-md-4">
+                            <label class="form-label">Genre</label>
+                            <select name="genreId" class="form-select">
+                                <option value="">Any</option>
+                                @foreach (var genre in layoutGenres)
+                                {
+                                    <option value="@genre.ID" selected="@(genre.ID == searchModel.GenreId)">@genre.Name</option>
+                                }
+                            </select>
+                        </div>
+                    }
+
+                    @if (layoutLanguages.Any())
+                    {
+                        <div class="col-md-4">
+                            <label class="form-label">Language</label>
+                            <select name="languageId" class="form-select">
+                                <option value="">Any</option>
+                                @foreach (var lang in layoutLanguages)
+                                {
+                                    <option value="@lang.ID" selected="@(lang.ID == searchModel.LanguageId)">@lang.Name</option>
+                                }
+                            </select>
+                        </div>
+                    }
+
+                    @if (layoutCountries.Any())
+                    {
+                        <div class="col-md-4">
+                            <label class="form-label">Country</label>
+                            <select name="countryId" class="form-select">
+                                <option value="">Any</option>
+                                @foreach (var country in layoutCountries)
+                                {
+                                    <option value="@country.ID" selected="@(country.ID == searchModel.CountryId)">@country.Name</option>
+                                }
+                            </select>
+                        </div>
+                    }
+
+                    <div class="col-md-6">
+                        <label class="form-label">Release From</label>
+                        <input type="date" name="releaseFrom" value="@(searchModel.ReleaseFrom?.ToString("yyyy-MM-dd"))"
+                               max="@today" class="form-control" />
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Release To</label>
+                        <input type="date" name="releaseTo" value="@(searchModel.ReleaseTo?.ToString("yyyy-MM-dd"))"
+                               max="@today" class="form-control" />
+                    </div>
+
+                    <div class="col-md-6">
+                        <label class="form-label">Sort By</label>
+                        <select name="sort" class="form-select">
+                            <option value="title_asc" selected="@(searchModel.Sort == "title_asc")">Title (A-Z)</option>
+                            <option value="title_desc" selected="@(searchModel.Sort == "title_desc")">Title (Z-A)</option>
+                            <option value="date_asc" selected="@(searchModel.Sort == "date_asc")">Release Date ↑</option>
+                            <option value="date_desc" selected="@(searchModel.Sort == "date_desc")">Release Date ↓</option>
+                        </select>
+                    </div>
+
+                    <div class="col-12 d-flex justify-content-between">
+                        <button type="submit" class="btn btn-primary"><i class="bi bi-search"></i> Search</button>
+                        <a asp-controller="MoviesList" asp-action="Index" class="btn btn-secondary">Reset</a>
+                    </div>
+                </form>
+            </div>
+        }
+    </header>
+
+    <!-- MAIN CONTENT -->
+    <div class="container">
+        <main role="main" class="pb-3 pt-5 mt-5">
+            @RenderBody()
+        </main>
+    </div>
+
+    <!-- FOOTER -->
+    <footer class="bg-dark text-white text-center py-4 mt-5">
+        <div class="container">
+            <p class="mb-0">© 2025 DKMovies. All rights reserved.</p>
+        </div>
+    </footer>
+
+    <!-- Toast Messages -->
+    @if (TempData["ToastSuccess"] != null)
+    {
+        <div class="toast align-items-center text-bg-success border-0 position-fixed top-0 end-0 m-3 show" role="alert" style="z-index: 1100;">
+            <div class="d-flex">
+                <div class="toast-body">@TempData["ToastSuccess"]</div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+            </div>
+        </div>
+    }
+
+    @if (TempData["ToastError"] != null)
+    {
+        <div class="toast align-items-center text-bg-danger border-0 position-fixed top-0 end-0 m-3 show" role="alert" style="z-index: 1100;">
+            <div class="d-flex">
+                <div class="toast-body">@TempData["ToastError"]</div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+            </div>
+        </div>
+    }
+
+    <!-- JavaScript -->
+    <script src="~/lib/jquery/dist/jquery.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="~/js/site.js" asp-append-version="true"></script>
+
+    @RenderSection("Scripts", required: false)
+
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            // Logout confirmation
+            const logoutLink = document.getElementById("logoutLink");
+            if (logoutLink) {
+                logoutLink.addEventListener("click", function (e) {
+                    const confirmLogout = confirm("Are you sure you want to log out?");
+                    if (!confirmLogout) {
+                        e.preventDefault();
+                    }
+                });
+            }
+
+            // Bootstrap tooltips
+            var tooltipTriggerList = [].slice.call(document.querySelectorAll('[title]'));
+            tooltipTriggerList.forEach(function (el) {
+                new bootstrap.Tooltip(el);
+            });
+
+            // Auto-hide toasts
+            setTimeout(() => {
+                document.querySelectorAll('.toast').forEach(toast => {
+                    toast.remove();
+                });
+            }, 3000);
+        });
+    </script>
+
+   
+
+</body>
+</html>

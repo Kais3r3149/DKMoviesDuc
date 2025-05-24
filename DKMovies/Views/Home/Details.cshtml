@@ -1,0 +1,725 @@
+﻿@model DKMovies.Models.Movie
+@{
+    ViewData["Title"] = "Movie Details";
+
+    // Wallpaper and Poster paths
+    var wallpaperPath = string.IsNullOrWhiteSpace(Model.WallpaperImagePath)
+        ? Url.Content("~/assets/images/movie_wallpapers/default.jpg")
+        : Url.Content($"~/assets/images/movie_wallpapers/{Model.WallpaperImagePath}");
+
+    var posterPath = string.IsNullOrWhiteSpace(Model.PosterImagePath)
+        ? Url.Content("~/assets/images/movie_posters/default.jpg")
+        : Url.Content($"~/assets/images/movie_posters/{Model.PosterImagePath}");
+
+    var averageRating = ViewData["AverageRating"] as double? ?? 0;
+    var isInWatchlist = ViewData["IsInWatchlist"] as bool? ?? false;
+    var hasUserReviewed = ViewData["HasUserReviewed"] as bool? ?? false;
+    var isAuthenticated = User.Identity?.IsAuthenticated ?? false;
+    var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+}
+
+@using System.Security.Claims
+@{
+    var role = User.FindFirst(ClaimTypes.Role)?.Value;
+}
+
+<!-- Load Bootstrap Icons -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" />
+
+<style>
+    .movie-background {
+        background-image: linear-gradient(rgba(0, 0, 0, 0.4), rgba(0, 0, 0, 0.7)), url('@wallpaperPath');
+        background-size: cover;
+        background-position: center;
+        background-attachment: fixed;
+        position: relative;
+        color: white;
+        min-height: 100vh;
+    }
+
+        .movie-background::before {
+            content: "";
+            position: absolute;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.3);
+            backdrop-filter: blur(1px);
+            z-index: 0;
+        }
+
+    .movie-content {
+        position: relative;
+        z-index: 1;
+        padding-top: 2rem;
+        padding-bottom: 3rem;
+    }
+
+    .poster-container {
+        position: relative;
+        border-radius: 20px;
+        overflow: hidden;
+        box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+        transition: transform 0.3s ease;
+    }
+
+        .poster-container:hover {
+            transform: scale(1.02);
+        }
+
+    .poster-image {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        aspect-ratio: 2/3;
+    }
+
+    .movie-title {
+        font-size: 3rem;
+        font-weight: 700;
+        margin-bottom: 1rem;
+        text-shadow: 2px 2px 8px rgba(0,0,0,0.5);
+        line-height: 1.2;
+    }
+
+    .movie-description {
+        font-size: 1.1rem;
+        line-height: 1.7;
+        margin-bottom: 2rem;
+        text-shadow: 1px 1px 3px rgba(0,0,0,0.5);
+        opacity: 0.95;
+    }
+
+    .info-item {
+        display: flex;
+        align-items: center;
+        margin-bottom: 0.8rem;
+        font-size: 1rem;
+        background: rgba(255,255,255,0.1);
+        padding: 0.6rem 1rem;
+        border-radius: 10px;
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255,255,255,0.1);
+        transition: all 0.3s ease;
+    }
+
+        .info-item:hover {
+            background: rgba(255,255,255,0.15);
+            transform: translateX(5px);
+        }
+
+        .info-item i {
+            margin-right: 0.8rem;
+            font-size: 1.1rem;
+            width: 20px;
+            text-align: center;
+        }
+
+    .genre-container {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+        margin-top: 0.5rem;
+    }
+
+    .genre-badge {
+        background: linear-gradient(45deg, #667eea, #764ba2);
+        color: white;
+        padding: 0.4rem 0.8rem;
+        border-radius: 20px;
+        font-size: 0.85rem;
+        font-weight: 500;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+        transition: transform 0.2s ease;
+    }
+
+        .genre-badge:hover {
+            transform: translateY(-2px);
+        }
+
+    .rating-display {
+        background: rgba(255,255,255,0.1);
+        padding: 1rem;
+        border-radius: 15px;
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255,255,255,0.1);
+        margin-bottom: 1.5rem;
+    }
+
+    .stars-large {
+        font-size: 1.5rem;
+        color: #ffc107;
+        margin-bottom: 0.5rem;
+    }
+
+    .rating-text {
+        font-size: 1.2rem;
+        font-weight: 600;
+    }
+
+    .action-buttons {
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+        align-items: flex-start;
+    }
+
+    .btn-action {
+        background: rgba(255,255,255,0.1);
+        color: white;
+        border: 1px solid rgba(255,255,255,0.2);
+        padding: 0.7rem 1.5rem;
+        border-radius: 25px;
+        text-decoration: none;
+        transition: all 0.3s ease;
+        backdrop-filter: blur(10px);
+        font-weight: 500;
+        min-width: 160px;
+        text-align: center;
+    }
+
+        .btn-action:hover {
+            background: rgba(255,255,255,0.2);
+            color: white;
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(0,0,0,0.3);
+        }
+
+    .btn-primary-action {
+        background: linear-gradient(45deg, #007bff, #0056b3);
+        border: none;
+    }
+
+        .btn-primary-action:hover {
+            background: linear-gradient(45deg, #0056b3, #004085);
+        }
+
+    .btn-warning-action {
+        background: linear-gradient(45deg, #ffc107, #e0a800);
+        color: #000;
+    }
+
+        .btn-warning-action:hover {
+            background: linear-gradient(45deg, #e0a800, #c69500);
+            color: #000;
+        }
+
+    .reviews-section {
+        background: white;
+        border-radius: 20px 20px 0 0;
+        margin-top: 3rem;
+        padding: 2rem 0;
+        color: #333;
+        box-shadow: 0 -10px 30px rgba(0,0,0,0.1);
+    }
+
+    .review-form {
+        background: #f8f9fa;
+        padding: 2rem;
+        border-radius: 15px;
+        margin-bottom: 2rem;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+    }
+
+    .star-rating {
+        font-size: 2rem;
+        margin-bottom: 1rem;
+    }
+
+        .star-rating i {
+            cursor: pointer;
+            transition: all 0.2s ease;
+            margin-right: 0.2rem;
+        }
+
+            .star-rating i:hover {
+                transform: scale(1.2);
+            }
+
+    .review-item {
+        background: white;
+        border: none;
+        border-radius: 15px;
+        padding: 1.5rem;
+        margin-bottom: 1rem;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+        transition: transform 0.2s ease;
+    }
+
+        .review-item:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+        }
+
+    .reviewer-info {
+        display: flex;
+        align-items: center;
+        margin-bottom: 1rem;
+    }
+
+    .reviewer-avatar {
+        width: 50px;
+        height: 50px;
+        border-radius: 50%;
+        object-fit: cover;
+        margin-right: 1rem;
+        border: 3px solid #f8f9fa;
+    }
+
+    .reviewer-name {
+        font-weight: 600;
+        font-size: 1.1rem;
+        color: #333;
+    }
+
+    .review-date {
+        color: #6c757d;
+        font-size: 0.9rem;
+    }
+
+    .review-stars {
+        color: #ffc107;
+        margin-bottom: 0.5rem;
+    }
+
+    .review-comment {
+        line-height: 1.6;
+        color: #555;
+    }
+
+    .back-btn-floating {
+        position: fixed;
+        top: 20px;
+        left: 20px;
+        z-index: 1000;
+        background: rgba(0,0,0,0.7);
+        color: white;
+        border: none;
+        border-radius: 50%;
+        width: 50px;
+        height: 50px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        backdrop-filter: blur(10px);
+        transition: all 0.3s ease;
+    }
+
+        .back-btn-floating:hover {
+            background: rgba(0,0,0,0.9);
+            transform: scale(1.1);
+        }
+
+    .fade-in {
+        opacity: 0;
+        transform: translateY(30px);
+        transition: all 0.8s ease;
+    }
+
+        .fade-in.show {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+
+
+    {
+        font-size: 2rem;
+    }
+
+    .movie-content {
+        padding-top: 1rem;
+    }
+
+    .action-buttons {
+        align-items: stretch;
+    }
+
+    .btn-action {
+        min-width: auto;
+    }
+
+    .back-btn-floating {
+        position: relative;
+        top: auto;
+        left: auto;
+        margin-bottom: 1rem;
+        width: auto;
+        height: auto;
+        border-radius: 10px;
+        padding: 0.5rem 1rem;
+    }
+
+    }</style>
+
+<!-- Floating Back Button -->
+<button class="back-btn-floating d-none d-md-flex" onclick="history.back()" title="Quay lại">
+    <i class="bi bi-arrow-left"></i>
+</button>
+
+<div class="movie-background">
+    <div class="container movie-content">
+        <!-- Mobile Back Button -->
+        <button class="back-btn-floating d-md-none mb-3" onclick="history.back()">
+            <i class="bi bi-arrow-left me-2"></i>Quay lại
+        </button>
+
+        <div class="row align-items-start">
+            <!-- Left: Poster -->
+            <div class="col-md-3 mb-4">
+                <div class="poster-container fade-in">
+                    <img src="@posterPath" alt="@Model.Title" class="poster-image" loading="lazy">
+                </div>
+            </div>
+
+            <!-- Center: Info -->
+            <div class="col-md-6 fade-in">
+                <h1 class="movie-title">@Model.Title</h1>
+
+                @if (!string.IsNullOrWhiteSpace(Model.Description))
+                {
+                    <p class="movie-description">@Model.Description</p>
+                }
+
+                <!-- Rating Display -->
+                <div class="rating-display">
+                    <div class="stars-large">
+                        @{
+                            int fullStars = (int)Math.Floor(averageRating);
+                            bool hasHalfStar = (averageRating - fullStars) >= 0.25 && (averageRating - fullStars) < 0.75;
+                            int emptyStars = 5 - fullStars - (hasHalfStar ? 1 : 0);
+                        }
+
+                        @for (int i = 0; i < fullStars; i++)
+                        {
+                            <i class="bi bi-star-fill"></i>
+                        }
+                        @if (hasHalfStar)
+                        {
+                            <i class="bi bi-star-half"></i>
+                        }
+                        @for (int i = 0; i < emptyStars; i++)
+                        {
+                            <i class="bi bi-star"></i>
+                        }
+                    </div>
+                    <div class="rating-text">@averageRating.ToString("F1") / 5</div>
+                </div>
+
+                <!-- Movie Info -->
+                <div class="info-item">
+                    <i class="bi bi-clock"></i>
+                    <strong>Thời lượng:</strong>&nbsp;@Model.DurationMinutes phút
+                </div>
+
+                <div class="info-item">
+                    <i class="bi bi-shield-check"></i>
+                    <strong>Phân loại:</strong>&nbsp;@Model.Rating?.Value
+                </div>
+
+                <div class="info-item">
+                    <i class="bi bi-calendar-event"></i>
+                    <strong>Ngày phát hành:</strong>&nbsp;@(Model.ReleaseDate?.ToString("dd/MM/yyyy") ?? "N/A")
+                </div>
+
+                <div class="info-item">
+                    <i class="bi bi-translate"></i>
+                    <strong>Ngôn ngữ:</strong>&nbsp;@Model.Language?.Name
+                </div>
+
+                <div class="info-item">
+                    <i class="bi bi-geo-alt"></i>
+                    <strong>Quốc gia:</strong>&nbsp;@Model.Country?.Name
+                </div>
+
+                <div class="info-item">
+                    <i class="bi bi-camera-reels"></i>
+                    <strong>Đạo diễn:</strong>&nbsp;
+                    @if (Model.Director != null)
+                    {
+                        <a asp-controller="DirectorsList" asp-action="Details" asp-route-id="@Model.Director.ID"
+                           class="text-white text-decoration-underline">
+                            @Model.Director.FullName
+                        </a>
+                    }
+                    else
+                    {
+                        <span>N/A</span>
+                    }
+                </div>
+
+                <!-- Genres -->
+                @if (Model.MovieGenres?.Any() == true)
+                {
+                    <div class="info-item">
+                        <i class="bi bi-tags"></i>
+                        <div>
+                            <strong>Thể loại:</strong>
+                            <div class="genre-container">
+                                @foreach (var genre in Model.MovieGenres.Select(mg => mg.Genre.Name))
+                                {
+                                    <span class="genre-badge">@genre</span>
+                                }
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+
+            <!-- Right: Actions -->
+            <div class="col-md-3 fade-in">
+                <div class="action-buttons">
+                    @if (role == "Admin")
+                    {
+                        <a asp-action="Edit" asp-route-id="@Model.ID" class="btn-action btn-primary-action">
+                            <i class="bi bi-pencil me-2"></i>Chỉnh sửa
+                        </a>
+                    }
+                    else if (role == "User")
+                    {
+                        @if (isInWatchlist)
+                        {
+                            <button class="btn-action btn-warning-action" disabled>
+                                <i class="bi bi-bookmark-check-fill me-2"></i>Đã thêm vào danh sách
+                            </button>
+                        }
+                        else
+                        {
+                            <form asp-controller="Watchlist" asp-action="Create" method="post">
+                                @Html.AntiForgeryToken()
+                                <input type="hidden" name="movieId" value="@Model.ID" />
+                                <button type="submit" class="btn-action">
+                                    <i class="bi bi-bookmark me-2"></i>Thêm vào danh sách
+                                </button>
+                            </form>
+                        }
+
+                        <a asp-controller="Tickets" asp-action="OrderTicket" asp-route-id="@Model.ID"
+                           class="btn-action btn-primary-action">
+                            <i class="bi bi-ticket-perforated me-2"></i>Đặt vé xem phim
+                        </a>
+                    }
+                    else
+                    {
+                        <button class="btn-action" disabled style="opacity: 0.6;">
+                            <i class="bi bi-ticket-perforated me-2"></i>Đặt vé xem phim
+                        </button>
+                        <small class="text-warning d-block mt-2 text-center">
+                            <i class="bi bi-info-circle me-1"></i>
+                            Vui lòng đăng nhập để đặt vé
+                        </small>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Reviews Section -->
+<div class="reviews-section">
+    <div class="container">
+        @if (isAuthenticated && role == "User" && !string.IsNullOrEmpty(userId))
+        {
+            if (!hasUserReviewed)
+            {
+                <div class="review-form fade-in">
+                    <h4 class="mb-3">
+                        <i class="bi bi-chat-square-text me-2"></i>
+                        Để lại đánh giá của bạn
+                    </h4>
+                    <form asp-controller="Reviews" asp-action="LeaveReview" method="post" id="reviewForm">
+                        <input type="hidden" name="MovieID" value="@Model.ID" />
+                        <input type="hidden" name="UserID" value="@userId" />
+                        <input type="hidden" name="Rating" id="selectedRating" value="0" />
+
+                        <div class="mb-3">
+                            <label class="form-label d-block fw-bold">Đánh giá của bạn</label>
+                            <div id="starRating" class="star-rating text-warning">
+                                @for (int i = 1; i <= 5; i++)
+                                {
+                                    <i class="bi bi-star" data-value="@i"></i>
+                                }
+                            </div>
+                            <small class="text-muted">Nhấp vào sao để đánh giá</small>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="Comment" class="form-label fw-bold">Nhận xét</label>
+                            <textarea name="Comment" class="form-control" rows="4" required
+                                      placeholder="Chia sẻ cảm nhận của bạn về bộ phim..."></textarea>
+                        </div>
+
+                        <button type="submit" class="btn btn-primary btn-lg rounded-pill px-4">
+                            <i class="bi bi-send me-2"></i>Gửi đánh giá
+                        </button>
+                    </form>
+                </div>
+            }
+            else
+            {
+                <div class="alert alert-info rounded-4 fade-in">
+                    <i class="bi bi-check-circle me-2"></i>
+                    <strong>Cảm ơn bạn!</strong> Bạn đã đánh giá bộ phim này rồi.
+                </div>
+            }
+        }
+
+        <div class="fade-in">
+            <h3 class="mb-4">
+                <i class="bi bi-chat-dots me-2"></i>
+                Đánh giá từ khán giả
+            </h3>
+
+            @if (Model.Reviews != null && Model.Reviews.Any())
+            {
+                <div class="row">
+                    @foreach (var review in Model.Reviews.Where(r => r.IsApproved))
+                    {
+                        <div class="col-md-6 mb-3">
+                            <div class="review-item">
+                                <div class="reviewer-info">
+                                    @if (!string.IsNullOrWhiteSpace(review.User?.ProfileImagePath))
+                                    {
+                                        <img src="~/images/users/@review.User.ProfileImagePath"
+                                             alt="@review.User.Username's Profile"
+                                             class="reviewer-avatar" />
+                                    }
+                                    else
+                                    {
+                                        <div class="reviewer-avatar bg-primary d-flex align-items-center justify-content-center text-white fw-bold">
+                                            @review.User.Username?.Substring(0, 1).ToUpper()
+                                        </div>
+                                    }
+                                    <div>
+                                        <div class="reviewer-name">@review.User.Username</div>
+                                        <div class="review-date">@review.CreatedAt.ToString("dd/MM/yyyy")</div>
+                                    </div>
+                                </div>
+
+                                <div class="review-stars mb-2">
+                                    @for (int i = 0; i < 5; i++)
+                                    {
+                                        <i class="bi @(i < review.Rating ? "bi-star-fill" : "bi-star")"></i>
+                                    }
+                                </div>
+
+                                <p class="review-comment mb-0">@review.Comment</p>
+                            </div>
+                        </div>
+                    }
+                </div>
+            }
+            else
+            {
+                <div class="text-center py-5">
+                    <i class="bi bi-chat-square-dots" style="font-size: 3rem; color: #dee2e6;"></i>
+                    <p class="text-muted mt-3 mb-0">Chưa có đánh giá nào cho bộ phim này.</p>
+                    <p class="text-muted">Hãy là người đầu tiên chia sẻ cảm nhận!</p>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Fade in animations
+            const fadeElements = document.querySelectorAll('.fade-in');
+            fadeElements.forEach((element, index) => {
+                setTimeout(() => {
+                    element.classList.add('show');
+                }, index * 300);
+            });
+
+            // Star rating functionality
+            const stars = document.querySelectorAll('#starRating .bi');
+            const ratingInput = document.getElementById('selectedRating');
+
+            if (stars.length > 0 && ratingInput) {
+                stars.forEach(star => {
+                    star.addEventListener('mouseenter', () => {
+                        const val = parseInt(star.getAttribute('data-value'));
+                        highlightStars(val);
+                    });
+
+                    star.addEventListener('mouseleave', () => {
+                        highlightStars(parseInt(ratingInput.value));
+                    });
+
+                    star.addEventListener('click', () => {
+                        const val = parseInt(star.getAttribute('data-value'));
+                        ratingInput.value = val;
+                        highlightStars(val);
+                    });
+                });
+
+                function highlightStars(value) {
+                    stars.forEach(star => {
+                        const starValue = parseInt(star.getAttribute('data-value'));
+                        if (starValue <= value) {
+                            star.classList.remove('bi-star');
+                            star.classList.add('bi-star-fill');
+                        } else {
+                            star.classList.remove('bi-star-fill');
+                            star.classList.add('bi-star');
+                        }
+                    });
+                }
+            }
+
+            // Form submission enhancement
+            const reviewForm = document.getElementById('reviewForm');
+            if (reviewForm) {
+                reviewForm.addEventListener('submit', function(e) {
+                    const rating = parseInt(ratingInput.value);
+                    if (rating === 0) {
+                        e.preventDefault();
+                        alert('Vui lòng chọn số sao đánh giá!');
+                        return;
+                    }
+
+                    const submitBtn = this.querySelector('button[type="submit"]');
+                    const originalText = submitBtn.innerHTML;
+                    submitBtn.innerHTML = '<i class="bi bi-arrow-repeat spinning me-2"></i>Đang gửi...';
+                    submitBtn.disabled = true;
+
+                    // Re-enable after 3 seconds in case of error
+                    setTimeout(() => {
+                        submitBtn.innerHTML = originalText;
+                        submitBtn.disabled = false;
+                    }, 3000);
+                });
+            }
+
+            // Image error handling
+            const posterImage = document.querySelector('.poster-image');
+            if (posterImage) {
+                posterImage.addEventListener('error', function() {
+                    this.src = '@Url.Content("~/assets/images/movie_posters/default.jpg")';
+                });
+            }
+
+            // Smooth scroll for mobile back button
+            const backBtns = document.querySelectorAll('.back-btn-floating');
+            backBtns.forEach(btn => {
+                btn.addEventListener('click', function(e) {
+                    if (window.history.length > 1) {
+                        e.preventDefault();
+                        window.history.back();
+                    } else {
+                        window.location.href = '@Url.Action("Index", "MoviesList")';
+                    }
+                });
+            });
+        });
+
+        // Add spinning animation
+        const style = document.createElement('style');
+        style.textContent = `
+            .spinning {
+                animation: spin 1s linear infinite;
+            }
+
+        `;
+        document.head.appendChild(style);
+    </script>
+}

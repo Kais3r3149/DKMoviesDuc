@@ -1,0 +1,118 @@
+﻿@model List<DKMovies.Models.CartItem>
+@{
+    ViewData["Title"] = "Giỏ hàng";
+    var total = Model.Sum(item => item.TheaterConcession.Price * item.Quantity);
+}
+
+<style>
+    .cart-card {
+        border-radius: 15px;
+        border: 1px solid #ddd;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+        overflow: hidden;
+    }
+
+    .price {
+        font-weight: 600;
+        color: #e74c3c;
+    }
+
+    .total-box {
+        background-color: #f9f9f9;
+        border: 1px solid #ddd;
+        padding: 1rem;
+        border-radius: 12px;
+    }
+</style>
+
+<!-- Hidden form chứa AntiForgeryToken cho AJAX -->
+<form id="__ajax-cart-form">@Html.AntiForgeryToken()</form>
+
+<div class="container py-5">
+    <h2 class="mb-4 text-center">🛒 Giỏ hàng của bạn</h2>
+
+    @if (!Model.Any())
+    {
+        <div class="alert alert-info text-center">
+            Chưa có món ăn nào trong giỏ hàng.
+        </div>
+    }
+    else
+    {
+        <div class="row row-cols-1 row-cols-md-2 g-4 mb-4">
+            @foreach (var item in Model)
+            {
+                var concession = item.TheaterConcession.Concession;
+                var theater = item.TheaterConcession.Theater;
+                var price = item.TheaterConcession.Price;
+                var subtotal = price * item.Quantity;
+
+                <div class="col">
+                    <div class="card cart-card p-3 h-100">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <h5 class="mb-0">@concession.Name</h5>
+                            <span class="badge text-bg-light">@theater.Name</span>
+                        </div>
+
+                        <div class="mb-2">
+                            <div class="input-group input-group-sm" style="max-width: 140px;">
+                                <button class="btn btn-outline-secondary btn-sm" onclick="updateQuantity(@item.ID, @item.Quantity - 1)">−</button>
+                                <input id="qty-@item.ID" type="text" class="form-control text-center" value="@item.Quantity" readonly />
+                                <button class="btn btn-outline-secondary btn-sm" onclick="updateQuantity(@item.ID, @item.Quantity + 1)">+</button>
+                            </div>
+                        </div>
+
+                        <div class="text-muted">Đơn giá: <span class="price">@price.ToString("n0") VND</span></div>
+
+                        <hr />
+                        <div class="d-flex justify-content-between align-items-center">
+                            <span class="fw-semibold">Thành tiền:</span>
+                            <span id="item-subtotal-@item.ID" class="price">@subtotal.ToString("n0") VND</span>
+                        </div>
+
+                        <form asp-action="RemoveItem" method="post" class="text-end mt-3">
+                            <input type="hidden" name="id" value="@item.ID" />
+                            <button type="submit" class="btn btn-sm btn-outline-danger rounded-pill">
+                                <i class="bi bi-trash3"></i> Xoá
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            }
+        </div>
+
+        <div class="total-box text-end">
+            <h5>Tổng cộng: <span id="cart-total" class="price">@total.ToString("n0") VND</span></h5>
+            <a class="btn btn-primary rounded-pill mt-2 px-4" href="#">Tiến hành thanh toán</a>
+        </div>
+    }
+</div>
+
+@section Scripts {
+    <script>
+        function updateQuantity(id, newQty) {
+            if (newQty < 1) return;
+
+            const token = document.querySelector('#__ajax-cart-form input[name="__RequestVerificationToken"]').value;
+
+            fetch('/Cart/UpdateQuantity', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'RequestVerificationToken': token
+                },
+                body: JSON.stringify({ id: id, quantity: newQty })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    document.getElementById(`qty-${id}`).value = newQty;
+                    document.getElementById(`item-subtotal-${id}`).innerText = data.newSubtotal + " VND";
+                    document.getElementById("cart-total").innerText = data.newTotal + " VND";
+                } else {
+                    alert("Không thể cập nhật số lượng.");
+                }
+            });
+        }
+    </script>
+}

@@ -1,0 +1,351 @@
+﻿@model IEnumerable<DKMovies.Models.Movie>
+@{
+    ViewData["Title"] = "Quản lý phim";
+    Layout = "~/Views/Shared/_AdminLayout.cshtml";
+}
+
+<div class="mb-4">
+    <div class="d-flex justify-content-between align-items-center">
+        <div>
+            <h2 class="fw-bold text-dark mb-1">
+                <i class="fas fa-film me-2 text-primary"></i>Quản lý phim
+            </h2>
+            <p class="text-muted mb-0">Danh sách tất cả phim trong hệ thống</p>
+        </div>
+        <div class="d-flex gap-2">
+            <button class="btn btn-outline-secondary btn-sm" onclick="location.reload()">
+                <i class="fas fa-sync-alt me-1"></i>Làm mới
+            </button>
+            <a asp-action="Create" class="btn btn-primary">
+                <i class="fas fa-plus me-2"></i>Thêm phim mới
+            </a>
+        </div>
+    </div>
+</div>
+
+@if (!Model.Any())
+{
+        <!-- Empty State -->
+        <div class="card border-0 shadow-sm">
+            <div class="card-body text-center py-5">
+                <div class="mb-4">
+                    <i class="fas fa-film text-muted" style="font-size: 4rem; opacity: 0.3;"></i>
+                </div>
+                <h4 class="text-muted mb-3">Chưa có phim nào</h4>
+                <p class="text-muted mb-4">
+                    Hãy thêm phim đầu tiên để bắt đầu quản lý rạp chiếu phim của bạn.
+                </p>
+                <a asp-action="Create" class="btn btn-primary">
+                    <i class="fas fa-plus me-2"></i>Thêm phim đầu tiên
+                </a>
+            </div>
+        </div>
+}
+else
+{
+        <!-- Movies Table -->
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-white border-bottom py-3">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h6 class="card-title mb-0 fw-semibold">
+                        <i class="fas fa-list me-2 text-secondary"></i>Danh sách phim (@Model.Count() phim)
+                    </h6>
+                    <div class="d-flex gap-2">
+                        <div class="dropdown">
+                            <button class="btn btn-outline-secondary btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                                <i class="fas fa-filter me-1"></i>Lọc
+                            </button>
+                            <ul class="dropdown-menu">
+                                <li><a class="dropdown-item" href="#" onclick="filterTable('all')">Tất cả</a></li>
+                                <li><a class="dropdown-item" href="#" onclick="filterTable('recent')">Mới nhất</a></li>
+                                <li><a class="dropdown-item" href="#" onclick="filterTable('popular')">Phổ biến</a></li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0" id="movieTable">
+                        <thead class="table-light">
+                            <tr>
+                                <th scope="col" class="fw-semibold text-dark py-3" style="width: 60px;">#</th>
+                                <th scope="col" class="fw-semibold text-dark py-3" style="width: 80px;">Poster</th>
+                                <th scope="col" class="fw-semibold text-dark py-3">Tiêu đề</th>
+                                <th scope="col" class="fw-semibold text-dark py-3">Thể loại</th>
+                                <th scope="col" class="fw-semibold text-dark py-3" style="width: 120px;">Thời lượng</th>
+                                <th scope="col" class="fw-semibold text-dark py-3" style="width: 130px;">Ngày phát hành</th>
+                                <th scope="col" class="fw-semibold text-dark py-3" style="width: 100px;">Trạng thái</th>
+                                <th scope="col" class="fw-semibold text-dark text-center py-3" style="width: 160px;">Hành động</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        @{
+                            int i = 1;
+                        }
+                        @foreach (var movie in Model)
+                        {
+                                    <tr class="align-middle">
+                                        <td class="fw-medium text-muted">@i</td>
+                                        <td>
+                                            <div class="position-relative">
+                                        <img src="@Url.Content($"~/assets/images/{(string.IsNullOrWhiteSpace(movie.PosterImagePath) ? "default-poster.jpg" : movie.PosterImagePath)}")"
+                                             alt="@movie.Title"
+                                             class="img-fluid"
+                                             style="height: 300px; object-fit: cover;" />
+
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <div>
+                                                <div class="fw-semibold text-dark">@movie.Title</div>
+                                        @if (!string.IsNullOrWhiteSpace(movie.Description))
+                                        {
+                                                        <small class="text-muted">
+                                                @(movie.Description.Length > 50 ? movie.Description.Substring(0, 50) + "..." : movie.Description)
+                                                        </small>
+                                        }
+                                            </div>
+                                        </td>
+                                        <td>
+                                    @if (movie.MovieGenres != null && movie.MovieGenres.Any())
+                                    {
+                                        @foreach (var genre in movie.MovieGenres.Take(2))
+                                        {
+                                                            <span class="badge bg-light text-dark me-1 mb-1">@genre.Genre?.Name</span>
+                                        }
+                                        @if (movie.MovieGenres.Count() > 2)
+                                        {
+                                                            <span class="badge bg-secondary">+@(movie.MovieGenres.Count() - 2)</span>
+                                        }
+                                    }
+                                    else
+                                    {
+                                                    <span class="text-muted small">Chưa phân loại</span>
+                                    }
+                                        </td>
+                                        <td>
+                                            <span class="badge bg-info text-white px-2 py-1">
+                                                <i class="fas fa-clock me-1"></i>@movie.DurationMinutes phút
+                                            </span>
+                                        </td>
+                                        <td>
+                                    @if (movie.ReleaseDate.HasValue)
+                                    {
+                                                    <span class="small">@movie.ReleaseDate.Value.ToString("dd/MM/yyyy")</span>
+                                    }
+                                    else
+                                    {
+                                                    <span class="text-muted small">Chưa xác định</span>
+                                    }
+                                        </td>
+                                        <td>
+                                    @{
+                                        var isActive = movie.ReleaseDate.HasValue && movie.ReleaseDate.Value <= DateTime.Now;
+                                        var badgeClass = isActive ? "bg-success" : "bg-warning text-dark";
+                                        var statusText = isActive ? "Đang chiếu" : "Sắp chiếu";
+                                    }
+                                            <span class="badge @badgeClass px-2 py-1">@statusText</span>
+                                        </td>
+                                        <td class="text-center">
+                                            <div class="btn-group" role="group">
+                                                <a asp-action="Details" asp-route-id="@movie.ID" 
+                                                   class="btn btn-outline-info btn-sm" 
+                                                   data-bs-toggle="tooltip" title="Xem chi tiết">
+                                                    <i class="fas fa-eye"></i>
+                                                </a>
+                                                <a asp-action="Edit" asp-route-id="@movie.ID" 
+                                                   class="btn btn-outline-warning btn-sm" 
+                                                   data-bs-toggle="tooltip" title="Chỉnh sửa">
+                                                    <i class="fas fa-edit"></i>
+                                                </a>
+                                                <button type="button" class="btn btn-outline-danger btn-sm" 
+                                                        data-bs-toggle="tooltip" title="Xóa phim"
+                                                        onclick="confirmDelete(@movie.ID, '@movie.Title')">
+                                                    <i class="fas fa-trash-alt"></i>
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                            i++;
+                        }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="card-footer bg-light border-top-0 py-3">
+                <div class="d-flex justify-content-between align-items-center">
+                    <small class="text-muted">
+                        Tổng cộng: <strong>@Model.Count()</strong> phim
+                    </small>
+                    <div class="d-flex gap-2">
+                        <a asp-controller="AdminShowTime" asp-action="Index" class="btn btn-outline-primary btn-sm">
+                            <i class="fas fa-calendar-alt me-1"></i>Quản lý suất chiếu
+                        </a>
+                        <a asp-action="Create" class="btn btn-primary btn-sm">
+                            <i class="fas fa-plus me-1"></i>Thêm phim
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+}
+
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deleteModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-exclamation-triangle text-warning me-2"></i>Xác nhận xóa
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p class="mb-3">Bạn có chắc chắn muốn xóa phim:</p>
+                <div class="alert alert-warning">
+                    <strong id="movieTitleToDelete"></strong>
+                </div>
+                <p class="text-muted small mb-0">
+                    <i class="fas fa-info-circle me-1"></i>
+                    Hành động này không thể hoàn tác. Tất cả dữ liệu liên quan sẽ bị xóa.
+                </p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+                <a id="confirmDeleteBtn" href="#" class="btn btn-danger">
+                    <i class="fas fa-trash-alt me-1"></i>Xóa phim
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+        <script>
+            $(document).ready(function () {
+                // Initialize DataTable
+                $('#movieTable').DataTable({
+                    language: {
+                        search: "Tìm kiếm:",
+                        lengthMenu: "Hiển thị _MENU_ mục",
+                        info: "Hiển thị _START_ đến _END_ trong _TOTAL_ mục",
+                        infoEmpty: "Hiển thị 0 đến 0 trong 0 mục",
+                        infoFiltered: "(lọc từ _MAX_ mục)",
+                        paginate: {
+                            previous: "Trước",
+                            next: "Sau",
+                            first: "Đầu",
+                            last: "Cuối"
+                        },
+                        emptyTable: "Không có dữ liệu",
+                        zeroRecords: "Không tìm thấy kết quả nào"
+                    },
+                    responsive: true,
+                    pageLength: 10,
+                    order: [[0, 'asc']],
+                    columnDefs: [
+                        { orderable: false, targets: [1, 7] }, // Disable sorting for poster and actions columns
+                        { searchable: false, targets: [0, 1, 7] } // Disable search for #, poster, and actions
+                    ]
+                });
+
+                // Initialize tooltips
+                var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+                var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+                    return new bootstrap.Tooltip(tooltipTriggerEl);
+                });
+
+                // Add loading states to buttons
+                document.querySelectorAll('.btn').forEach(btn => {
+                    btn.addEventListener('click', function(e) {
+                        if (this.href && !this.href.includes('#') && !this.hasAttribute('onclick')) {
+                            const originalContent = this.innerHTML;
+                            this.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Đang tải...';
+                            this.disabled = true;
+
+                            // Re-enable after 3 seconds as fallback
+                            setTimeout(() => {
+                                this.innerHTML = originalContent;
+                                this.disabled = false;
+                            }, 3000);
+                        }
+                    });
+                });
+            });
+
+            // Delete confirmation function
+            function confirmDelete(movieId, movieTitle) {
+                document.getElementById('movieTitleToDelete').textContent = movieTitle;
+                document.getElementById('confirmDeleteBtn').href = '/AdminMovie/Delete/' + movieId;
+                new bootstrap.Modal(document.getElementById('deleteModal')).show();
+            }
+
+            // Filter function
+            function filterTable(type) {
+                const table = $('#movieTable').DataTable();
+
+                switch(type) {
+                    case 'recent':
+                        // Filter by recent release date (last 6 months)
+                        table.draw();
+                        break;
+                    case 'popular':
+                        // This would need backend support for popularity metrics
+                        table.draw();
+                        break;
+                    default:
+                        table.search('').draw();
+                        break;
+                }
+            }
+
+            // Auto-refresh every 5 minutes
+            setInterval(function() {
+                const refreshBtn = document.querySelector('.btn-outline-secondary');
+                if (refreshBtn && refreshBtn.textContent.includes('Làm mới')) {
+                    refreshBtn.classList.add('opacity-50');
+                    setTimeout(() => {
+                        refreshBtn.classList.remove('opacity-50');
+                    }, 1000);
+                }
+            }, 300000);
+        </script>
+}
+
+<style>
+    .table tbody tr {
+        transition: all 0.2s ease;
+    }
+
+    .table tbody tr:hover {
+        background-color: rgba(var(--bs-primary-rgb), 0.05) !important;
+        transform: translateY(-1px);
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+
+    .btn-group .btn {
+        border-radius: 0.25rem !important;
+        margin-right: 2px;
+    }
+
+    .btn-group .btn:last-child {
+        margin-right: 0;
+    }
+
+    .badge {
+        font-size: 0.875rem;
+    }
+
+
+
+        .btn-group {
+            flex-direction: column;
+        }
+
+        .btn-group .btn {
+            margin-bottom: 2px;
+            margin-right: 0;
+        }
+    }
+</style>

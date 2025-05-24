@@ -1,0 +1,138 @@
+@model DKMovies.Models.Movie
+
+@{
+    ViewData["Title"] = "Edit";
+}
+
+<h1>Edit</h1>
+<h4>Movie</h4>
+<hr />
+
+<div class="row">
+    <!-- Left Column: Movie Edit Form -->
+    <div class="col-md-6">
+        <form asp-action="Edit" enctype="multipart/form-data">
+            <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+            <input type="hidden" asp-for="ID" />
+            <div class="form-group">
+                <label asp-for="Title" class="control-label"></label>
+                <input asp-for="Title" class="form-control" />
+                <span asp-validation-for="Title" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <label asp-for="Description" class="control-label"></label>
+                <input asp-for="Description" class="form-control" />
+                <span asp-validation-for="Description" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <label asp-for="DurationMinutes" class="control-label"></label>
+                <input asp-for="DurationMinutes" class="form-control" />
+                <span asp-validation-for="DurationMinutes" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <label asp-for="RatingID" class="control-label"></label>
+                <select asp-for="RatingID" class="form-control" asp-items="ViewBag.RatingID"></select>
+                <span asp-validation-for="RatingID" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <label asp-for="ReleaseDate" class="control-label"></label>
+                <input asp-for="ReleaseDate" class="form-control" />
+                <span asp-validation-for="ReleaseDate" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <label asp-for="LanguageID" class="control-label"></label>
+                <select asp-for="LanguageID" class="form-control" asp-items="ViewBag.LanguageID"></select>
+                <span asp-validation-for="LanguageID" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <label asp-for="CountryID" class="control-label"></label>
+                <select asp-for="CountryID" class="form-control" asp-items="ViewBag.CountryID"></select>
+                <span asp-validation-for="CountryID" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <label asp-for="DirectorID" class="control-label"></label>
+                <select asp-for="DirectorID" class="form-control" asp-items="ViewBag.DirectorID"></select>
+                <span asp-validation-for="DirectorID" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <label class="control-label">Current Profile Image</label><br />
+                @if (!string.IsNullOrEmpty(Model.PosterImagePath))
+                {
+                    <img src="~/images/movie_posters/@Model.PosterImagePath" alt="Image" style="max-width:100%; height:auto; margin-bottom:10px;" />
+                }
+                else
+                {
+                    <p>No image.</p>
+                }
+            </div>
+            <div class="form-group">
+                <label class="control-label">Upload New Image</label>
+                <input type="file" name="image" class="form-control" accept="image/*" onchange="previewImage(this)" />
+                <img id="imagePreview" src="#" alt="Image Preview" style="display:none; margin-top:10px; max-width:100%; height:auto;" />
+            </div>
+            <div class="form-group">
+                <input type="submit" value="Save" class="btn btn-primary" />
+            </div>
+        </form>
+        <div>
+            <a asp-action="Index">Back to List</a>
+        </div>
+    </div>
+
+    <!-- Right Column: ShowTimes for this Movie -->
+    <div class="col-md-6">
+        <h4>Showtime</h4>
+        <!-- Add Showtime Button -->
+        <div class="mb-3">
+            <a asp-action="Create" asp-controller="ShowTimes" asp-route-movieId="@Model.ID" class="btn btn-success">+ Add Showtime</a>
+        </div>
+        <hr />
+        @if (ViewBag.ShowTimes != null && ViewBag.ShowTimes.Count > 0)
+        {
+            <table class="table table-striped">
+                <thead>
+                    <tr>
+                        <th>Theater</th>
+                        <th>Auditorium</th>
+                        <th>Start Time</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var showtime in ViewBag.ShowTimes)
+                    {
+                        <tr>
+                            <td>@showtime.TheaterName</td>
+                            <td>@showtime.AuditoriumName</td>
+                            <td>@showtime.StartTime.ToString("g")</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+        else
+        {
+            <p>No showtimes available for this movie.</p>
+        }
+    </div>
+</div>
+
+@section Scripts {
+    @await Html.PartialAsync("_ValidationScriptsPartial")
+    <script>
+        function previewImage(input) {
+            const preview = document.getElementById('imagePreview');
+            const file = input.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function (e) {
+                    preview.src = e.target.result;
+                    preview.style.display = 'block';
+                };
+                reader.readAsDataURL(file);
+            } else {
+                preview.src = '#';
+                preview.style.display = 'none';
+            }
+        }
+    </script>
+}

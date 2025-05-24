@@ -1,0 +1,570 @@
+﻿@model List<DKMovies.Models.ShowTime>
+
+@{
+    var movie = ViewData["Movie"] as DKMovies.Models.Movie;
+    var search = ViewData["Search"] as string;
+    var date = ViewData["Date"] as string;
+    var selectedTheaterId = ViewData["SelectedTheaterId"] as int?;
+    var availableTheaters = ViewData["AvailableTheaters"] as List<DKMovies.Models.Theater> ?? new List<DKMovies.Models.Theater>();
+
+    ViewData["Title"] = $"Đặt vé - {movie.Title}";
+
+    // Get available dates from showtimes
+    var availableDates = Model.Select(s => s.StartTime.Date).Distinct().OrderBy(d => d).ToList();
+
+    // Default to first available date if none selected
+    DateTime selectedDate;
+    if (string.IsNullOrWhiteSpace(date) || !DateTime.TryParse(date, out selectedDate))
+    {
+        selectedDate = availableDates.FirstOrDefault();
+    }
+
+    // Filter showtimes by selected date
+    var todayShowtimes = Model.Where(s => s.StartTime.Date == selectedDate.Date).ToList();
+
+    // Group by theater
+    var theaterGroups = todayShowtimes
+        .GroupBy(s => s.Auditorium.Theater)
+        .OrderBy(g => g.Key.Name)
+        .ToList();
+
+    var posterPath = string.IsNullOrWhiteSpace(movie.PosterImagePath)
+        ? Url.Content("~/assets/images/movie_posters/default.jpg")
+        : Url.Content($"~/assets/images/movie_posters/{movie.PosterImagePath}");
+}
+
+<style>
+    .page-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 2rem 0;
+        margin-bottom: 2rem;
+        border-radius: 0 0 20px 20px;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    }
+
+    .movie-info-card {
+        background: rgba(255,255,255,0.1);
+        backdrop-filter: blur(10px);
+        border-radius: 20px;
+        padding: 1.5rem;
+        border: 1px solid rgba(255,255,255,0.2);
+    }
+
+    .movie-poster-small {
+        width: 80px;
+        height: 120px;
+        object-fit: cover;
+        border-radius: 10px;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+    }
+
+    .date-selector {
+        background: white;
+        border-radius: 15px;
+        padding: 1.5rem;
+        margin-bottom: 2rem;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+    }
+
+    .date-btn {
+        background: #f8f9fa;
+        border: 2px solid transparent;
+        border-radius: 15px;
+        padding: 1rem;
+        margin: 0.3rem;
+        transition: all 0.3s ease;
+        text-decoration: none;
+        color: #495057;
+        font-weight: 500;
+        min-width: 120px;
+        text-align: center;
+    }
+
+        .date-btn:hover {
+            background: #e9ecef;
+            color: #495057;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+
+        .date-btn.active {
+            background: linear-gradient(45deg, #007bff, #0056b3);
+            color: white;
+            border-color: #0056b3;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(0,123,255,0.3);
+        }
+
+    .theater-card {
+        background: white;
+        border-radius: 20px;
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+        transition: all 0.3s ease;
+        border: 1px solid rgba(0,0,0,0.05);
+    }
+
+        .theater-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.12);
+        }
+
+    .theater-header {
+        border-bottom: 1px solid #e9ecef;
+        padding-bottom: 1rem;
+        margin-bottom: 1rem;
+    }
+
+    .theater-name {
+        font-size: 1.2rem;
+        font-weight: 700;
+        color: #2c3e50;
+        margin-bottom: 0.3rem;
+    }
+
+    .theater-location {
+        color: #6c757d;
+        font-size: 0.9rem;
+        display: flex;
+        align-items: center;
+        gap: 0.3rem;
+    }
+
+    .showtime-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+        gap: 0.8rem;
+    }
+
+    .showtime-btn {
+        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+        border: 2px solid #dee2e6;
+        border-radius: 12px;
+        padding: 0.8rem 0.5rem;
+        text-decoration: none;
+        color: #495057;
+        font-weight: 600;
+        text-align: center;
+        transition: all 0.3s ease;
+        position: relative;
+        overflow: hidden;
+    }
+
+        .showtime-btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent);
+            transition: left 0.5s ease;
+        }
+
+        .showtime-btn:hover {
+            background: linear-gradient(135deg, #28a745, #20c997);
+            border-color: #28a745;
+            color: white;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(40, 167, 69, 0.3);
+        }
+
+            .showtime-btn:hover::before {
+                left: 100%;
+            }
+
+    .showtime-time {
+        font-size: 1rem;
+        display: block;
+        margin-bottom: 0.2rem;
+    }
+
+    .showtime-price {
+        font-size: 0.8rem;
+        opacity: 0.8;
+    }
+
+    .empty-state {
+        text-align: center;
+        padding: 4rem 2rem;
+        background: white;
+        border-radius: 20px;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+    }
+
+    .empty-icon {
+        font-size: 4rem;
+        margin-bottom: 1.5rem;
+        opacity: 0.3;
+    }
+
+    .back-btn {
+        background: rgba(255,255,255,0.1);
+        color: white;
+        border: 1px solid rgba(255,255,255,0.2);
+        border-radius: 20px;
+        padding: 0.5rem 1.5rem;
+        text-decoration: none;
+        transition: all 0.3s ease;
+    }
+
+        .back-btn:hover {
+            background: rgba(255,255,255,0.2);
+            color: white;
+            transform: translateY(-1px);
+        }
+
+    .filter-bar {
+        background: white;
+        border-radius: 15px;
+        padding: 1.5rem;
+        margin-bottom: 2rem;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+    }
+
+
+    {
+        padding: 1.5rem 0;
+    }
+
+    .movie-info-card {
+        padding: 1rem;
+    }
+
+    .movie-poster-small {
+        width: 60px;
+        height: 90px;
+    }
+
+    .date-btn {
+        min-width: 100px;
+        padding: 0.8rem;
+    }
+
+    .theater-card {
+        padding: 1rem;
+    }
+
+    .showtime-grid {
+        grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+        gap: 0.5rem;
+    }
+
+    }</style>
+
+<div class="page-header">
+    <div class="container">
+        <div class="row align-items-center">
+            <div class="col-md-9">
+                <div class="movie-info-card">
+                    <div class="row align-items-center">
+                        <div class="col-auto">
+                            <img src="@posterPath" alt="@movie.Title" class="movie-poster-small" />
+                        </div>
+                        <div class="col">
+                            <h2 class="mb-2">
+                                <i class="bi bi-ticket-perforated me-2"></i>
+                                Chọn suất chiếu
+                            </h2>
+                            <h3 class="mb-1">@movie.Title</h3>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    @if (movie.DurationMinutes > 0)
+                                    {
+                                        <small>
+                                            <i class="bi bi-clock me-1"></i>
+                                            @movie.DurationMinutes phút
+                                        </small>
+                                    }
+                                    @if (movie.Language != null)
+                                    {
+                                        <small class="ms-3">
+                                            <i class="bi bi-translate me-1"></i>
+                                            @movie.Language.Name
+                                        </small>
+                                    }
+                                    @if (movie.Rating != null)
+                                    {
+                                        <small class="ms-3">
+                                            <i class="bi bi-shield-check me-1"></i>
+                                            @movie.Rating.Value
+                                        </small>
+                                    }
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3 text-md-end mt-3 mt-md-0">
+                <a href="@Url.Action("Details", "MoviesList", new { id = movie.ID })" class="back-btn">
+                    <i class="bi bi-arrow-left me-2"></i>Quay lại phim
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="container pb-5">
+    <!-- Date Selector -->
+    @if (availableDates.Any())
+    {
+        <div class="date-selector">
+            <h5 class="mb-3">
+                <i class="bi bi-calendar-event me-2"></i>
+                Chọn ngày xem phim
+            </h5>
+            <div class="d-flex flex-wrap justify-content-center">
+                @foreach (var availableDate in availableDates.Take(365))
+                {
+                    var isActive = availableDate.Date == selectedDate.Date;
+                    var dayName = availableDate.ToString("dddd", new System.Globalization.CultureInfo("vi-VN"));
+                    var dateString = availableDate.ToString("dd/MM");
+
+                    <a href="@Url.Action("OrderTicket", new { id = movie.ID, date = availableDate.ToString("yyyy-MM-dd"), search, theaterId = selectedTheaterId })"
+                       class="date-btn @(isActive ? "active" : "")">
+                        <div class="fw-bold">@dayName</div>
+                        <div>@dateString</div>
+                        @if (availableDate.Date == DateTime.Today)
+                        {
+                            <small class="text-muted">Hôm nay</small>
+                        }
+                        else if (availableDate.Date == DateTime.Today.AddDays(1))
+                        {
+                            <small class="text-muted">Ngày mai</small>
+                        }
+                    </a>
+                }
+            </div>
+        </div>
+    }
+
+    <!-- Theater Filter -->
+    @if (availableTheaters.Count > 1)
+    {
+        <div class="filter-bar">
+            <form method="get" class="row g-3 align-items-end">
+                <input type="hidden" name="id" value="@movie.ID" />
+                <input type="hidden" name="date" value="@selectedDate.ToString("yyyy-MM-dd")" />
+
+                <div class="col-md-6">
+                    <label class="form-label fw-semibold">
+                        <i class="bi bi-search me-1"></i>
+                        Tìm kiếm rạp
+                    </label>
+                    <input type="text" name="search" value="@search" class="form-control"
+                           placeholder="Nhập tên rạp hoặc địa điểm..." />
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label fw-semibold">
+                        <i class="bi bi-building me-1"></i>
+                        Chọn rạp
+                    </label>
+                    <select name="theaterId" class="form-select">
+                        <option value="">Tất cả rạp</option>
+                        @foreach (var theater in availableTheaters)
+                        {
+                            <option value="@theater.ID" selected="@(theater.ID == selectedTheaterId)">
+                                @theater.Name - @theater.Location
+                            </option>
+                        }
+                    </select>
+                </div>
+                <div class="col-md-2 d-grid">
+                    <button type="submit" class="btn btn-primary rounded-pill">
+                        <i class="bi bi-funnel me-1"></i>
+                        Lọc
+                    </button>
+                </div>
+            </form>
+        </div>
+    }
+
+    <!-- Showtimes by Theater -->
+    @if (!theaterGroups.Any())
+    {
+        <div class="empty-state">
+            <div class="empty-icon">🎭</div>
+            <h4 class="mb-3">Không có suất chiếu</h4>
+            <p class="text-muted mb-4">
+                Không tìm thấy suất chiếu nào cho ngày @selectedDate.ToString("dd/MM/yyyy").<br>
+                Vui lòng chọn ngày khác hoặc thay đổi bộ lọc.
+            </p>
+            @if (availableDates.Count > 1)
+            {
+                <a href="@Url.Action("OrderTicket", new { id = movie.ID, date = availableDates.First().ToString("yyyy-MM-dd") })"
+                   class="btn btn-primary btn-lg rounded-pill">
+                    <i class="bi bi-calendar me-2"></i>
+                    Chọn ngày khác
+                </a>
+            }
+        </div>
+    }
+    else
+    {
+        @foreach (var theaterGroup in theaterGroups)
+        {
+            var theater = theaterGroup.Key;
+            var showtimes = theaterGroup.OrderBy(s => s.StartTime).ToList();
+
+            <div class="theater-card">
+                <div class="theater-header">
+                    <div class="row align-items-center">
+                        <div class="col-md-8">
+                            <div class="theater-name">
+                                <i class="bi bi-building me-2"></i>
+                                @theater.Name
+                            </div>
+                            <div class="theater-location">
+                                <i class="bi bi-geo-alt"></i>
+                                @theater.Location
+                            </div>
+                            @if (!string.IsNullOrWhiteSpace(theater.Phone))
+                            {
+                                <div class="theater-location">
+                                    <i class="bi bi-telephone"></i>
+                                    @theater.Phone
+                                </div>
+                            }
+                        </div>
+                        <div class="col-md-4 text-md-end">
+                            <span class="badge bg-primary rounded-pill px-3 py-2">
+                                @showtimes.Count suất chiếu
+                            </span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="showtime-grid">
+                    @foreach (var showtime in showtimes)
+                    {
+                        var timeString = showtime.StartTime.ToString("HH:mm");
+                        var isNearShowtime = showtime.StartTime <= DateTime.Now.AddMinutes(30);
+                        var isPast = showtime.StartTime <= DateTime.Now;
+
+                        @if (isPast)
+                        {
+                            <div class="showtime-btn" style="opacity: 0.5; cursor: not-allowed;">
+                                <span class="showtime-time">@timeString</span>
+                                <span class="showtime-price">Đã chiếu</span>
+                            </div>
+                        }
+                        else if (isNearShowtime)
+                        {
+                            <div class="showtime-btn" style="opacity: 0.7; cursor: not-allowed;">
+                                <span class="showtime-time">@timeString</span>
+                                <span class="showtime-price">Gần giờ chiếu</span>
+                            </div>
+                        }
+                        else
+                        {
+                            <a href="@Url.Action("OrderTicketDetails", new { id = showtime.ID })" class="showtime-btn">
+                                <span class="showtime-time">@timeString</span>
+                                <span class="showtime-price">@showtime.Price.ToString("N0")₫</span>
+                                @if (showtime.Is3D)
+                                {
+                                    <small class="d-block text-info">3D</small>
+                                }
+                                @if (showtime.SubtitleLanguage != null)
+                                {
+                                    <small class="d-block">@showtime.SubtitleLanguage.Name</small>
+                                }
+                            </a>
+                        }
+                    }
+                </div>
+
+                <!-- Theater Info -->
+                <div class="mt-3 pt-3 border-top">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <small class="text-muted">
+                                <i class="bi bi-info-circle me-1"></i>
+                                Vui lòng đến rạp trước giờ chiếu 15 phút
+                            </small>
+                        </div>
+                        <div class="col-md-6 text-md-end">
+                            <small class="text-muted">
+                                <i class="bi bi-clock me-1"></i>
+                                Thời gian cập nhật: @DateTime.Now.ToString("HH:mm")
+                            </small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+
+        <!-- Additional Info -->
+        <div class="row mt-4">
+            <div class="col-md-6">
+                <div class="alert alert-info border-0" style="border-radius: 15px;">
+                    <h6 class="alert-heading">
+                        <i class="bi bi-info-circle me-2"></i>
+                        Lưu ý quan trọng
+                    </h6>
+                    <ul class="mb-0 small">
+                        <li>Vé đã mua không thể đổi trả</li>
+                        <li>Vui lòng đến rạp trước giờ chiếu 15 phút</li>
+                        <li>Mang theo giấy tờ tùy thân khi xem phim</li>
+                        <li>Không được mang đồ ăn từ bên ngoài vào rạp</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="alert alert-success border-0" style="border-radius: 15px;">
+                    <h6 class="alert-heading">
+                        <i class="bi bi-gift me-2"></i>
+                        Ưu đãi đặc biệt
+                    </h6>
+                    <ul class="mb-0 small">
+                        <li>Giảm 20% cho học sinh, sinh viên (có thẻ)</li>
+                        <li>Combo bắp nước chỉ từ 99.000₫</li>
+                        <li>Tích điểm thành viên nhận nhiều ưu đãi</li>
+                        <li>Đặt vé online tiết kiệm thời gian</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Add smooth transitions for showtime buttons
+        const showtimeBtns = document.querySelectorAll('.showtime-btn');
+        showtimeBtns.forEach(btn => {
+            btn.addEventListener('mouseenter', function() {
+                this.style.transform = 'translateY(-2px) scale(1.02)';
+            });
+
+            btn.addEventListener('mouseleave', function() {
+                this.style.transform = 'translateY(0) scale(1)';
+            });
+        });
+
+        // Auto-refresh showtimes every 5 minutes
+        setTimeout(() => {
+            location.reload();
+        }, 300000); // 5 minutes
+
+        // Add loading state for showtime selection
+        const showtimeLinks = document.querySelectorAll('a.showtime-btn');
+        showtimeLinks.forEach(link => {
+            link.addEventListener('click', function() {
+                this.style.opacity = '0.7';
+                this.innerHTML = '<i class="bi bi-arrow-repeat spinning"></i><br>Đang tải...';
+            });
+        });
+
+        // Add spinning animation
+        const style = document.createElement('style');
+        style.textContent = `
+            .spinning {
+                animation: spin 1s linear infinite;
+            }
+        `;
+        document.head.appendChild(style);
+    });
+</script>

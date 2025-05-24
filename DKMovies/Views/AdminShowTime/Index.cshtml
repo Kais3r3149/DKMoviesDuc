@@ -1,0 +1,345 @@
+﻿@model IEnumerable<DKMovies.Models.ShowTime>
+@{
+    ViewData["Title"] = "Quản lý suất chiếu";
+    Layout = "~/Views/Shared/_AdminLayout.cshtml";
+}
+
+<div class="mb-4">
+    <div class="d-flex justify-content-between align-items-center">
+        <div>
+            <h2 class="fw-bold text-dark mb-1">
+                <i class="fas fa-clock me-2 text-primary"></i>Quản lý suất chiếu
+            </h2>
+            <p class="text-muted mb-0">Danh sách tất cả suất chiếu trong hệ thống</p>
+        </div>
+        <div class="d-flex gap-2">
+            <button class="btn btn-outline-secondary btn-sm" onclick="location.reload()">
+                <i class="fas fa-sync-alt me-1"></i>Làm mới
+            </button>
+            <a asp-action="Create" class="btn btn-primary">
+                <i class="fas fa-plus me-2"></i>Thêm suất chiếu
+            </a>
+        </div>
+    </div>
+</div>
+
+@if (!Model.Any())
+{
+    <!-- Empty State -->
+    <div class="card border-0 shadow-sm">
+        <div class="card-body text-center py-5">
+            <div class="mb-4">
+                <i class="fas fa-calendar-times text-muted" style="font-size: 4rem; opacity: 0.3;"></i>
+            </div>
+            <h4 class="text-muted mb-3">Chưa có suất chiếu nào</h4>
+            <p class="text-muted mb-4">
+                Hãy tạo suất chiếu đầu tiên để khách hàng có thể đặt vé xem phim.
+            </p>
+            <a asp-action="Create" class="btn btn-primary">
+                <i class="fas fa-plus me-2"></i>Tạo suất chiếu đầu tiên
+            </a>
+        </div>
+    </div>
+}
+else
+{
+    <!-- ShowTimes Table -->
+    <div class="card border-0 shadow-sm">
+        <div class="card-header bg-white border-bottom py-3">
+            <div class="d-flex justify-content-between align-items-center">
+                <h6 class="card-title mb-0 fw-semibold">
+                    <i class="fas fa-list me-2 text-secondary"></i>Danh sách suất chiếu (@Model.Count() suất)
+                </h6>
+                <div class="d-flex gap-2">
+                    <div class="dropdown">
+                        <button class="btn btn-outline-secondary btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                            <i class="fas fa-filter me-1"></i>Lọc
+                        </button>
+                        <ul class="dropdown-menu">
+                            <li><a class="dropdown-item" href="#" onclick="filterShowTimes('all')">Tất cả</a></li>
+                            <li><a class="dropdown-item" href="#" onclick="filterShowTimes('today')">Hôm nay</a></li>
+                            <li><a class="dropdown-item" href="#" onclick="filterShowTimes('upcoming')">Sắp tới</a></li>
+                            <li><a class="dropdown-item" href="#" onclick="filterShowTimes('past')">Đã qua</a></li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0" id="showTimeTable">
+                    <thead class="table-light">
+                        <tr>
+                            <th scope="col" class="fw-semibold text-dark py-3" style="width: 60px;">#</th>
+                            <th scope="col" class="fw-semibold text-dark py-3">Phim</th>
+                            <th scope="col" class="fw-semibold text-dark py-3">Rạp & Phòng</th>
+                            <th scope="col" class="fw-semibold text-dark py-3" style="width: 180px;">Thời gian bắt đầu</th>
+                            <th scope="col" class="fw-semibold text-dark py-3" style="width: 120px;">Thời lượng</th>
+                            <th scope="col" class="fw-semibold text-dark py-3" style="width: 100px;">Giá vé</th>
+                            <th scope="col" class="fw-semibold text-dark py-3" style="width: 100px;">Trạng thái</th>
+                            <th scope="col" class="fw-semibold text-dark text-center py-3" style="width: 160px;">Hành động</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @{
+                            int i = 1;
+                        }
+                        @foreach (var showTime in Model)
+                        {
+                            var isActive = showTime.StartTime > DateTime.Now;
+                            var isPast = showTime.StartTime.AddMinutes(showTime.DurationMinutes) < DateTime.Now;
+                            var isNow = showTime.StartTime <= DateTime.Now && showTime.StartTime.AddMinutes(showTime.DurationMinutes) > DateTime.Now;
+
+                            <tr class="align-middle @(isPast ? "table-secondary" : "")">
+                                <td class="fw-medium text-muted">@i</td>
+                                <td>
+                                    <div class="d-flex align-items-center">
+                                        <img src="@(!string.IsNullOrWhiteSpace(showTime.Movie?.PosterImagePath) ? showTime.Movie.PosterImagePath : "/images/default-poster.jpg")"
+                                             alt="@showTime.Movie?.Title"
+                                             class="rounded shadow-sm me-3"
+                                             style="width: 40px; height: 60px; object-fit: cover;"
+                                             onerror="this.src='/images/default-poster.jpg'" />
+                                        <div>
+                                            <div class="fw-semibold text-dark">@showTime.Movie?.Title</div>
+                                            <small class="text-muted">ID: @showTime.MovieID</small>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div>
+                                        <div class="fw-medium">@showTime.Auditorium?.Theater?.Name</div>
+                                        <small class="text-muted">
+                                            <i class="fas fa-door-open me-1"></i>Phòng @showTime.Auditorium?.Name
+                                        </small>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div>
+                                        <div class="fw-medium">@showTime.StartTime.ToString("dd/MM/yyyy")</div>
+                                        <div class="text-primary fw-bold">@showTime.StartTime.ToString("HH:mm")</div>
+                                    </div>
+                                </td>
+                                <td>
+                                    <span class="badge bg-info text-white px-2 py-1">
+                                        <i class="fas fa-hourglass-half me-1"></i>@showTime.DurationMinutes phút
+                                    </span>
+                                </td>
+                                <td>
+                                    <div class="fw-bold text-success">
+                                        @String.Format("{0:N0} ₫", showTime.Price)
+                                    </div>
+                                </td>
+                                <td>
+                                    @if (isNow)
+                                    {
+                                        <span class="badge bg-danger px-2 py-1">
+                                            <i class="fas fa-play me-1"></i>Đang chiếu
+                                        </span>
+                                    }
+                                    else if (isPast)
+                                    {
+                                        <span class="badge bg-secondary px-2 py-1">
+                                            <i class="fas fa-check me-1"></i>Đã kết thúc
+                                        </span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-success px-2 py-1">
+                                            <i class="fas fa-clock me-1"></i>Sắp chiếu
+                                        </span>
+                                    }
+                                </td>
+                                <td class="text-center">
+                                    <div class="btn-group" role="group">
+                                        <a asp-action="Edit" asp-route-id="@showTime.ID"
+                                           class="btn btn-outline-warning btn-sm"
+                                           data-bs-toggle="tooltip" title="Chỉnh sửa">
+                                            <i class="fas fa-edit"></i>
+                                        </a>
+                                        <button type="button" class="btn btn-outline-danger btn-sm"
+                                                data-bs-toggle="tooltip" title="Xóa suất chiếu"
+                                                onclick="confirmDelete(@showTime.ID, '@showTime.Movie?.Title', '@showTime.StartTime.ToString("dd/MM/yyyy HH:mm")')">
+                                            <i class="fas fa-trash-alt"></i>
+                                        </button>
+                                        @if (isActive && !isNow)
+                                        {
+                                            <a href="#" class="btn btn-outline-info btn-sm"
+                                               data-bs-toggle="tooltip" title="Xem vé đã bán">
+                                                <i class="fas fa-ticket-alt"></i>
+                                            </a>
+                                        }
+                                    </div>
+                                </td>
+                            </tr>
+                            i++;
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        <div class="card-footer bg-light border-top-0 py-3">
+            <div class="d-flex justify-content-between align-items-center">
+                <small class="text-muted">
+                    Tổng cộng: <strong>@Model.Count()</strong> suất chiếu
+                    | Sắp tới: <strong>@Model.Count(s => s.StartTime > DateTime.Now)</strong>
+                    | Đã qua: <strong>@Model.Count(s => s.StartTime.AddMinutes(s.DurationMinutes) < DateTime.Now)</strong>
+                </small>
+                <div class="d-flex gap-2">
+                    <a asp-controller="AdminMovie" asp-action="Index" class="btn btn-outline-secondary btn-sm">
+                        <i class="fas fa-film me-1"></i>Quản lý phim
+                    </a>
+                    <a asp-action="Create" class="btn btn-primary btn-sm">
+                        <i class="fas fa-plus me-1"></i>Thêm suất chiếu
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deleteModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-exclamation-triangle text-warning me-2"></i>Xác nhận xóa
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p class="mb-3">Bạn có chắc chắn muốn xóa suất chiếu:</p>
+                <div class="alert alert-warning">
+                    <div><strong>Phim:</strong> <span id="movieTitleToDelete"></span></div>
+                    <div><strong>Thời gian:</strong> <span id="showTimeToDelete"></span></div>
+                </div>
+                <p class="text-muted small mb-0">
+                    <i class="fas fa-info-circle me-1"></i>
+                    Hành động này không thể hoàn tác. Tất cả vé đã bán sẽ bị ảnh hưởng.
+                </p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+                <form id="deleteForm" method="post" style="display: inline;">
+                    @Html.AntiForgeryToken()
+                    <button type="submit" class="btn btn-danger">
+                        <i class="fas fa-trash-alt me-1"></i>Xóa suất chiếu
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        $(document).ready(function () {
+            // Initialize DataTable
+            $('#showTimeTable').DataTable({
+                language: {
+                    search: "Tìm kiếm:",
+                    lengthMenu: "Hiển thị _MENU_ mục",
+                    info: "Hiển thị _START_ đến _END_ trong _TOTAL_ mục",
+                    infoEmpty: "Hiển thị 0 đến 0 trong 0 mục",
+                    infoFiltered: "(lọc từ _MAX_ mục)",
+                    paginate: {
+                        previous: "Trước",
+                        next: "Sau",
+                        first: "Đầu",
+                        last: "Cuối"
+                    },
+                    emptyTable: "Không có dữ liệu",
+                    zeroRecords: "Không tìm thấy kết quả nào"
+                },
+                responsive: true,
+                pageLength: 15,
+                order: [[3, 'desc']], // Sort by start time descending
+                columnDefs: [
+                    { orderable: false, targets: [0, 7] }, // Disable sorting for # and actions columns
+                    { searchable: false, targets: [0, 7] } // Disable search for # and actions
+                ]
+            });
+
+            // Initialize tooltips
+            var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+            var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+                return new bootstrap.Tooltip(tooltipTriggerEl);
+            });
+        });
+
+        // Delete confirmation function
+        function confirmDelete(showTimeId, movieTitle, showTime) {
+            document.getElementById('movieTitleToDelete').textContent = movieTitle;
+            document.getElementById('showTimeToDelete').textContent = showTime;
+            document.getElementById('deleteForm').action = '/AdminShowTime/Delete/' + showTimeId;
+            new bootstrap.Modal(document.getElementById('deleteModal')).show();
+        }
+
+        // Filter function
+        function filterShowTimes(type) {
+            const table = $('#showTimeTable').DataTable();
+            const today = new Date().toLocaleDateString('vi-VN');
+
+            switch(type) {
+                case 'today':
+                    table.column(3).search(today).draw();
+                    break;
+                case 'upcoming':
+                    table.search('Sắp chiếu').draw();
+                    break;
+                case 'past':
+                    table.search('Đã kết thúc').draw();
+                    break;
+                default:
+                    table.search('').columns().search('').draw();
+                    break;
+            }
+        }
+    </script>
+}
+
+<style>
+    .table tbody tr {
+        transition: all 0.2s ease;
+    }
+
+        .table tbody tr:hover:not(.table-secondary) {
+            background-color: rgba(var(--bs-primary-rgb), 0.05) !important;
+            transform: translateY(-1px);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+    .table-secondary {
+        opacity: 0.7;
+    }
+
+    .btn-group .btn {
+        border-radius: 0.25rem !important;
+        margin-right: 2px;
+    }
+
+        .btn-group .btn:last-child {
+            margin-right: 0;
+        }
+
+    .badge {
+        font-size: 0.875rem;
+    }
+
+
+    {
+        flex-direction: column;
+        gap: 1rem;
+    }
+
+    .btn-group {
+        flex-direction: column;
+    }
+
+        .btn-group .btn {
+            margin-bottom: 2px;
+            margin-right: 0;
+        }
+
+    }
+</style>

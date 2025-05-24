@@ -1,0 +1,170 @@
+﻿@* OrderConfirmation View *@
+@model DKMovies.Models.Ticket
+
+@{
+    ViewData["Title"] = "Xác nhận vé";
+    var seatLabels = Model.TicketSeats
+        .OrderBy(s => s.Seat.RowLabel)
+        .ThenBy(s => s.Seat.SeatNumber)
+        .Select(s => $"{s.Seat.RowLabel}{s.Seat.SeatNumber}")
+        .ToList();
+}
+
+<style>
+    .confirmation-container {
+        max-width: 500px;
+        margin: 2rem auto;
+        background: white;
+        border-radius: 20px;
+        box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+        overflow: hidden;
+    }
+
+    .confirmation-header {
+        background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+        color: white;
+        padding: 2rem;
+        text-align: center;
+    }
+
+    .confirmation-body {
+        padding: 2rem;
+    }
+
+    .info-row {
+        display: flex;
+        justify-content: space-between;
+        padding: 0.8rem 0;
+        border-bottom: 1px solid #f1f3f4;
+    }
+
+    .info-row:last-child {
+        border-bottom: none;
+    }
+
+    .info-label {
+        font-weight: 600;
+        color: #6c757d;
+    }
+
+    .info-value {
+        font-weight: 500;
+        color: #212529;
+        text-align: right;
+    }
+
+    .seat-list {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.3rem;
+        justify-content: flex-end;
+    }
+
+    .seat-item {
+        background: #e9ecef;
+        padding: 0.2rem 0.5rem;
+        border-radius: 8px;
+        font-size: 0.8rem;
+        font-weight: 500;
+    }
+
+    .price-total {
+        background: #28a745;
+        color: white;
+        padding: 1rem;
+        text-align: center;
+        font-size: 1.3rem;
+        font-weight: 700;
+        margin: 1rem 0;
+        border-radius: 10px;
+    }
+
+    .back-button {
+        background: #007bff;
+        color: white;
+        border: none;
+        border-radius: 25px;
+        padding: 0.8rem 2rem;
+        font-weight: 600;
+        text-decoration: none;
+        width: 100%;
+        text-align: center;
+        transition: all 0.3s ease;
+    }
+
+    .back-button:hover {
+        background: #0056b3;
+        color: white;
+        transform: translateY(-2px);
+    }
+</style>
+
+<div class="container">
+    <div class="confirmation-container">
+        <div class="confirmation-header">
+            <h3 class="mb-2">Xác nhận vé</h3>
+            <p class="mb-0">Thông tin đặt vé của bạn</p>
+        </div>
+
+        <div class="confirmation-body">
+            <div class="info-row">
+                <span class="info-label">Phim:</span>
+                <span class="info-value">@Model.ShowTime.Movie.Title</span>
+            </div>
+
+            <div class="info-row">
+                <span class="info-label">Suất chiếu:</span>
+                <span class="info-value">@Model.ShowTime.StartTime.ToString("dd/MM/yyyy HH:mm")</span>
+            </div>
+
+            <div class="info-row">
+                <span class="info-label">Ghế:</span>
+                <div class="seat-list">
+                    @foreach (var seatLabel in seatLabels)
+                    {
+                        <span class="seat-item">@seatLabel</span>
+                    }
+                </div>
+            </div>
+
+            <div class="price-total">
+                Tổng tiền: @Model.TotalPrice.ToString("N0") ₫
+            </div>
+
+            <a href="@Url.Action("Index", "Home")" class="back-button">
+                <i class="bi bi-house me-2"></i>
+                Về trang chủ
+            </a>
+        </div>
+    </div>
+</div>
+
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Auto-redirect after 10 seconds
+        let countdown = 10;
+        const redirectMessage = document.createElement('div');
+        redirectMessage.className = 'text-center mt-3 text-muted small';
+        redirectMessage.innerHTML = `<i class="bi bi-clock me-1"></i>Tự động chuyển về trang chủ sau <span id="countdown">${countdown}</span> giây`;
+
+        document.querySelector('.container').appendChild(redirectMessage);
+
+        const countdownEl = document.getElementById('countdown');
+        const interval = setInterval(() => {
+            countdown--;
+            if (countdownEl) countdownEl.textContent = countdown;
+
+            if (countdown <= 0) {
+                clearInterval(interval);
+                window.location.href = '@Url.Action("Index", "Home")';
+            }
+        }, 1000);
+
+        // Cancel auto-redirect if user interacts with page
+        document.addEventListener('click', () => {
+            clearInterval(interval);
+            if (redirectMessage) redirectMessage.remove();
+        });
+    });
+</script>

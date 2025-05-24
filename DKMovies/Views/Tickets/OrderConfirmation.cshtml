@@ -1,0 +1,548 @@
+﻿@model DKMovies.Models.Ticket
+
+@{
+    ViewData["Title"] = "Xác nhận đặt vé";
+    var seatLabels = Model.TicketSeats
+        .OrderBy(s => s.Seat.RowLabel)
+        .ThenBy(s => s.Seat.SeatNumber)
+        .Select(s => $"{s.Seat.RowLabel}{s.Seat.SeatNumber}")
+        .ToList();
+
+    var posterPath = string.IsNullOrWhiteSpace(Model.ShowTime.Movie.PosterImagePath)
+        ? Url.Content("~/assets/images/movie_posters/default.jpg")
+        : Url.Content($"~/assets/images/movie_posters/{Model.ShowTime.Movie.PosterImagePath}");
+
+    var statusText = Model.Status switch
+    {
+        TicketStatus.PENDING => "Chờ xác nhận",
+        TicketStatus.CONFIRMED => "Đã xác nhận",
+        TicketStatus.CANCELLED => "Đã hủy",
+        _ => "Không xác định"
+    };
+
+    var statusClass = Model.Status switch
+    {
+        TicketStatus.PENDING => "warning",
+        TicketStatus.CONFIRMED => "success",
+        TicketStatus.CANCELLED => "danger",
+        _ => "secondary"
+    };
+}
+
+<style>
+    .success-header {
+        background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+        color: white;
+        padding: 3rem 0;
+        text-align: center;
+        border-radius: 0 0 30px 30px;
+        margin-bottom: 2rem;
+        box-shadow: 0 4px 20px rgba(40, 167, 69, 0.2);
+    }
+
+    .success-icon {
+        font-size: 4rem;
+        margin-bottom: 1rem;
+        animation: bounce 2s infinite;
+    }
+
+    .ticket-container {
+        max-width: 800px;
+        margin: 0 auto;
+    }
+
+    .ticket-card {
+        background: white;
+        border-radius: 25px;
+        overflow: hidden;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        position: relative;
+        border: 2px dashed #dee2e6;
+    }
+
+        .ticket-card::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: -10px;
+            width: 20px;
+            height: 20px;
+            background: #f8f9fa;
+            border-radius: 50%;
+            transform: translateY(-50%);
+            box-shadow: inset 0 0 0 2px #dee2e6;
+        }
+
+        .ticket-card::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            right: -10px;
+            width: 20px;
+            height: 20px;
+            background: #f8f9fa;
+            border-radius: 50%;
+            transform: translateY(-50%);
+            box-shadow: inset 0 0 0 2px #dee2e6;
+        }
+
+    .ticket-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 2rem;
+        text-align: center;
+        position: relative;
+    }
+
+        .ticket-header::after {
+            content: '';
+            position: absolute;
+            bottom: -1px;
+            left: 0;
+            right: 0;
+            height: 20px;
+            background: url("data:image/svg+xml,%3csvg width='100' height='20' xmlns='http://www.w3.org/2000/svg'%3e%3cpath d='m0 20 l30 0 l5 -10 l5 10 l30 0 l5 -10 l5 10 l20 0 l0 -20 l-100 0 z' fill='white'/%3e%3c/svg%3e") repeat-x;
+        }
+
+    .ticket-body {
+        padding: 2rem;
+    }
+
+    .movie-info {
+        border-radius: 20px;
+        padding: 1.5rem;
+        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+        margin-bottom: 2rem;
+    }
+
+    .movie-poster-confirm {
+        width: 120px;
+        height: 180px;
+        object-fit: cover;
+        border-radius: 15px;
+        box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+    }
+
+    .movie-title {
+        font-size: 1.8rem;
+        font-weight: 700;
+        color: #2c3e50;
+        margin-bottom: 0.5rem;
+    }
+
+    .detail-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0.8rem 0;
+        border-bottom: 1px solid #f1f3f4;
+    }
+
+        .detail-item:last-child {
+            border-bottom: none;
+        }
+
+    .detail-label {
+        font-weight: 600;
+        color: #495057;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .detail-value {
+        font-weight: 500;
+        color: #212529;
+        text-align: right;
+    }
+
+    .seat-display {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+        justify-content: flex-end;
+    }
+
+    .seat-badge {
+        background: linear-gradient(45deg, #007bff, #0056b3);
+        color: white;
+        padding: 0.3rem 0.8rem;
+        border-radius: 15px;
+        font-size: 0.9rem;
+        font-weight: 600;
+        box-shadow: 0 2px 8px rgba(0,123,255,0.3);
+    }
+
+    .total-price {
+        background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
+        color: white;
+        padding: 1rem 1.5rem;
+        border-radius: 15px;
+        text-align: center;
+        margin: 1.5rem 0;
+        box-shadow: 0 4px 15px rgba(231, 76, 60, 0.3);
+    }
+
+        .total-price .amount {
+            font-size: 2rem;
+            font-weight: 700;
+            margin-bottom: 0.2rem;
+        }
+
+        .total-price .label {
+            font-size: 0.9rem;
+            opacity: 0.9;
+        }
+
+    .status-badge-large {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.8rem 1.5rem;
+        border-radius: 25px;
+        font-size: 1rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-bottom: 1rem;
+    }
+
+    .action-buttons {
+        display: flex;
+        gap: 1rem;
+        justify-content: center;
+        margin-top: 2rem;
+        flex-wrap: wrap;
+    }
+
+    .btn-action {
+        padding: 0.8rem 2rem;
+        border-radius: 25px;
+        font-weight: 600;
+        text-decoration: none;
+        transition: all 0.3s ease;
+        border: none;
+        min-width: 160px;
+    }
+
+    .btn-primary-action {
+        background: linear-gradient(45deg, #007bff, #0056b3);
+        color: white;
+        box-shadow: 0 4px 15px rgba(0,123,255,0.3);
+    }
+
+        .btn-primary-action:hover {
+            background: linear-gradient(45deg, #0056b3, #004085);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0,123,255,0.4);
+            color: white;
+        }
+
+    .btn-secondary-action {
+        background: #f8f9fa;
+        color: #495057;
+        border: 2px solid #dee2e6;
+    }
+
+        .btn-secondary-action:hover {
+            background: #e9ecef;
+            color: #495057;
+            transform: translateY(-2px);
+        }
+
+    .qr-code-section {
+        background: #f8f9fa;
+        border-radius: 15px;
+        padding: 1.5rem;
+        text-align: center;
+        margin: 1.5rem 0;
+    }
+
+    .important-notes {
+        background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%);
+        border-radius: 15px;
+        padding: 1.5rem;
+        margin-top: 2rem;
+        border-left: 4px solid #ffc107;
+    }
+
+    .countdown {
+        background: linear-gradient(135deg, #17a2b8 0%, #138496 100%);
+        color: white;
+        padding: 1rem;
+        border-radius: 15px;
+        text-align: center;
+        margin: 1rem 0;
+    }
+
+    {
+        padding: 2rem 0;
+    }
+
+    .success-icon {
+        font-size: 3rem;
+    }
+
+    .ticket-body {
+        padding: 1.5rem;
+    }
+
+    .movie-poster-confirm {
+        width: 80px;
+        height: 120px;
+    }
+
+    .movie-title {
+        font-size: 1.4rem;
+    }
+
+    .total-price .amount {
+        font-size: 1.5rem;
+    }
+
+    .action-buttons {
+        flex-direction: column;
+        align-items: center;
+    }
+
+    .btn-action {
+        width: 100%;
+        max-width: 300px;
+    }
+
+    }</style>
+
+<div class="success-header">
+    <div class="container">
+        <div class="success-icon">🎉</div>
+        <h1 class="mb-3">Đặt vé thành công!</h1>
+        <p class="mb-0 lead">Cảm ơn bạn đã chọn DKMovies. Thông tin vé của bạn như sau:</p>
+    </div>
+</div>
+
+<div class="container pb-5">
+    <div class="ticket-container">
+        <div class="ticket-card">
+            <div class="ticket-header">
+                <h3 class="mb-0">VÉ XEM PHIM ĐIỆN TỬ</h3>
+                <p class="mb-0 mt-2">Mã vé: #@Model.ID.ToString("D6")</p>
+            </div>
+
+            <div class="ticket-body">
+                <!-- Status -->
+                <div class="text-center">
+                    <span class="status-badge-large bg-@statusClass">
+                        @if (Model.Status == TicketStatus.PENDING)
+                        {
+                            <i class="bi bi-clock"></i>
+                        }
+                        else if (Model.Status == TicketStatus.CONFIRMED)
+                        {
+                            <i class="bi bi-check-circle"></i>
+                        }
+                        else
+                        {
+                            <i class="bi bi-x-circle"></i>
+                        }
+                        @statusText
+                    </span>
+                </div>
+
+                <!-- Movie Info -->
+                <div class="movie-info">
+                    <div class="row align-items-center">
+                        <div class="col-auto">
+                            <img src="@posterPath" alt="@Model.ShowTime.Movie.Title" class="movie-poster-confirm" />
+                        </div>
+                        <div class="col">
+                            <h2 class="movie-title">@Model.ShowTime.Movie.Title</h2>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    @if (Model.ShowTime.Movie.DurationMinutes > 0)
+                                    {
+                                        <small class="text-muted">
+                                            <i class="bi bi-clock me-1"></i>
+                                            @Model.ShowTime.Movie.DurationMinutes phút
+                                        </small>
+                                    }
+                                    @if (Model.ShowTime.Movie.Rating != null)
+                                    {
+                                        <small class="text-muted ms-3">
+                                            <i class="bi bi-shield-check me-1"></i>
+                                            @Model.ShowTime.Movie.Rating.Value
+                                        </small>
+                                    }
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Ticket Details -->
+                <div class="detail-item">
+                    <div class="detail-label">
+                        <i class="bi bi-building"></i>
+                        Rạp chiếu
+                    </div>
+                    <div class="detail-value">@Model.ShowTime.Auditorium.Theater.Name</div>
+                </div>
+
+                <div class="detail-item">
+                    <div class="detail-label">
+                        <i class="bi bi-geo-alt"></i>
+                        Địa chỉ
+                    </div>
+                    <div class="detail-value">@Model.ShowTime.Auditorium.Theater.Location</div>
+                </div>
+
+                <div class="detail-item">
+                    <div class="detail-label">
+                        <i class="bi bi-camera-reels"></i>
+                        Phòng chiếu
+                    </div>
+                    <div class="detail-value">@Model.ShowTime.Auditorium.Name</div>
+                </div>
+
+                <div class="detail-item">
+                    <div class="detail-label">
+                        <i class="bi bi-calendar-event"></i>
+                        Ngày chiếu
+                    </div>
+                    <div class="detail-value">@Model.ShowTime.StartTime.ToString("dddd, dd/MM/yyyy")</div>
+                </div>
+
+                <div class="detail-item">
+                    <div class="detail-label">
+                        <i class="bi bi-clock"></i>
+                        Giờ chiếu
+                    </div>
+                    <div class="detail-value">@Model.ShowTime.StartTime.ToString("HH:mm")</div>
+                </div>
+
+                <div class="detail-item">
+                    <div class="detail-label">
+                        <i class="bi bi-person"></i>
+                        Khách hàng
+                    </div>
+                    <div class="detail-value">@Model.User.Username</div>
+                </div>
+
+                <div class="detail-item">
+                    <div class="detail-label">
+                        <i class="bi bi-ticket"></i>
+                        Ghế ngồi
+                    </div>
+                    <div class="detail-value">
+                        <div class="seat-display">
+                            @foreach (var seatLabel in seatLabels)
+                            {
+                                <span class="seat-badge">@seatLabel</span>
+                            }
+                        </div>
+                    </div>
+                </div>
+
+                <div class="detail-item">
+                    <div class="detail-label">
+                        <i class="bi bi-calendar-plus"></i>
+                        Thời gian đặt
+                    </div>
+                    <div class="detail-value">@Model.PurchaseTime.ToString("dd/MM/yyyy HH:mm")</div>
+                </div>
+
+                <!-- Total Price -->
+                <div class="total-price">
+                    <div class="amount">@Model.TotalPrice.ToString("N0") ₫</div>
+                    <div class="label">Tổng tiền (@seatLabels.Count ghế × @Model.ShowTime.Price.ToString("N0")₫)</div>
+                </div>
+
+                <!-- QR Code Section -->
+                <div class="qr-code-section">
+                    <h6 class="mb-3">
+                        <i class="bi bi-qr-code me-2"></i>
+                        Mã QR để check-in tại rạp
+                    </h6>
+                    <div class="bg-white p-3 rounded d-inline-block">
+                        <div style="width: 150px; height: 150px; background: #f8f9fa; border: 2px dashed #dee2e6; display: flex; align-items: center; justify-content: center;">
+                            <span class="text-muted">QR Code<br>#@Model.ID</span>
+                        </div>
+                    </div>
+                    <p class="mt-2 mb-0 small text-muted">
+                        Vui lòng xuất trình mã QR này tại quầy để nhận vé
+                    </p>
+                </div>
+
+                <!-- Countdown for showtime -->
+                @if (Model.ShowTime.StartTime > DateTime.Now)
+                {
+                    <div class="countdown">
+                        <h6 class="mb-2">
+                            <i class="bi bi-stopwatch me-2"></i>
+                            Thời gian đến suất chiếu
+                        </h6>
+                        <div id="countdown-timer" data-showtime="@Model.ShowTime.StartTime.ToString("yyyy-MM-ddTHH:mm:ss")">
+                            <!-- Countdown will be populated by JavaScript -->
+                        </div>
+                    </div>
+                }
+
+                <!-- Action Buttons -->
+                <div class="action-buttons">
+                    <a href="@Url.Action("UserTickets", "Tickets")" class="btn-action btn-secondary-action">
+                        <i class="bi bi-list me-2"></i>
+                        Xem tất cả vé
+                    </a>
+                    <a href="@Url.Action("Index", "MoviesList")" class="btn-action btn-primary-action">
+                        <i class="bi bi-film me-2"></i>
+                        Đặt vé khác
+                    </a>
+                </div>
+
+                <!-- Important Notes -->
+                <div class="important-notes">
+                    <h6 class="fw-bold mb-3">
+                        <i class="bi bi-exclamation-triangle me-2"></i>
+                        Lưu ý quan trọng
+                    </h6>
+                    <ul class="mb-0 small">
+                        <li>Vui lòng đến rạp trước giờ chiếu <strong>15 phút</strong> để check-in</li>
+                        <li>Mang theo <strong>giấy tờ tùy thân</strong> và <strong>mã QR</strong> này</li>
+                        <li>Vé đã đặt <strong>không thể hoàn trả</strong> sau khi xác nhận</li>
+                        <li>Liên hệ hotline <strong>1900-xxxx</strong> nếu cần hỗ trợ</li>
+                        @if (Model.Status == TicketStatus.PENDING)
+                        {
+                            <li class="text-warning"><strong>Vé đang chờ xác nhận, bạn có thể hủy trong vòng 2 giờ trước suất chiếu</strong></li>
+                        }
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Countdown timer
+        const countdownEl = document.getElementById('countdown-timer');
+        if (countdownEl) {
+            const showtimeStr = countdownEl.dataset.showtime;
+            const showtime = new Date(showtimeStr);
+
+            function updateCountdown() {
+                const now = new Date();
+                const diff = showtime - now;
+
+                if (diff <= 0) {
+                    countdownEl.innerHTML = '<strong class="text-light">Suất chiếu đã bắt đầu</strong>';
+                    return;
+                }
+
+                const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+                const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+                const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+                const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+
+                let countdownHtml = '';
+                if (days > 0) countdownHtml += `<span class="fw-bold">${days}</span> ngày `;
+                if (hours > 0) countdownHtml += `<span class="fw-bold">${hours}</span> giờ `;
+                countdownHtml += `<span class
