@@ -4,12 +4,24 @@
 @{
     var showTime = ViewData["ShowTime"] as DKMovies.Models.ShowTime;
     var takenSeats = ViewData["TakenSeats"] as List<int> ?? new List<int>();
+    var availableConcessions = ViewData["AvailableConcessions"] as List<DKMovies.Models.TheaterConcession> ?? new List<DKMovies.Models.TheaterConcession>();
     ViewData["Title"] = "Chọn ghế ngồi";
 }
 
 <style>
+    :root {
+        --primary-color: #667eea;
+        --secondary-color: #764ba2;
+        --success-color: #28a745;
+        --danger-color: #dc3545;
+        --warning-color: #ffc107;
+        --info-color: #007bff;
+        --light-color: #f8f9fa;
+        --dark-color: #343a40;
+    }
+
     .page-header {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
         color: white;
         padding: 2rem 0;
         margin-bottom: 2rem;
@@ -32,9 +44,11 @@
         padding: 1rem;
         margin: 2rem auto;
         border-radius: 50px 50px 10px 10px;
-        max-width: 400px;
+        max-width: 500px;
         box-shadow: 0 4px 15px rgba(0,0,0,0.2);
         position: relative;
+        font-weight: 600;
+        font-size: 1.1rem;
     }
 
         .cinema-screen::before {
@@ -50,35 +64,24 @@
         }
 
     .seating-area {
-        background: #f8f9fa;
+        background: white;
         border-radius: 20px;
         padding: 2rem;
         margin: 2rem 0;
         box-shadow: 0 4px 15px rgba(0,0,0,0.05);
     }
 
-    .seat-section {
-        margin-bottom: 2rem;
-    }
-
-        .seat-section h6 {
-            color: #495057;
-            font-weight: 600;
-            margin-bottom: 1rem;
-            text-align: center;
-        }
-
     .seat-row {
         display: flex;
         justify-content: center;
-        gap: 8px;
-        margin-bottom: 12px;
+        gap: 6px;
+        margin-bottom: 8px;
         align-items: center;
     }
 
     .row-label {
-        font-weight: 600;
-        color: #6c757d;
+        font-weight: 700;
+        color: var(--dark-color);
         min-width: 30px;
         text-align: center;
         font-size: 0.9rem;
@@ -88,107 +91,80 @@
         position: relative;
     }
 
+    .seat-label {
+        min-width: 40px;
+        height: 40px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 10px;
+        font-size: 0.8rem;
+        font-weight: 600;
+        transition: all 0.2s ease;
+        cursor: pointer;
+        border: 2px solid transparent;
+        position: relative;
+        user-select: none;
+        /* FIXED: Prevent layout shift */
+        backface-visibility: hidden;
+        will-change: transform;
+    }
+
     .seat-checkbox {
         display: none;
     }
 
-    .seat-label {
-        min-width: 45px;
-        height: 45px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        border-radius: 12px;
-        font-size: 0.8rem;
-        font-weight: 600;
-        transition: all 0.3s ease;
-        cursor: pointer;
-        position: relative;
-        overflow: hidden;
-    }
-
-        .seat-label::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: -100%;
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
-            transition: left 0.5s ease;
-        }
-
-        .seat-label:hover::before {
-            left: 100%;
-        }
-
     .seat-available {
         background: #e8f5e8;
-        border: 2px solid #28a745;
-        color: #28a745;
+        border-color: var(--success-color);
+        color: var(--success-color);
     }
 
         .seat-available:hover {
-            background: #28a745;
+            background: var(--success-color);
             color: white;
-            transform: scale(1.1);
-            box-shadow: 0 4px 15px rgba(40, 167, 69, 0.3);
+            /* FIXED: Reduced transform to prevent issues */
+            transform: scale(1.03);
+            box-shadow: 0 2px 8px rgba(40, 167, 69, 0.3);
         }
 
     .seat-selected {
-        background: #007bff !important;
-        border: 2px solid #0056b3 !important;
+        background: var(--info-color) !important;
+        border-color: #0056b3 !important;
         color: white !important;
-        transform: scale(1.1);
-        box-shadow: 0 4px 15px rgba(0, 123, 255, 0.4);
+        /* FIXED: Consistent transform */
+        transform: scale(1.03) !important;
+        box-shadow: 0 4px 12px rgba(0, 123, 255, 0.4) !important;
     }
 
     .seat-taken {
         background: #6c757d !important;
-        border: 2px solid #495057 !important;
+        border-color: #495057 !important;
         color: white !important;
         cursor: not-allowed !important;
         opacity: 0.7;
     }
 
-    .seat-legend {
-        display: flex;
-        justify-content: center;
-        gap: 2rem;
-        margin: 2rem 0;
-        flex-wrap: wrap;
-    }
-
-    .legend-item {
-        display: flex;
-        align-items: center;
-        gap: 0.5rem;
-        font-size: 0.9rem;
-        color: #495057;
-    }
-
-    .legend-seat {
-        width: 30px;
-        height: 30px;
-        border-radius: 8px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 0.7rem;
-        font-weight: 600;
+    .seat-disabled {
+        background: #f8f9fa !important;
+        border-color: #dee2e6 !important;
+        color: #6c757d !important;
+        cursor: not-allowed !important;
+        opacity: 0.5;
     }
 
     .selection-summary {
         background: white;
         border-radius: 15px;
-        padding: 1.5rem;
+        padding: 2rem;
         box-shadow: 0 4px 15px rgba(0,0,0,0.1);
         position: sticky;
         top: 20px;
+        height: fit-content;
     }
 
     .selected-seats-display {
-        background: #f8f9fa;
+        background: var(--light-color);
         border-radius: 10px;
         padding: 1rem;
         margin: 1rem 0;
@@ -200,24 +176,153 @@
     }
 
     .selected-seat-tag {
-        background: #007bff;
+        background: linear-gradient(45deg, var(--info-color), #0056b3);
         color: white;
-        padding: 0.3rem 0.6rem;
+        padding: 0.3rem 0.8rem;
         border-radius: 15px;
         font-size: 0.8rem;
-        font-weight: 500;
+        font-weight: 600;
+        animation: fadeIn 0.3s ease;
     }
 
-    .price-display {
-        font-size: 1.2rem;
-        font-weight: 700;
-        color: #e74c3c;
+
+    {
+        opacity: 0;
+        transform: scale(0.8);
+    }
+
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+
+    }
+
+
+
+    {
+        transform: rotate(0deg);
+    }
+
+    to {
+        transform: rotate(360deg);
+    }
+
+    }
+
+    .spinning {
+        animation: spin 1s linear infinite;
+    }
+
+    .concession-section {
+        background: white;
+        border-radius: 15px;
+        padding: 2rem;
+        margin-top: 1.5rem;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+    }
+
+    .concession-item {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 1rem;
+        border: 1px solid #dee2e6;
+        border-radius: 10px;
+        margin-bottom: 1rem;
+        transition: all 0.2s ease;
+    }
+
+        .concession-item:hover {
+            border-color: var(--info-color);
+            background: #f8f9fa;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .concession-item.selected {
+            border-color: var(--info-color);
+            background: #e7f3ff;
+        }
+
+    .concession-info {
+        flex: 1;
+    }
+
+    .concession-name {
+        font-weight: 600;
+        color: var(--dark-color);
+        margin-bottom: 0.2rem;
+    }
+
+    .concession-price {
+        color: var(--danger-color);
+        font-weight: 600;
+    }
+
+    .quantity-controls {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .quantity-btn {
+        width: 30px;
+        height: 30px;
+        border: 1px solid #dee2e6;
+        background: white;
+        border-radius: 5px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        font-weight: 600;
+    }
+
+        .quantity-btn:hover:not(:disabled) {
+            background: var(--info-color);
+            color: white;
+            border-color: var(--info-color);
+        }
+
+        .quantity-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+    .quantity-input {
+        width: 50px;
         text-align: center;
+        border: 1px solid #dee2e6;
+        border-radius: 5px;
+        padding: 0.25rem;
+        font-weight: 600;
+    }
+
+    .price-breakdown {
+        background: var(--light-color);
+        border-radius: 10px;
+        padding: 1rem;
         margin: 1rem 0;
     }
 
+    .price-row {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 0.5rem;
+        color: var(--dark-color);
+    }
+
+        .price-row.total {
+            border-top: 2px solid #dee2e6;
+            padding-top: 0.5rem;
+            font-weight: 700;
+            font-size: 1.1rem;
+            color: var(--danger-color);
+        }
+
     .btn-proceed {
-        background: linear-gradient(45deg, #28a745, #20c997);
+        background: linear-gradient(45deg, var(--success-color), #20c997);
         border: none;
         border-radius: 25px;
         padding: 1rem 2rem;
@@ -228,7 +333,7 @@
         box-shadow: 0 4px 15px rgba(40, 167, 69, 0.3);
     }
 
-        .btn-proceed:hover {
+        .btn-proceed:hover:not(:disabled) {
             background: linear-gradient(45deg, #20c997, #17a2b8);
             transform: translateY(-2px);
             box-shadow: 0 6px 20px rgba(40, 167, 69, 0.4);
@@ -252,32 +357,59 @@
         transition: all 0.3s ease;
     }
 
-    .back-btn:hover {
-        background: rgba(255,255,255,0.2);
-        color: white;
-        transform: translateY(-1px);
+        .back-btn:hover {
+            background: rgba(255,255,255,0.2);
+            color: white;
+            transform: translateY(-1px);
+        }
+
+    .seat-legend {
+        display: flex;
+        justify-content: center;
+        gap: 2rem;
+        margin: 2rem 0;
+        flex-wrap: wrap;
+    }
+
+    .legend-item {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-size: 0.9rem;
+        color: var(--dark-color);
+    }
+
+    .max-seats-warning {
+        background: #fff3cd;
+        border: 1px solid #ffeaa7;
+        color: #856404;
+        padding: 0.75rem;
+        border-radius: 10px;
+        margin-bottom: 1rem;
+        display: none;
     }
 
 
     {
-        padding: 1.5rem 0;
+        min-width: 35px;
+        height: 35px;
+        font-size: 0.7rem;
+    }
+
+    .row-label {
+        min-width: 25px;
+        font-size: 0.8rem;
     }
 
     .seating-area {
         padding: 1rem;
     }
 
-    .seat-label {
-        min-width: 35px;
-        height: 35px;
-        font-size: 0.7rem;
-    }
-
     .seat-legend {
         gap: 1rem;
     }
-    
-    </style>
+
+    }</style>
 
 <div class="page-header">
     <div class="container">
@@ -342,8 +474,9 @@
 
                 <!-- Seating Area -->
                 <div class="seating-area">
-                    <form asp-action="ConfirmOrder" method="post" id="seatSelectionForm">
-                        <input type="hidden" name="ShowTimeID" value="@showTime.ID" />
+                    <form asp-action="ConfirmOrder" method="post" id="orderForm" enctype="application/x-www-form-urlencoded">
+                        <input type="hidden" name="ShowTimeID" value="@showTime.ID" id="showTimeId" />
+                        <input type="hidden" name="__RequestVerificationToken" value="@Html.AntiForgeryToken().ToString()" />
 
                         @{
                             var seatsByRow = Model.GroupBy(s => s.RowLabel).OrderBy(g => g.Key);
@@ -364,10 +497,13 @@
                                                name="SelectedSeats"
                                                value="@seat.ID"
                                                class="seat-checkbox"
+                                               data-seat-name="@($"{seat.RowLabel}{seat.SeatNumber}")"
+                                               data-seat-price="@showTime.Price"
                                         @(isTaken ? "disabled" : "") />
 
                                         <label for="@seatId"
                                                class="seat-label @(isTaken ? "seat-taken" : "seat-available")"
+                                               data-seat-id="@seat.ID"
                                                title="@(isTaken ? "Ghế đã được đặt" : $"Ghế {seat.RowLabel}{seat.SeatNumber} - {showTime.Price:N0}₫")">
                                             @seat.SeatNumber
                                         </label>
@@ -382,18 +518,57 @@
                 <!-- Seat Legend -->
                 <div class="seat-legend">
                     <div class="legend-item">
-                        <div class="legend-seat seat-available">1</div>
+                        <div class="seat-label seat-available" style="min-width: 30px; height: 30px; pointer-events: none;">1</div>
                         <span>Ghế trống</span>
                     </div>
                     <div class="legend-item">
-                        <div class="legend-seat seat-selected">2</div>
+                        <div class="seat-label seat-selected" style="min-width: 30px; height: 30px; pointer-events: none;">2</div>
                         <span>Ghế đã chọn</span>
                     </div>
                     <div class="legend-item">
-                        <div class="legend-seat seat-taken">3</div>
+                        <div class="seat-label seat-taken" style="min-width: 30px; height: 30px; pointer-events: none;">3</div>
                         <span>Ghế đã đặt</span>
                     </div>
                 </div>
+
+                <!-- Concessions -->
+                @if (availableConcessions.Any())
+                {
+                    <div class="concession-section">
+                        <h5 class="mb-3">
+                            <i class="bi bi-cup-straw me-2"></i>
+                            Đồ ăn & Thức uống
+                        </h5>
+
+                        @foreach (var concession in availableConcessions)
+                        {
+                            <div class="concession-item" data-concession-id="@concession.ID" data-price="@concession.Price">
+                                <div class="concession-info">
+                                    <div class="concession-name">@concession.Concession.Name</div>
+                                    <div class="concession-price">@concession.Price.ToString("N0") ₫</div>
+                                    @if (!string.IsNullOrEmpty(concession.Concession.Description))
+                                    {
+                                        <small class="text-muted">@concession.Concession.Description</small>
+                                    }
+                                </div>
+                                <div class="quantity-controls">
+                                    <button type="button" class="quantity-btn minus-btn" data-target="concession-@concession.ID">-</button>
+                                    <input type="number"
+                                           name="ConcessionQuantities[@concession.ID]"
+                                           id="concession-@concession.ID"
+                                           class="quantity-input concession-quantity"
+                                           value="0"
+                                           min="0"
+                                           max="10"
+                                           data-concession-id="@concession.ID"
+                                           data-price="@concession.Price"
+                                           readonly />
+                                    <button type="button" class="quantity-btn plus-btn" data-target="concession-@concession.ID">+</button>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                }
             </div>
 
             <div class="col-lg-4">
@@ -402,7 +577,14 @@
                     <h5 class="mb-3">
                         <i class="bi bi-list-check me-2"></i>
                         Thông tin đặt vé
+                        <span id="seatCountBadge" class="badge bg-secondary ms-2">0/10</span>
                     </h5>
+
+                    <div class="max-seats-warning" id="maxSeatsWarning">
+                        <i class="bi bi-exclamation-triangle me-2"></i>
+                        <strong>Đã chọn tối đa 10 ghế!</strong><br>
+                        <small>Vui lòng bỏ chọn ghế khác để chọn ghế mới.</small>
+                    </div>
 
                     <div class="mb-3">
                         <strong>Ghế đã chọn:</strong>
@@ -411,23 +593,31 @@
                         </div>
                     </div>
 
-                    <div class="mb-3">
-                        <div class="d-flex justify-content-between">
+                    <!-- Price Breakdown -->
+                    <div class="price-breakdown">
+                        <div class="price-row">
                             <span>Số ghế:</span>
                             <strong id="seatCount">0</strong>
                         </div>
-                        <div class="d-flex justify-content-between">
+                        <div class="price-row">
                             <span>Giá mỗi ghế:</span>
                             <strong>@showTime.Price.ToString("N0") ₫</strong>
                         </div>
-                        <hr>
-                        <div class="d-flex justify-content-between">
-                            <span class="h6">Tổng cộng:</span>
-                            <strong class="h6 text-danger" id="totalPrice">0 ₫</strong>
+                        <div class="price-row" id="ticketSubtotal">
+                            <span>Tiền vé:</span>
+                            <strong id="ticketPrice">0 ₫</strong>
+                        </div>
+                        <div class="price-row" id="concessionSubtotal" style="display: none;">
+                            <span>Tiền đồ ăn:</span>
+                            <strong id="concessionPrice">0 ₫</strong>
+                        </div>
+                        <div class="price-row total">
+                            <span>Tổng cộng:</span>
+                            <strong id="totalPrice">0 ₫</strong>
                         </div>
                     </div>
 
-                    <button type="submit" form="seatSelectionForm" class="btn-proceed" id="proceedBtn" disabled>
+                    <button type="submit" form="orderForm" class="btn-proceed" id="proceedBtn" disabled>
                         <i class="bi bi-credit-card me-2"></i>
                         Tiến hành thanh toán
                     </button>
@@ -446,66 +636,311 @@
 
 @section Scripts {
     <script>
+        // FIXED: Constants and state management
+        const MAX_SEATS = 10;
         const seatPrice = parseFloat("@showTime.Price.ToString(System.Globalization.CultureInfo.InvariantCulture)");
         let selectedSeats = [];
+        let concessionTotal = 0;
+        let isProcessing = false; // FIXED: Prevent double-clicks
 
-        function updateSeatVisuals() {
-            const checkboxes = document.querySelectorAll('input[name="SelectedSeats"]');
-            const selectedSeatsDisplay = document.getElementById('selectedSeatsDisplay');
+        console.log('🎬 Cinema booking system initialized');
+        console.log('📍 Seat price:', seatPrice);
+        console.log('🎫 Max seats:', MAX_SEATS);
+
+        // FIXED: Debounced update function
+        let updateTimeout;
+        function debouncedUpdate() {
+            clearTimeout(updateTimeout);
+            updateTimeout = setTimeout(() => {
+                updateSeatVisuals();
+                updatePriceDisplay();
+            }, 50);
+        }
+
+        function updatePriceDisplay() {
             const seatCountEl = document.getElementById('seatCount');
+            const ticketPriceEl = document.getElementById('ticketPrice');
+            const concessionPriceEl = document.getElementById('concessionPrice');
+            const concessionSubtotal = document.getElementById('concessionSubtotal');
             const totalPriceEl = document.getElementById('totalPrice');
             const proceedBtn = document.getElementById('proceedBtn');
+            const seatCountBadge = document.getElementById('seatCountBadge');
+
+            const ticketTotal = selectedSeats.length * seatPrice;
+            const grandTotal = ticketTotal + concessionTotal;
+
+            // Update displays
+            seatCountEl.textContent = selectedSeats.length;
+            ticketPriceEl.textContent = ticketTotal.toLocaleString('vi-VN') + ' ₫';
+            concessionPriceEl.textContent = concessionTotal.toLocaleString('vi-VN') + ' ₫';
+            totalPriceEl.textContent = grandTotal.toLocaleString('vi-VN') + ' ₫';
+
+            // Update badge
+            seatCountBadge.textContent = `${selectedSeats.length}/${MAX_SEATS}`;
+            if (selectedSeats.length === 0) {
+                seatCountBadge.className = 'badge bg-secondary ms-2';
+            } else if (selectedSeats.length >= MAX_SEATS) {
+                seatCountBadge.className = 'badge bg-danger ms-2';
+            } else {
+                seatCountBadge.className = 'badge bg-primary ms-2';
+            }
+
+            // Show/hide concession subtotal
+            concessionSubtotal.style.display = concessionTotal > 0 ? 'flex' : 'none';
+
+            // Enable/disable proceed button
+            proceedBtn.disabled = selectedSeats.length === 0;
+
+            // Show/hide max seats warning
+            const warning = document.getElementById('maxSeatsWarning');
+            warning.style.display = selectedSeats.length >= MAX_SEATS ? 'block' : 'none';
+
+            console.log(`💰 Updated pricing - Seats: ${selectedSeats.length}, Total: ${grandTotal.toLocaleString('vi-VN')}₫`);
+        }
+
+        function updateSeatVisuals() {
+            const checkboxes = document.querySelectorAll('input[name="SelectedSeats"]:not(:disabled)');
+            const selectedSeatsDisplay = document.getElementById('selectedSeatsDisplay');
 
             selectedSeats = [];
 
             checkboxes.forEach(cb => {
                 const label = document.querySelector(`label[for="${cb.id}"]`);
-                if (!label || cb.disabled) return;
+                if (!label) return;
+
+                const seatName = cb.dataset.seatName;
 
                 if (cb.checked) {
                     label.classList.remove("seat-available");
                     label.classList.add("seat-selected");
-
-                    // Get seat info
-                    const seatText = label.getAttribute('title').split(' - ')[0].replace('Ghế ', '');
-                    selectedSeats.push(seatText);
+                    selectedSeats.push(seatName);
                 } else {
                     label.classList.add("seat-available");
                     label.classList.remove("seat-selected");
                 }
             });
 
-            // Update display
+            // FIXED: Update seat states based on limit
+            updateSeatStates();
+
+            // Update seats display
             if (selectedSeats.length === 0) {
                 selectedSeatsDisplay.innerHTML = '<span class="text-muted">Chưa chọn ghế nào</span>';
-                proceedBtn.disabled = true;
             } else {
-                selectedSeatsDisplay.innerHTML = selectedSeats.map(seat =>
-                    `<span class="selected-seat-tag">${seat}</span>`
-                ).join('');
-                proceedBtn.disabled = false;
+                selectedSeatsDisplay.innerHTML = selectedSeats
+                    .sort()
+                    .map(seat => `<span class="selected-seat-tag">${seat}</span>`)
+                    .join('');
             }
 
-            seatCountEl.textContent = selectedSeats.length;
-            totalPriceEl.textContent = (selectedSeats.length * seatPrice).toLocaleString('vi-VN') + ' ₫';
+            console.log('🎫 Selected seats:', selectedSeats);
+        }
+
+        // FIXED: Seat state management
+        function updateSeatStates() {
+            const availableCheckboxes = document.querySelectorAll('input[name="SelectedSeats"]:not(:disabled):not(:checked)');
+
+            availableCheckboxes.forEach(cb => {
+                const label = document.querySelector(`label[for="${cb.id}"]`);
+                if (!label) return;
+
+                if (selectedSeats.length >= MAX_SEATS) {
+                    label.classList.add('seat-disabled');
+                    label.classList.remove('seat-available');
+                    label.style.pointerEvents = 'none';
+                } else {
+                    label.classList.remove('seat-disabled');
+                    label.classList.add('seat-available');
+                    label.style.pointerEvents = '';
+                }
+            });
+        }
+
+        function updateConcessionTotal() {
+            concessionTotal = 0;
+            const quantityInputs = document.querySelectorAll('.concession-quantity');
+
+            quantityInputs.forEach(input => {
+                const quantity = parseInt(input.value) || 0;
+                const price = parseFloat(input.dataset.price) || 0;
+                concessionTotal += quantity * price;
+
+                // Update item visual state
+                const item = input.closest('.concession-item');
+                if (quantity > 0) {
+                    item.classList.add('selected');
+                } else {
+                    item.classList.remove('selected');
+                }
+            });
+
+            updatePriceDisplay();
+            console.log('🍿 Concession total:', concessionTotal.toLocaleString('vi-VN') + '₫');
+        }
+
+        // FIXED: Show message function
+        function showMessage(message, type = 'warning') {
+            const existing = document.getElementById('tempMessage');
+            if (existing) existing.remove();
+
+            const alertClass = type === 'error' ? 'alert-danger' :
+                              type === 'success' ? 'alert-success' : 'alert-warning';
+
+            const messageEl = document.createElement('div');
+            messageEl.id = 'tempMessage';
+            messageEl.className = `alert ${alertClass} position-fixed`;
+            messageEl.style.cssText = `
+                top: 20px; right: 20px; z-index: 9999; min-width: 300px;
+                box-shadow: 0 4px 15px rgba(0,0,0,0.2); border-radius: 10px;
+            `;
+            messageEl.innerHTML = `<i class="bi bi-exclamation-triangle me-2"></i>${message}`;
+
+            document.body.appendChild(messageEl);
+            setTimeout(() => messageEl.remove(), 3000);
         }
 
         document.addEventListener('DOMContentLoaded', function () {
-            updateSeatVisuals();
+            console.log('🚀 Initializing seat selection system...');
 
-            // Add event listeners to seat checkboxes
+            // Initialize displays
+            updateSeatVisuals();
+            updateConcessionTotal();
+
+            // FIXED: Seat selection handlers with proper debouncing
             document.querySelectorAll('input[name="SelectedSeats"]').forEach(cb => {
-                cb.addEventListener('change', updateSeatVisuals);
+                cb.addEventListener('change', function(e) {
+                    if (isProcessing) {
+                        e.preventDefault();
+                        return;
+                    }
+
+                    isProcessing = true;
+
+                    // Check max seats limit when selecting
+                    if (this.checked && selectedSeats.length >= MAX_SEATS) {
+                        this.checked = false;
+                        showMessage(`Chỉ được chọn tối đa ${MAX_SEATS} ghế trong một lần đặt vé!`, 'warning');
+                        isProcessing = false;
+                        return;
+                    }
+
+                    console.log(`🎯 Seat ${this.dataset.seatName} ${this.checked ? 'selected' : 'deselected'}`);
+                    debouncedUpdate();
+
+                    setTimeout(() => {
+                        isProcessing = false;
+                    }, 100);
+                });
             });
 
-            // Form validation
-            const form = document.getElementById('seatSelectionForm');
-            form.addEventListener('submit', function (e) {
-                if (selectedSeats.length === 0) {
+            // FIXED: Concession quantity handlers with better validation
+            document.querySelectorAll('.plus-btn').forEach(btn => {
+                btn.addEventListener('click', function(e) {
                     e.preventDefault();
-                    alert("Vui lòng chọn ít nhất một ghế trước khi tiếp tục.");
-                    return;
+                    if (isProcessing) return;
+
+                    const targetId = this.dataset.target;
+                    const input = document.getElementById(targetId);
+                    const currentValue = parseInt(input.value) || 0;
+                    const maxValue = parseInt(input.getAttribute('max')) || 10;
+
+                    if (currentValue < maxValue) {
+                        input.value = currentValue + 1;
+                        updateConcessionTotal();
+                        console.log(`🍿 Increased ${targetId} to ${input.value}`);
+                    }
+                });
+            });
+
+            document.querySelectorAll('.minus-btn').forEach(btn => {
+                btn.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    if (isProcessing) return;
+
+                    const targetId = this.dataset.target;
+                    const input = document.getElementById(targetId);
+                    const currentValue = parseInt(input.value) || 0;
+
+                    if (currentValue > 0) {
+                        input.value = currentValue - 1;
+                        updateConcessionTotal();
+                        console.log(`🍿 Decreased ${targetId} to ${input.value}`);
+                    }
+                });
+            });
+
+            // FIXED: Direct input change handlers
+            document.querySelectorAll('.concession-quantity').forEach(input => {
+                input.addEventListener('change', function() {
+                    const value = parseInt(this.value) || 0;
+                    const max = parseInt(this.getAttribute('max')) || 10;
+
+                    if (value > max) {
+                        this.value = max;
+                    } else if (value < 0) {
+                        this.value = 0;
+                    }
+
+                    updateConcessionTotal();
+                });
+            });
+
+            // FIXED: Form validation with better UX and debugging
+            const form = document.getElementById('orderForm');
+            form.addEventListener('submit', function (e) {
+                console.log('📤 Form submission triggered...');
+
+                // Debug form data
+                const formData = new FormData(form);
+                const showTimeId = formData.get('ShowTimeID');
+                const selectedSeatIds = formData.getAll('SelectedSeats');
+
+                console.log('🔍 Form data debug:', {
+                    ShowTimeID: showTimeId,
+                    SelectedSeats: selectedSeatIds,
+                    SelectedSeatNames: selectedSeats
+                });
+
+                // Validation
+                if (!showTimeId || showTimeId === '' || showTimeId === 'ShowTimeID') {
+                    e.preventDefault();
+                    console.error('❌ Invalid ShowTimeID:', showTimeId);
+                    showMessage("Lỗi: Không tìm thấy thông tin suất chiếu. Vui lòng tải lại trang.", 'error');
+                    return false;
                 }
+
+                if (selectedSeats.length === 0 || selectedSeatIds.length === 0) {
+                    e.preventDefault();
+                    console.error('❌ No seats selected');
+                    showMessage("Vui lòng chọn ít nhất một ghế trước khi tiếp tục!", 'error');
+                    return false;
+                }
+
+                if (selectedSeats.length > MAX_SEATS) {
+                    e.preventDefault();
+                    console.error('❌ Too many seats selected:', selectedSeats.length);
+                    showMessage(`Chỉ được đặt tối đa ${MAX_SEATS} ghế trong một lần!`, 'error');
+                    return false;
+                }
+
+                // Verify seat IDs are numbers
+                const invalidSeats = selectedSeatIds.filter(id => isNaN(parseInt(id)));
+                if (invalidSeats.length > 0) {
+                    e.preventDefault();
+                    console.error('❌ Invalid seat IDs:', invalidSeats);
+                    showMessage("Lỗi: Dữ liệu ghế không hợp lệ. Vui lòng tải lại trang.", 'error');
+                    return false;
+                }
+
+                console.log('✅ Form validation passed, submitting...');
+                console.log('📋 Final order:', {
+                    ShowTimeID: parseInt(showTimeId),
+                    seats: selectedSeats,
+                    seatIds: selectedSeatIds.map(id => parseInt(id)),
+                    seatCount: selectedSeats.length,
+                    concessionTotal: concessionTotal,
+                    grandTotal: (selectedSeats.length * seatPrice) + concessionTotal
+                });
 
                 // Add loading state
                 const submitBtn = form.querySelector('button[type="submit"]');
@@ -513,16 +948,114 @@
                     submitBtn.innerHTML = '<i class="bi bi-arrow-repeat spinning me-2"></i>Đang xử lý...';
                     submitBtn.disabled = true;
                 }
+
+                return true;
             });
 
-            // Add spinning animation
-            const style = document.createElement('style');
-            style.textContent = `
-                .spinning {
-                    animation: spin 1s linear infinite;
+            // FIXED: Debug functions for testing
+            window.seatDebug = {
+                selectSeats: (seatNames) => {
+                    console.log('🧪 Debug: Selecting seats', seatNames);
+                    seatNames.forEach(seatName => {
+                        const checkbox = document.querySelector(`input[data-seat-name="${seatName}"]:not(:disabled)`);
+                        if (checkbox && !checkbox.checked && selectedSeats.length < MAX_SEATS) {
+                            checkbox.checked = true;
+                            checkbox.dispatchEvent(new Event('change'));
+                        }
+                    });
+                },
+
+                clearAllSeats: () => {
+                    console.log('🧪 Debug: Clearing all seats');
+                    document.querySelectorAll('input[name="SelectedSeats"]:checked').forEach(cb => {
+                        cb.checked = false;
+                        cb.dispatchEvent(new Event('change'));
+                    });
+                },
+
+                addConcessions: () => {
+                    console.log('🧪 Debug: Adding concessions');
+                    const inputs = document.querySelectorAll('.concession-quantity');
+                    inputs.forEach((input, index) => {
+                        input.value = Math.min(2, parseInt(input.getAttribute('max')));
+                        input.dispatchEvent(new Event('change'));
+                    });
+                },
+
+                getState: () => {
+                    return {
+                        selectedSeats: selectedSeats,
+                        seatCount: selectedSeats.length,
+                        concessionTotal: concessionTotal,
+                        grandTotal: (selectedSeats.length * seatPrice) + concessionTotal,
+                        maxSeats: MAX_SEATS
+                    };
+                },
+
+                // FIXED: Add form debugging
+                debugForm: () => {
+                    const form = document.getElementById('orderForm');
+                    const formData = new FormData(form);
+
+                    console.log('🔍 Form Debug Info:');
+                    console.log('ShowTimeID:', formData.get('ShowTimeID'));
+                    console.log('Selected Seat IDs:', formData.getAll('SelectedSeats'));
+                    console.log('Selected Seat Names:', selectedSeats);
+
+                    // Check all concessions
+                    const concessions = {};
+                    Array.from(formData.keys()).forEach(key => {
+                        if (key.startsWith('ConcessionQuantities')) {
+                            concessions[key] = formData.get(key);
+                        }
+                    });
+                    console.log('Concessions:', concessions);
+
+                    return {
+                        showTimeId: formData.get('ShowTimeID'),
+                        seatIds: formData.getAll('SelectedSeats'),
+                        seatNames: selectedSeats,
+                        concessions: concessions
+                    };
+                },
+
+                // FIXED: Test form submission
+                testSubmit: () => {
+                    console.log('🧪 Testing form submission...');
+                    const debugInfo = window.seatDebug.debugForm();
+
+                    if (!debugInfo.showTimeId) {
+                        console.error('❌ ShowTimeID is missing!');
+                        return false;
+                    }
+
+                    if (debugInfo.seatIds.length === 0) {
+                        console.error('❌ No seats selected!');
+                        return false;
+                    }
+
+                    console.log('✅ Form data looks good for submission');
+                    return true;
                 }
-            `;
-            document.head.appendChild(style);
+            };
+
+            console.log('✅ Seat selection system ready!');
+            console.log('🔧 Debug tools available: window.seatDebug');
+            console.log('   - seatDebug.selectSeats(["A1", "A2"])');
+            console.log('   - seatDebug.clearAllSeats()');
+            console.log('   - seatDebug.addConcessions()');
+            console.log('   - seatDebug.getState()');
+            console.log('   - seatDebug.debugForm() - Check form data');
+            console.log('   - seatDebug.testSubmit() - Test form validation');
+
+            // FIXED: Initial form validation on load
+            const showTimeIdInput = document.getElementById('showTimeId');
+            if (!showTimeIdInput || !showTimeIdInput.value || showTimeIdInput.value === '') {
+                console.error('❌ CRITICAL: ShowTimeID is missing on page load!');
+                showMessage('Lỗi: Không tìm thấy thông tin suất chiếu. Vui lòng quay lại và chọn lại suất chiếu.', 'error');
+            } else {
+                console.log('✅ ShowTimeID found:', showTimeIdInput.value);
+            }
         });
     </script>
 }

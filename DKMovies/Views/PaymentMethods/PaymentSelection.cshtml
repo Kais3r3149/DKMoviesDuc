@@ -1,0 +1,344 @@
+﻿@model DKMovies.Models.Ticket
+
+@{
+    ViewData["Title"] = "Chọn phương thức thanh toán";
+    var timeRemaining = Model.PurchaseTime.AddMinutes(15) - DateTime.Now;
+    var totalTicketPrice = Model.TicketSeats.Count * Model.ShowTime.Price;
+    var totalConcessionPrice = Model.OrderItems?.Sum(oi => oi.Quantity * oi.PriceAtPurchase) ?? 0;
+}
+
+<div class="container my-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <!-- Payment Timer -->
+            <div class="alert alert-warning text-center mb-4">
+                <i class="fas fa-clock"></i>
+                <strong>Thời gian còn lại để thanh toán: </strong>
+                <span id="countdown-timer" class="fw-bold text-danger">
+                    @($"{(int)timeRemaining.TotalMinutes:00}:{timeRemaining.Seconds:00}")
+                </span>
+            </div>
+
+            <!-- Order Summary -->
+            <div class="card mb-4">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0"><i class="fas fa-receipt"></i> Tóm tắt đơn hàng</h5>
+                </div>
+                <div class="card-body">
+                    <!-- Movie Information -->
+                    <div class="row mb-3">
+                        <div class="col-md-3">
+                            @if (!string.IsNullOrEmpty(Model.ShowTime.Movie.PosterImagePath))
+                            {
+                                <img src="@Model.ShowTime.Movie.PosterImagePath" alt="@Model.ShowTime.Movie.Title"
+                                     class="img-fluid rounded" style="max-height: 150px;">
+                            }
+                        </div>
+                        <div class="col-md-9">
+                            <h6 class="fw-bold">@Model.ShowTime.Movie.Title</h6>
+                            <p class="mb-1"><i class="fas fa-map-marker-alt"></i> @Model.ShowTime.Auditorium.Theater.Name - @Model.ShowTime.Auditorium.Name</p>
+                            <p class="mb-1"><i class="fas fa-calendar"></i> @Model.ShowTime.StartTime.ToString("dd/MM/yyyy HH:mm")</p>
+                            <p class="mb-1">
+                                <i class="fas fa-chair"></i> Ghế:
+                                @string.Join(", ", Model.TicketSeats.Select(ts => $"{ts.Seat.RowLabel}{ts.Seat.SeatNumber}"))
+                            </p>
+                            <p class="mb-0"><i class="fas fa-clock"></i> Thời lượng: @Model.ShowTime.DurationMinutes phút</p>
+                        </div>
+                    </div>
+
+                    <!-- Price Breakdown -->
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <tbody>
+                                <tr>
+                                    <td><i class="fas fa-ticket-alt"></i> Vé xem phim (@Model.TicketSeats.Count ghế)</td>
+                                    <td class="text-end">@totalTicketPrice.ToString("N0") VND</td>
+                                </tr>
+
+                                @if (Model.OrderItems?.Any() == true)
+                                {
+                                    @foreach (var item in Model.OrderItems)
+                                    {
+                                        <tr>
+                                            <td><i class="fas fa-utensils"></i> @item.TheaterConcession.Concession.Name (x@item.Quantity)</td>
+                                            <td class="text-end">@((item.Quantity * item.PriceAtPurchase).ToString("N0")) VND</td>
+                                        </tr>
+                                    }
+                                }
+
+                                <tr class="table-warning fw-bold">
+                                    <td><strong>TỔNG CỘNG</strong></td>
+                                    <td class="text-end"><strong>@Model.TotalPrice.ToString("N0") VND</strong></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Payment Methods -->
+            <div class="card">
+                <div class="card-header bg-success text-white">
+                    <h5 class="mb-0"><i class="fas fa-credit-card"></i> Chọn phương thức thanh toán</h5>
+                </div>
+                <div class="card-body">
+                    @using (Html.BeginForm("ProcessPayment", "Tickets", FormMethod.Post, new { @class = "needs-validation", novalidate = "novalidate" }))
+                    {
+                        @Html.AntiForgeryToken()
+                        @Html.Hidden("ticketId", Model.ID)
+
+                        <div class="row g-3">
+                            <!-- Stripe Payment -->
+                            <div class="col-md-6">
+                                <div class="card payment-option h-100" data-payment="stripe">
+                                    <div class="card-body text-center">
+                                        <i class="fab fa-stripe fs-1 text-primary mb-3"></i>
+                                        <h6 class="card-title">Thanh toán trực tuyến</h6>
+                                        <p class="card-text small text-muted">Thanh toán bằng thẻ tín dụng/ghi nợ</p>
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="radio" name="paymentMethod" id="stripe" value="stripe" required>
+                                            <label class="form-check-label fw-bold text-success" for="stripe">
+                                                Thanh toán ngay
+                                            </label>
+                                        </div>
+                                        <small class="text-muted">
+                                            <i class="fas fa-shield-alt"></i> Bảo mật SSL 256-bit<br>
+                                            <i class="fas fa-check-circle"></i> Xác nhận tức thì
+                                        </small>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Cash Payment -->
+                            <div class="col-md-6">
+                                <div class="card payment-option h-100" data-payment="cash">
+                                    <div class="card-body text-center">
+                                        <i class="fas fa-money-bill-wave fs-1 text-success mb-3"></i>
+                                        <h6 class="card-title">Thanh toán tại quầy</h6>
+                                        <p class="card-text small text-muted">Thanh toán bằng tiền mặt khi đến rạp</p>
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="radio" name="paymentMethod" id="cash" value="cash" required>
+                                            <label class="form-check-label fw-bold text-warning" for="cash">
+                                                Thanh toán sau
+                                            </label>
+                                        </div>
+                                        <small class="text-muted">
+                                            <i class="fas fa-info-circle"></i> Thanh toán trước giờ chiếu<br>
+                                            <i class="fas fa-clock"></i> Đến sớm 30 phút
+                                        </small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Submit Button -->
+                        <div class="text-center mt-4">
+                            <button type="submit" class="btn btn-primary btn-lg px-5" id="payment-submit">
+                                <i class="fas fa-arrow-right"></i> Tiếp tục thanh toán
+                            </button>
+                        </div>
+
+                        <!-- Terms -->
+                        <div class="mt-3">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="terms" required>
+                                <label class="form-check-label small" for="terms">
+                                    Tôi đồng ý với <a href="#" data-bs-toggle="modal" data-bs-target="#termsModal">điều khoản sử dụng</a>
+                                    và <a href="#" data-bs-toggle="modal" data-bs-target="#privacyModal">chính sách bảo mật</a> của DK Movies.
+                                </label>
+                            </div>
+                        </div>
+                    }
+                </div>
+            </div>
+
+            <!-- Back Button -->
+            <div class="text-center mt-3">
+                <a href="@Url.Action("OrderTicketDetails", "Tickets", new { id = Model.ShowTimeID })"
+                   class="btn btn-outline-secondary">
+                    <i class="fas fa-arrow-left"></i> Quay lại chọn ghế
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Terms Modal -->
+<div class="modal fade" id="termsModal" tabindex="-1" aria-labelledby="termsModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="termsModalLabel">Điều khoản sử dụng</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <h6>1. Điều khoản đặt vé</h6>
+                <p>- Vé được đặt phải được thanh toán trong vòng 15 phút kể từ khi đặt.</p>
+                <p>- Vé có thể được hủy trước 2 tiếng so với giờ chiếu.</p>
+                <p>- Khách hàng phải có mặt tại rạp trước giờ chiếu ít nhất 15 phút.</p>
+
+                <h6>2. Chính sách hoàn trả</h6>
+                <p>- Vé đã thanh toán có thể được hoàn trả trong trường hợp hủy suất chiếu.</p>
+                <p>- Phí dịch vụ không được hoàn trả trong mọi trường hợp.</p>
+
+                <h6>3. Quy định trong rạp</h6>
+                <p>- Không mang thức ăn, đồ uống từ bên ngoài vào rạp.</p>
+                <p>- Không sử dụng điện thoại trong suốt thời gian chiếu phim.</p>
+                <p>- Tuân thủ quy định về độ tuổi của từng bộ phim.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Đóng</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Privacy Modal -->
+<div class="modal fade" id="privacyModal" tabindex="-1" aria-labelledby="privacyModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="privacyModalLabel">Chính sách bảo mật</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <h6>1. Thu thập thông tin</h6>
+                <p>Chúng tôi thu thập thông tin cá nhân như tên, email, số điện thoại khi bạn đăng ký tài khoản và đặt vé.</p>
+
+                <h6>2. Sử dụng thông tin</h6>
+                <p>Thông tin của bạn được sử dụng để:</p>
+                <ul>
+                    <li>Xử lý đơn hàng và giao dịch</li>
+                    <li>Gửi thông báo về vé đã đặt</li>
+                    <li>Cải thiện dịch vụ của chúng tôi</li>
+                </ul>
+
+                <h6>3. Bảo mật thông tin</h6>
+                <p>Chúng tôi cam kết bảo vệ thông tin cá nhân của bạn bằng các biện pháp bảo mật phù hợp.</p>
+
+                <h6>4. Chia sẻ thông tin</h6>
+                <p>Chúng tôi không chia sẻ thông tin cá nhân của bạn với bên thứ ba, trừ khi có sự đồng ý của bạn hoặc theo yêu cầu của pháp luật.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Đóng</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        // Countdown Timer
+        function updateCountdown() {
+            const purchaseTime = new Date('@Model.PurchaseTime.ToString("yyyy-MM-ddTHH:mm:ss")');
+            const expiryTime = new Date(purchaseTime.getTime() + 15 * 60 * 1000); // Add 15 minutes
+            const now = new Date();
+            const timeLeft = expiryTime - now;
+
+            if (timeLeft <= 0) {
+                // Time expired, redirect to cancellation
+                window.location.href = '@Url.Action("OrderTicket", "Tickets", new { id = Model.ShowTime.MovieID })';
+                return;
+            }
+
+            const minutes = Math.floor(timeLeft / 60000);
+            const seconds = Math.floor((timeLeft % 60000) / 1000);
+
+            document.getElementById('countdown-timer').textContent =
+                `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+
+            // Change color when time is running out
+            const timerElement = document.getElementById('countdown-timer');
+            if (minutes < 5) {
+                timerElement.className = 'fw-bold text-danger';
+                timerElement.parentElement.className = 'alert alert-danger text-center mb-4';
+            } else if (minutes < 10) {
+                timerElement.className = 'fw-bold text-warning';
+                timerElement.parentElement.className = 'alert alert-warning text-center mb-4';
+            }
+        }
+
+        // Update countdown every second
+        setInterval(updateCountdown, 1000);
+
+        // Payment option selection
+        document.querySelectorAll('.payment-option').forEach(option => {
+            option.addEventListener('click', function() {
+                const paymentType = this.dataset.payment;
+                const radio = document.getElementById(paymentType);
+                radio.checked = true;
+
+                // Update visual selection
+                document.querySelectorAll('.payment-option').forEach(opt => {
+                    opt.classList.remove('border-primary', 'shadow');
+                });
+                this.classList.add('border-primary', 'shadow');
+            });
+        });
+
+        // Form validation
+        document.querySelector('form').addEventListener('submit', function(e) {
+            const paymentMethod = document.querySelector('input[name="paymentMethod"]:checked');
+            const terms = document.getElementById('terms');
+
+            if (!paymentMethod) {
+                e.preventDefault();
+                alert('Vui lòng chọn phương thức thanh toán.');
+                return;
+            }
+
+            if (!terms.checked) {
+                e.preventDefault();
+                alert('Vui lòng đồng ý với điều khoản sử dụng.');
+                return;
+            }
+
+            // Show loading for stripe payment
+            if (paymentMethod.value === 'stripe') {
+                document.getElementById('payment-submit').innerHTML =
+                    '<i class="fas fa-spinner fa-spin"></i> Đang chuyển hướng...';
+                document.getElementById('payment-submit').disabled = true;
+            }
+        });
+
+        // Auto-select stripe payment on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            const stripeOption = document.querySelector('[data-payment="stripe"]');
+            if (stripeOption) {
+                stripeOption.click();
+            }
+        });
+    </script>
+}
+
+<style>
+    .payment-option {
+        cursor: pointer;
+        transition: all 0.3s ease;
+        border: 2px solid #dee2e6;
+    }
+
+        .payment-option:hover {
+            border-color: #007bff;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+
+        .payment-option.border-primary {
+            border-color: #007bff !important;
+            box-shadow: 0 0 15px rgba(0,123,255,0.3);
+        }
+
+    .form-check-input:checked {
+        background-color: #28a745;
+        border-color: #28a745;
+    }
+
+    #countdown-timer {
+        font-size: 1.2em;
+    }
+
+    .table-warning {
+        background-color: #fff3cd !important;
+    }
+</style>

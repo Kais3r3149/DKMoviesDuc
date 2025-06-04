@@ -1,457 +1,563 @@
-﻿@model List<DKMovies.Models.Seat>
-@{
-    var showTime = ViewData["ShowTime"] as DKMovies.Models.ShowTime;
-    var takenSeats = ViewData["TakenSeats"] as List<int> ?? new List<int>();
-    ViewData["Title"] = "Chọn ghế ngồi";
-}
-
-<style>
-    .page-header {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        color: white;
-        padding: 2rem 0;
-        margin-bottom: 2rem;
-        border-radius: 0 0 20px 20px;
-        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-    }
-
-    .movie-info-card {
-        background: rgba(255,255,255,0.1);
-        backdrop-filter: blur(10px);
-        border-radius: 15px;
-        padding: 1.5rem;
-        border: 1px solid rgba(255,255,255,0.2);
-    }
-
-    .cinema-screen {
-        background: linear-gradient(135deg, #2c3e50, #34495e);
-        color: white;
-        text-align: center;
-        padding: 1rem;
-        margin: 2rem auto;
-        border-radius: 50px 50px 10px 10px;
-        max-width: 400px;
-        box-shadow: 0 4px 15px rgba(0,0,0,0.2);
-        position: relative;
-    }
-
-        .cinema-screen::before {
-            content: '';
-            position: absolute;
-            top: -5px;
-            left: 50%;
-            transform: translateX(-50%);
-            width: 80%;
-            height: 5px;
-            background: linear-gradient(90deg, transparent, #fff, transparent);
-            border-radius: 10px;
+﻿<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chọn ghế ngồi - Cinema Booking</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-icons/1.11.0/font/bootstrap-icons.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --primary-color: #667eea;
+            --secondary-color: #764ba2;
+            --success-color: #28a745;
+            --danger-color: #dc3545;
+            --warning-color: #ffc107;
+            --info-color: #007bff;
+            --light-color: #f8f9fa;
+            --dark-color: #343a40;
         }
 
-    .seating-area {
-        background: #f8f9fa;
-        border-radius: 20px;
-        padding: 2rem;
-        margin: 2rem 0;
-        box-shadow: 0 4px 15px rgba(0,0,0,0.05);
-    }
-
-    .section-container {
-        margin-bottom: 2rem;
-    }
-
-    .section-title {
-        text-align: center;
-        color: #495057;
-        font-weight: 600;
-        margin-bottom: 1rem;
-        padding: 0.5rem;
-        background: #e9ecef;
-        border-radius: 10px;
-    }
-
-    .seat-row {
-        display: flex;
-        justify-content: center;
-        gap: 4px;
-        margin-bottom: 8px;
-        align-items: center;
-    }
-
-    .seat-container {
-        position: relative;
-    }
-
-    .seat-label {
-        min-width: 45px;
-        height: 45px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        border-radius: 12px;
-        font-size: 0.8rem;
-        font-weight: 600;
-        transition: all 0.3s ease;
-        cursor: pointer;
-        border: 2px solid transparent;
-        position: relative;
-        overflow: hidden;
-        user-select: none;
-    }
-
-        .seat-label::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: -100%;
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
-            transition: left 0.5s ease;
+        body {
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            min-height: 100vh;
         }
 
-        .seat-label:hover:not(.seat-taken):not(.seat-disabled)::before {
-            left: 100%;
-        }
-
-    .seat-available {
-        background: #e8f5e8;
-        border-color: #28a745;
-        color: #28a745;
-    }
-
-        .seat-available:hover {
-            background: #28a745;
+        .page-header {
+            background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
             color: white;
-            transform: scale(1.1);
+            padding: 2rem 0;
+            margin-bottom: 2rem;
+            border-radius: 0 0 20px 20px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+
+        .movie-info-card {
+            background: rgba(255,255,255,0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 1.5rem;
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+
+        .cinema-screen {
+            background: linear-gradient(135deg, #2c3e50, #34495e);
+            color: white;
+            text-align: center;
+            padding: 1rem;
+            margin: 2rem auto;
+            border-radius: 50px 50px 10px 10px;
+            max-width: 500px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            position: relative;
+            font-weight: 600;
+            font-size: 1.1rem;
+        }
+
+            .cinema-screen::before {
+                content: '';
+                position: absolute;
+                top: -5px;
+                left: 50%;
+                transform: translateX(-50%);
+                width: 80%;
+                height: 5px;
+                background: linear-gradient(90deg, transparent, #fff, transparent);
+                border-radius: 10px;
+            }
+
+        .seating-container {
+            background: white;
+            border-radius: 20px;
+            padding: 2rem;
+            margin: 2rem 0;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+        }
+
+        .seat-map {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 2rem;
+        }
+
+        .seat-row {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .row-label {
+            width: 30px;
+            text-align: center;
+            font-weight: bold;
+            color: var(--dark-color);
+            font-size: 0.9rem;
+        }
+
+        .seat {
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            border: 2px solid transparent;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.8rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            position: relative;
+            user-select: none;
+        }
+
+            .seat.available {
+                background: #e8f5e8;
+                border-color: var(--success-color);
+                color: var(--success-color);
+            }
+
+                .seat.available:hover {
+                    background: var(--success-color);
+                    color: white;
+                    transform: scale(1.05);
+                }
+
+            .seat.selected {
+                background: var(--info-color);
+                border-color: #0056b3;
+                color: white;
+                transform: scale(1.05);
+                box-shadow: 0 4px 15px rgba(0, 123, 255, 0.4);
+            }
+
+            .seat.taken {
+                background: #6c757d;
+                border-color: #495057;
+                color: white;
+                cursor: not-allowed;
+                opacity: 0.7;
+            }
+
+            .seat.disabled {
+                background: #f8f9fa;
+                border-color: #dee2e6;
+                color: #6c757d;
+                cursor: not-allowed;
+                opacity: 0.5;
+            }
+
+        .aisle {
+            width: 20px;
+        }
+
+        .seat-legend {
+            display: flex;
+            justify-content: center;
+            gap: 2rem;
+            margin: 2rem 0;
+            flex-wrap: wrap;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.9rem;
+            color: var(--dark-color);
+        }
+
+        .legend-seat {
+            width: 30px;
+            height: 30px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.7rem;
+            font-weight: 600;
+        }
+
+            .legend-seat.available {
+                background: #e8f5e8;
+                border: 2px solid var(--success-color);
+                color: var(--success-color);
+            }
+
+            .legend-seat.selected {
+                background: var(--info-color);
+                border: 2px solid #0056b3;
+                color: white;
+            }
+
+            .legend-seat.taken {
+                background: #6c757d;
+                border: 2px solid #495057;
+                color: white;
+            }
+
+            .legend-seat.disabled {
+                background: #f8f9fa;
+                border: 2px solid #dee2e6;
+                color: #6c757d;
+            }
+
+        .booking-summary {
+            background: white;
+            border-radius: 15px;
+            padding: 2rem;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            margin-top: 2rem;
+        }
+
+        .selected-seats-display {
+            background: var(--light-color);
+            border-radius: 10px;
+            padding: 1rem;
+            margin: 1rem 0;
+            min-height: 50px;
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+        }
+
+        .selected-seat-tag {
+            background: linear-gradient(45deg, var(--info-color), #0056b3);
+            color: white;
+            padding: 0.3rem 0.8rem;
+            border-radius: 15px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            animation: fadeIn 0.3s ease;
+        }
+
+
+        {
+            opacity: 0;
+            transform: scale(0.8);
+        }
+
+        to {
+            opacity: 1;
+            transform: scale(1);
+        }
+
+        }
+
+
+        {
+            transform: rotate(0deg);
+        }
+
+        to {
+            transform: rotate(360deg);
+        }
+
+        }
+
+        .spin {
+            animation: spin 1s linear infinite;
+        }
+
+        .concessions-section {
+            background: white;
+            border-radius: 15px;
+            padding: 2rem;
+            margin-top: 2rem;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+        }
+
+        .concession-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 1rem;
+            border: 1px solid #dee2e6;
+            border-radius: 10px;
+            margin-bottom: 1rem;
+            transition: all 0.2s ease;
+        }
+
+            .concession-item:hover {
+                box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+                border-color: var(--info-color);
+            }
+
+        .concession-info h6 {
+            margin: 0;
+            color: var(--dark-color);
+        }
+
+        .concession-info .price {
+            color: var(--danger-color);
+            font-weight: 600;
+        }
+
+        .quantity-controls {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .quantity-btn {
+            width: 30px;
+            height: 30px;
+            border: 1px solid #dee2e6;
+            background: white;
+            border-radius: 5px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+            .quantity-btn:hover:not(:disabled) {
+                background: var(--info-color);
+                color: white;
+                border-color: var(--info-color);
+            }
+
+            .quantity-btn:disabled {
+                opacity: 0.5;
+                cursor: not-allowed;
+            }
+
+        .quantity-input {
+            width: 50px;
+            text-align: center;
+            border: 1px solid #dee2e6;
+            border-radius: 5px;
+            padding: 0.25rem;
+        }
+
+        .btn-proceed {
+            background: linear-gradient(45deg, var(--success-color), #20c997);
+            border: none;
+            border-radius: 25px;
+            padding: 1rem 2rem;
+            font-weight: 600;
+            color: white;
+            width: 100%;
+            transition: all 0.3s ease;
             box-shadow: 0 4px 15px rgba(40, 167, 69, 0.3);
         }
 
-    .seat-selected {
-        background: #007bff !important;
-        border-color: #0056b3 !important;
-        color: white !important;
-        transform: scale(1.1);
-        box-shadow: 0 4px 15px rgba(0, 123, 255, 0.4);
-    }
+            .btn-proceed:hover:not(:disabled) {
+                background: linear-gradient(45deg, #20c997, #17a2b8);
+                transform: translateY(-2px);
+                box-shadow: 0 6px 20px rgba(40, 167, 69, 0.4);
+                color: white;
+            }
 
-    .seat-taken {
-        background: #6c757d !important;
-        border-color: #495057 !important;
-        color: white !important;
-        cursor: not-allowed !important;
-        opacity: 0.7;
-    }
+            .btn-proceed:disabled {
+                background: #6c757d;
+                cursor: not-allowed;
+                transform: none;
+                box-shadow: none;
+            }
 
-    .seat-disabled {
-        background: #f8f9fa !important;
-        border-color: #dee2e6 !important;
-        color: #6c757d !important;
-        cursor: not-allowed !important;
-        opacity: 0.5;
-    }
-
-    .seat-legend {
-        display: flex;
-        justify-content: center;
-        gap: 2rem;
-        margin: 2rem 0;
-        flex-wrap: wrap;
-    }
-
-    .legend-item {
-        display: flex;
-        align-items: center;
-        gap: 0.5rem;
-        font-size: 0.9rem;
-        color: #495057;
-    }
-
-    .legend-seat {
-        width: 30px;
-        height: 30px;
-        border-radius: 8px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 0.7rem;
-        font-weight: 600;
-    }
-
-    .selection-summary {
-        background: white;
-        border-radius: 15px;
-        padding: 1.5rem;
-        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-        position: sticky;
-        top: 20px;
-    }
-
-    .selected-seats-display {
-        background: #f8f9fa;
-        border-radius: 10px;
-        padding: 1rem;
-        margin: 1rem 0;
-        min-height: 50px;
-        display: flex;
-        align-items: center;
-        flex-wrap: wrap;
-        gap: 0.5rem;
-    }
-
-    .selected-seat-tag {
-        background: linear-gradient(45deg, #007bff, #0056b3);
-        color: white;
-        padding: 0.3rem 0.8rem;
-        border-radius: 15px;
-        font-size: 0.8rem;
-        font-weight: 600;
-        animation: fadeIn 0.3s ease;
-    }
-
-    {
-        opacity: 0;
-        transform: scale(0.8);
-    }
-
-    to {
-        opacity: 1;
-        transform: scale(1);
-    }
-
-    }
- 
-
-    {
-        transform: rotate(0deg);
-    }
-
-    to {
-        transform: rotate(360deg);
-    }
-
-    }
-
-    .spinning {
-        animation: spin 1s linear infinite;
-    }
-
-    .btn-proceed {
-        background: linear-gradient(45deg, #28a745, #20c997);
-        border: none;
-        border-radius: 25px;
-        padding: 1rem 2rem;
-        font-weight: 600;
-        color: white;
-        width: 100%;
-        transition: all 0.3s ease;
-        box-shadow: 0 4px 15px rgba(40, 167, 69, 0.3);
-    }
-
-        .btn-proceed:hover:not(:disabled) {
-            background: linear-gradient(45deg, #20c997, #17a2b8);
-            transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(40, 167, 69, 0.4);
+        .back-btn {
+            background: rgba(255,255,255,0.1);
             color: white;
+            border: 1px solid rgba(255,255,255,0.2);
+            border-radius: 20px;
+            padding: 0.5rem 1.5rem;
+            text-decoration: none;
+            transition: all 0.3s ease;
         }
 
-        .btn-proceed:disabled {
-            background: #6c757d;
-            cursor: not-allowed;
-            transform: none;
-            box-shadow: none;
+            .back-btn:hover {
+                background: rgba(255,255,255,0.2);
+                color: white;
+                transform: translateY(-1px);
+            }
+
+        .alert {
+            border-radius: 10px;
+            margin-bottom: 1rem;
         }
 
-    .back-btn {
-        background: rgba(255,255,255,0.1);
-        color: white;
-        border: 1px solid rgba(255,255,255,0.2);
-        border-radius: 20px;
-        padding: 0.5rem 1.5rem;
-        text-decoration: none;
-        transition: all 0.3s ease;
-    }
-
-        .back-btn:hover {
-            background: rgba(255,255,255,0.2);
-            color: white;
-            transform: translateY(-1px);
+        .layout-container {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 2rem;
+            max-width: 1200px;
+            margin: 0 auto;
         }
 
-    .max-seats-warning {
-        background: #fff3cd;
-        border: 1px solid #ffeaa7;
-        color: #856404;
-        padding: 0.75rem;
-        border-radius: 10px;
-        margin-bottom: 1rem;
-        display: none;
-    }
+       
 
-    {
-        padding: 1.5rem 0;
-    }
+        {
+            grid-template-columns: 2fr 1fr;
+        }
 
-    .seating-area {
-        padding: 1rem;
-    }
+        }
 
-    .seat-label {
-        min-width: 35px;
-        height: 35px;
-        font-size: 0.7rem;
-    }
 
-    .seat-legend {
-        gap: 1rem;
-    }
+        {
+            width: 35px;
+            height: 35px;
+            font-size: 0.7rem;
+        }
 
-    .selection-summary {
-        position: static;
-        margin-top: 2rem;
-    }
+        .row-label {
+            width: 25px;
+            font-size: 0.8rem;
+        }
 
-    }</style>
+        .seat-legend {
+            gap: 1rem;
+        }
 
-<div class="page-header">
-    <div class="container">
-        <div class="row align-items-center">
-            <div class="col-md-8">
-                <div class="movie-info-card">
-                    <h2 class="mb-2">
-                        <i class="bi bi-ticket-perforated me-2"></i>
-                        Chọn ghế ngồi
-                    </h2>
-                    <div class="row">
-                        <div class="col-md-8">
-                            <h4 class="mb-1">@showTime.Movie.Title</h4>
-                            <p class="mb-1">
-                                <i class="bi bi-building me-1"></i>
-                                @showTime.Auditorium.Theater.Name
-                            </p>
-                            <p class="mb-1">
-                                <i class="bi bi-camera-reels me-1"></i>
-                                Phòng @showTime.Auditorium.Name
-                            </p>
-                            <p class="mb-0">
-                                <i class="bi bi-clock me-1"></i>
-                                @showTime.StartTime.ToString("dddd, dd/MM/yyyy - HH:mm")
-                            </p>
-                        </div>
-                        <div class="col-md-4 text-md-end">
-                            <div class="price-info">
-                                <small>Giá vé</small>
-                                <div class="h5 mb-0">@showTime.Price.ToString("N0") ₫</div>
+        .seating-container {
+            padding: 1rem;
+        }
+
+        }</style>
+</head>
+<body>
+    <!-- Page Header -->
+    <div class="page-header">
+        <div class="container">
+            <div class="row align-items-center">
+                <div class="col-md-8">
+                    <div class="movie-info-card">
+                        <h2 class="mb-2">
+                            <i class="bi bi-ticket-perforated me-2"></i>
+                            Chọn ghế ngồi
+                        </h2>
+                        <div class="row">
+                            <div class="col-md-8">
+                                <h4 class="mb-1">Avengers: Endgame</h4>
+                                <p class="mb-1">
+                                    <i class="bi bi-building me-1"></i>
+                                    CGV Vincom
+                                </p>
+                                <p class="mb-1">
+                                    <i class="bi bi-camera-reels me-1"></i>
+                                    Phòng 3D-01
+                                </p>
+                                <p class="mb-0">
+                                    <i class="bi bi-clock me-1"></i>
+                                    Thứ Ba, 04/06/2025 - 19:30
+                                </p>
+                            </div>
+                            <div class="col-md-4 text-md-end">
+                                <div class="price-info">
+                                    <small>Giá vé</small>
+                                    <div class="h5 mb-0">120,000 ₫</div>
+                                </div>
                             </div>
                         </div>
                     </div>
                 </div>
-            </div>
-            <div class="col-md-4 text-md-end mt-3 mt-md-0">
-                <a href="@Url.Action("OrderTicket", new { id = showTime.MovieID })" class="back-btn">
-                    <i class="bi bi-arrow-left me-2"></i>Chọn suất khác
-                </a>
+                <div class="col-md-4 text-md-end mt-3 mt-md-0">
+                    <a href="#" class="back-btn">
+                        <i class="bi bi-arrow-left me-2"></i>Chọn suất khác
+                    </a>
+                </div>
             </div>
         </div>
     </div>
-</div>
 
-<div class="container pb-5">
-    @if (Model == null || !Model.Any())
-    {
-        <div class="alert alert-warning text-center">
-            <i class="bi bi-exclamation-triangle me-2"></i>
-            Không có ghế nào khả dụng cho suất chiếu này.
-        </div>
-    }
-    else
-    {
-        <div class="row">
-            <div class="col-lg-8">
+    <div class="container pb-5">
+        <div class="layout-container">
+            <!-- Main Content -->
+            <div class="main-content">
                 <!-- Cinema Screen -->
                 <div class="cinema-screen">
                     <i class="bi bi-tv me-2"></i>
                     <strong>MÀN HÌNH</strong>
                 </div>
 
-                <!-- Seating Area -->
-                <div class="seating-area">
-                    <form asp-action="ConfirmOrder" method="post" id="seatSelectionForm">
-                        <input type="hidden" name="ShowTimeID" value="@showTime.ID" />
+                <!-- Seat Selection -->
+                <div class="seating-container">
+                    <h5 class="text-center mb-3">Khu vực VIP - Ghế A1 đến J18</h5>
 
-                        @for (int section = 0; section < 3; section++)
-                        {
-                            int minSeat = section * 6 + 1;
-                            int maxSeat = minSeat + 5;
-
-                            var sectionSeats = Model.Where(s => s.SeatNumber >= minSeat && s.SeatNumber <= maxSeat).ToList();
-
-                            @if (sectionSeats.Any())
-                            {
-                                <div class="section-container">
-                                    <div class="section-title">
-                                        Khu vực @(section + 1) - Ghế @minSeat đến @maxSeat
-                                    </div>
-
-                                    @foreach (var rowGroup in sectionSeats.GroupBy(s => s.RowLabel).OrderBy(g => g.Key))
-                                    {
-                                        <div class="seat-row">
-                                            @foreach (var seat in rowGroup.OrderBy(s => s.SeatNumber))
-                                            {
-                                                var isTaken = takenSeats.Contains(seat.ID);
-                                                var seatId = $"seat-{seat.ID}";
-
-                                                <div class="seat-container">
-                                                    <input type="checkbox"
-                                                           id="@seatId"
-                                                           name="SelectedSeats"
-                                                           value="@seat.ID"
-                                                           class="d-none seat-checkbox"
-                                                    @(isTaken ? "disabled" : "") />
-
-                                                    <label for="@seatId"
-                                                           class="seat-label @(isTaken ? "seat-taken" : "seat-available")"
-                                                           title="@(isTaken ? "Ghế đã được đặt" : $"Ghế {seat.RowLabel}{seat.SeatNumber} - {showTime.Price:N0}₫")"
-                                                           data-seat-info="@seat.RowLabel@seat.SeatNumber"
-                                                    @(isTaken ? "" : "")>
-                                                        @seat.RowLabel@seat.SeatNumber
-                                                    </label>
-                                                </div>
-                                            }
-                                        </div>
-                                    }
-                                </div>
-                            }
-                        }
-                    </form>
+                    <div class="seat-map" id="seatMap">
+                        <!-- Seats will be generated by JavaScript -->
+                    </div>
                 </div>
 
                 <!-- Seat Legend -->
                 <div class="seat-legend">
                     <div class="legend-item">
-                        <div class="legend-seat seat-available">A1</div>
+                        <div class="legend-seat available">A1</div>
                         <span>Ghế trống</span>
                     </div>
                     <div class="legend-item">
-                        <div class="legend-seat seat-selected">A2</div>
+                        <div class="legend-seat selected">A2</div>
                         <span>Ghế đã chọn</span>
                     </div>
                     <div class="legend-item">
-                        <div class="legend-seat seat-taken">A3</div>
+                        <div class="legend-seat taken">A3</div>
                         <span>Ghế đã đặt</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-seat disabled">A4</div>
+                        <span>Không thể chọn</span>
+                    </div>
+                </div>
+
+                <!-- Concessions Section -->
+                <div class="concessions-section">
+                    <h5 class="mb-3">
+                        <i class="bi bi-cup-straw me-2"></i>
+                        Đồ ăn & Thức uống
+                    </h5>
+
+                    <div class="concession-item">
+                        <div class="concession-info">
+                            <h6>Bắp rang bơ lớn</h6>
+                            <div class="price">65,000 ₫</div>
+                        </div>
+                        <div class="quantity-controls">
+                            <button class="quantity-btn" onclick="changeQuantity('popcorn', -1)">-</button>
+                            <input type="number" class="quantity-input" id="popcorn-qty" value="0" min="0" max="10" readonly>
+                            <button class="quantity-btn" onclick="changeQuantity('popcorn', 1)">+</button>
+                        </div>
+                    </div>
+
+                    <div class="concession-item">
+                        <div class="concession-info">
+                            <h6>Coca Cola lớn</h6>
+                            <div class="price">45,000 ₫</div>
+                        </div>
+                        <div class="quantity-controls">
+                            <button class="quantity-btn" onclick="changeQuantity('coke', -1)">-</button>
+                            <input type="number" class="quantity-input" id="coke-qty" value="0" min="0" max="10" readonly>
+                            <button class="quantity-btn" onclick="changeQuantity('coke', 1)">+</button>
+                        </div>
+                    </div>
+
+                    <div class="concession-item">
+                        <div class="concession-info">
+                            <h6>Combo Family</h6>
+                            <div class="price">150,000 ₫</div>
+                        </div>
+                        <div class="quantity-controls">
+                            <button class="quantity-btn" onclick="changeQuantity('combo', -1)">-</button>
+                            <input type="number" class="quantity-input" id="combo-qty" value="0" min="0" max="5" readonly>
+                            <button class="quantity-btn" onclick="changeQuantity('combo', 1)">+</button>
+                        </div>
                     </div>
                 </div>
             </div>
 
-            <div class="col-lg-4">
-                <!-- Selection Summary -->
-                <div class="selection-summary">
+            <!-- Booking Summary -->
+            <div class="sidebar">
+                <div class="booking-summary">
                     <h5 class="mb-3">
                         <i class="bi bi-list-check me-2"></i>
                         Thông tin đặt vé
                         <span id="seatCountBadge" class="badge bg-secondary ms-2">0/5</span>
                     </h5>
 
-                    <div class="max-seats-warning" id="maxSeatsWarning">
+                    <div class="alert alert-warning d-none" id="maxSeatsWarning">
                         <i class="bi bi-exclamation-triangle me-2"></i>
                         <strong>Đã chọn tối đa 5 ghế!</strong><br>
                         <small>Vui lòng bỏ chọn ghế khác để chọn ghế mới.</small>
@@ -471,7 +577,11 @@
                         </div>
                         <div class="d-flex justify-content-between">
                             <span>Giá mỗi ghế:</span>
-                            <strong>@showTime.Price.ToString("N0") ₫</strong>
+                            <strong>120,000 ₫</strong>
+                        </div>
+                        <div class="d-flex justify-content-between">
+                            <span>Đồ ăn & thức uống:</span>
+                            <strong id="concessionTotal">0 ₫</strong>
                         </div>
                         <hr>
                         <div class="d-flex justify-content-between">
@@ -480,7 +590,7 @@
                         </div>
                     </div>
 
-                    <button type="submit" form="seatSelectionForm" class="btn-proceed" id="proceedBtn" disabled>
+                    <button class="btn-proceed" id="proceedBtn" disabled onclick="proceedToPayment()">
                         <i class="bi bi-credit-card me-2"></i>
                         Tiến hành thanh toán
                     </button>
@@ -494,309 +604,323 @@
                 </div>
             </div>
         </div>
-    }
-</div>
-
-@if (TempData["Error"] != null)
-{
-    <div class="alert alert-danger position-fixed top-0 end-0 m-3" style="z-index: 1100;">
-        <i class="bi bi-exclamation-triangle me-2"></i>
-        @TempData["Error"]
     </div>
-}
 
-@if (TempData["Success"] != null)
-{
-    <div class="alert alert-success position-fixed top-0 end-0 m-3" style="z-index: 1100;">
-        <i class="bi bi-check-circle me-2"></i>
-        @TempData["Success"]
-    </div>
-}
+    <script>
+                // Constants
+                const SEAT_PRICE = 120000;
+                const MAX_SEATS = 5;
+                const CONCESSION_PRICES = {
+                    popcorn: 65000,
+                    coke: 45000,
+                    combo: 150000
+                };
 
-<script>
-    document.addEventListener('DOMContentLoaded', function() {
-        console.log('🎬 Seat Selection Script Initialized');
+                // State
+                let selectedSeats = [];
+                let concessionQuantities = {
+                    popcorn: 0,
+                    coke: 0,
+                    combo: 0
+                };
 
-        const seatPrice = @showTime.Price;
-        const MAX_SEATS = 5;
-        let selectedSeats = [];
+                // Predefined taken seats for demo
+                const takenSeats = ['A3', 'A8', 'B5', 'C12', 'D7', 'E15', 'F3', 'G10', 'H6', 'I14'];
 
-        console.log('Seat price:', seatPrice);
-        console.log('Max seats allowed:', MAX_SEATS);
+                // Initialize
+                document.addEventListener('DOMContentLoaded', function() {
+                    generateSeatMap();
+                    updateDisplay();
+                    console.log('✅ Cinema booking system initialized');
+                });
 
-        function updateDisplay() {
-            console.log('🔄 Updating display...');
+                // Generate seat map
+                function generateSeatMap() {
+                    const seatMap = document.getElementById('seatMap');
+                    const rows = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J'];
 
-            const selectedSeatsDisplay = document.getElementById('selectedSeatsDisplay');
-            const seatCountEl = document.getElementById('seatCount');
-            const seatCountBadge = document.getElementById('seatCountBadge');
-            const totalPriceEl = document.getElementById('totalPrice');
-            const proceedBtn = document.getElementById('proceedBtn');
-            const maxSeatsWarning = document.getElementById('maxSeatsWarning');
+                    rows.forEach(row => {
+                        const seatRow = document.createElement('div');
+                        seatRow.className = 'seat-row';
 
-            // Update selected seats display
-            if (selectedSeats.length === 0) {
-                selectedSeatsDisplay.innerHTML = '<span class="text-muted">Chưa chọn ghế nào</span>';
-                proceedBtn.disabled = true;
-            } else {
-                selectedSeatsDisplay.innerHTML = selectedSeats.map(seat =>
-                    `<span class="selected-seat-tag">${seat}</span>`
-                ).join('');
-                proceedBtn.disabled = false;
-            }
+                        // Row label
+                        const rowLabel = document.createElement('div');
+                        rowLabel.className = 'row-label';
+                        rowLabel.textContent = row;
+                        seatRow.appendChild(rowLabel);
 
-            // Update counts and totals
-            seatCountEl.textContent = selectedSeats.length;
-            seatCountBadge.textContent = `${selectedSeats.length}/${MAX_SEATS}`;
-            totalPriceEl.textContent = (selectedSeats.length * seatPrice).toLocaleString('vi-VN') + ' ₫';
+                        // Generate seats
+                        for (let i = 1; i <= 18; i++) {
+                            const seatId = `${row}${i}`;
 
-            // Update badge color
-            if (selectedSeats.length === 0) {
-                seatCountBadge.className = 'badge bg-secondary ms-2';
-            } else if (selectedSeats.length >= MAX_SEATS) {
-                seatCountBadge.className = 'badge bg-danger ms-2';
-                maxSeatsWarning.style.display = 'block';
-            } else {
-                seatCountBadge.className = 'badge bg-primary ms-2';
-                maxSeatsWarning.style.display = 'none';
-            }
+                            // Add aisle after seat 6 and 12
+                            if (i === 7 || i === 13) {
+                                const aisle = document.createElement('div');
+                                aisle.className = 'aisle';
+                                seatRow.appendChild(aisle);
+                            }
 
-            // Handle max seats logic
-            const checkboxes = document.querySelectorAll('.seat-checkbox:not(:disabled)');
-            checkboxes.forEach(checkbox => {
-                const label = document.querySelector(`label[for="${checkbox.id}"]`);
-                if (!checkbox.checked && !checkbox.disabled) {
-                    if (selectedSeats.length >= MAX_SEATS) {
-                        label.classList.add('seat-disabled');
-                        label.style.pointerEvents = 'none';
-                        label.title = `Đã chọn tối đa ${MAX_SEATS} ghế`;
+                            const seat = document.createElement('div');
+                            seat.className = 'seat';
+                            seat.id = seatId;
+                            seat.textContent = i;
+                            seat.title = `Ghế ${seatId}`;
+
+                            // Set seat status
+                            if (takenSeats.includes(seatId)) {
+                                seat.classList.add('taken');
+                                seat.title = `Ghế ${seatId} - Đã được đặt`;
+                            } else {
+                                seat.classList.add('available');
+                                seat.title = `Ghế ${seatId} - 120,000₫`;
+                                seat.addEventListener('click', () => toggleSeat(seatId));
+                            }
+
+                            seatRow.appendChild(seat);
+                        }
+
+                        seatMap.appendChild(seatRow);
+                    });
+                }
+
+                // Toggle seat selection
+                function toggleSeat(seatId) {
+                    const seat = document.getElementById(seatId);
+
+                    if (seat.classList.contains('taken') || seat.classList.contains('disabled')) {
+                        showMessage('Không thể chọn ghế này!', 'warning');
+                        return;
+                    }
+
+                    if (seat.classList.contains('selected')) {
+                        // Deselect seat
+                        seat.classList.remove('selected');
+                        seat.classList.add('available');
+                        selectedSeats = selectedSeats.filter(id => id !== seatId);
+                        console.log(`❌ Deselected seat: ${seatId}`);
                     } else {
-                        label.classList.remove('seat-disabled');
-                        label.style.pointerEvents = '';
-                        const seatInfo = label.getAttribute('data-seat-info');
-                        label.title = `Ghế ${seatInfo} - ${seatPrice.toLocaleString('vi-VN')}₫`;
+                        // Check max seats limit
+                        if (selectedSeats.length >= MAX_SEATS) {
+                            showMessage(`Chỉ được chọn tối đa ${MAX_SEATS} ghế!`, 'warning');
+                            return;
+                        }
+
+                        // Select seat
+                        seat.classList.remove('available');
+                        seat.classList.add('selected');
+                        selectedSeats.push(seatId);
+                        console.log(`✅ Selected seat: ${seatId}`);
+                    }
+
+                    updateDisplay();
+                    updateSeatStates();
+                }
+
+                // Update seat states based on selection limit
+                function updateSeatStates() {
+                    const availableSeats = document.querySelectorAll('.seat.available');
+
+                    if (selectedSeats.length >= MAX_SEATS) {
+                        availableSeats.forEach(seat => {
+                            seat.classList.add('disabled');
+                            seat.classList.remove('available');
+                        });
+                    } else {
+                        availableSeats.forEach(seat => {
+                            if (seat.classList.contains('disabled')) {
+                                seat.classList.remove('disabled');
+                                seat.classList.add('available');
+                            }
+                        });
                     }
                 }
-            });
 
-            console.log(`Selected: ${selectedSeats.length}/${MAX_SEATS}`, selectedSeats);
-        }
+                // Change concession quantity
+                function changeQuantity(item, change) {
+                    const currentQty = concessionQuantities[item];
+                    const newQty = Math.max(0, Math.min(10, currentQty + change));
 
-        function toggleSeatSelection(label) {
-            const seatInfo = label.getAttribute('data-seat-info');
-            console.log('🎯 Seat clicked:', seatInfo);
+                    if (item === 'combo') {
+                        // Combo has lower max limit
+                        concessionQuantities[item] = Math.min(5, newQty);
+                    } else {
+                        concessionQuantities[item] = newQty;
+                    }
 
-            if (label.classList.contains('seat-taken')) {
-                console.log('❌ Cannot select taken seat');
-                return false;
-            }
-
-            if (label.classList.contains('seat-disabled')) {
-                console.log('❌ Seat disabled due to max limit');
-                showMessage(`Chỉ được chọn tối đa ${MAX_SEATS} ghế!`, 'warning');
-                return false;
-            }
-
-            const checkboxId = label.getAttribute('for');
-            const checkbox = document.getElementById(checkboxId);
-            if (!checkbox) {
-                console.log('❌ Checkbox not found for:', checkboxId);
-                return false;
-            }
-
-            // Check if trying to select more than allowed
-            if (!checkbox.checked && selectedSeats.length >= MAX_SEATS) {
-                console.log('❌ Maximum seats limit reached');
-                showMessage(`Chỉ được chọn tối đa ${MAX_SEATS} ghế trong một lần đặt vé!`, 'warning');
-                return false;
-            }
-
-            // Toggle checkbox and visual state
-            checkbox.checked = !checkbox.checked;
-            console.log('🔄 Checkbox toggled:', checkboxId, 'checked:', checkbox.checked);
-
-            if (checkbox.checked) {
-                label.classList.remove('seat-available');
-                label.classList.add('seat-selected');
-                selectedSeats.push(seatInfo);
-                console.log(`✅ Selected seat: ${seatInfo}`);
-            } else {
-                label.classList.remove('seat-selected');
-                label.classList.add('seat-available');
-                selectedSeats = selectedSeats.filter(seat => seat !== seatInfo);
-                console.log(`❌ Deselected seat: ${seatInfo}`);
-            }
-
-            // Visual feedback
-            label.style.transform = 'scale(1.2)';
-            setTimeout(() => {
-                if (checkbox.checked) {
-                    label.style.transform = 'scale(1.1)';
-                } else {
-                    label.style.transform = '';
-                }
-            }, 200);
-
-            updateDisplay();
-            return true;
-        }
-
-        function showMessage(message, type = 'info') {
-            // Remove existing message
-            const existing = document.getElementById('tempMessage');
-            if (existing) existing.remove();
-
-            const alertClass = type === 'error' ? 'alert-danger' :
-                              type === 'warning' ? 'alert-warning' : 'alert-info';
-
-            const messageEl = document.createElement('div');
-            messageEl.id = 'tempMessage';
-            messageEl.className = `alert ${alertClass} position-fixed`;
-            messageEl.style.cssText = `
-                top: 20px;
-                right: 20px;
-                z-index: 9999;
-                min-width: 300px;
-                box-shadow: 0 4px 15px rgba(0,0,0,0.2);
-            `;
-            messageEl.innerHTML = `
-                <i class="bi bi-${type === 'error' ? 'exclamation-circle' : type === 'warning' ? 'exclamation-triangle' : 'info-circle'} me-2"></i>
-                ${message}
-            `;
-
-            document.body.appendChild(messageEl);
-
-            setTimeout(() => {
-                if (messageEl.parentNode) {
-                    messageEl.remove();
-                }
-            }, 3000);
-        }
-
-        // Add event listeners to seat labels
-        document.querySelectorAll('.seat-label').forEach(label => {
-            console.log('🎟️ Adding click listener to seat:', label.getAttribute('data-seat-info'));
-
-            label.addEventListener('click', function(e) {
-                e.preventDefault();
-                e.stopPropagation();
-
-                // Don't allow clicking on taken seats
-                if (this.classList.contains('seat-taken')) {
-                    console.log('❌ Cannot click taken seat');
-                    showMessage('Ghế này đã được đặt!', 'warning');
-                    return false;
+                    document.getElementById(`${item}-qty`).value = concessionQuantities[item];
+                    updateDisplay();
                 }
 
-                toggleSeatSelection(this);
-            });
-        });
-
-        // Form validation
-        const form = document.getElementById('seatSelectionForm');
-        if (form) {
-            form.addEventListener('submit', function(e) {
-                console.log('📤 Form submission triggered...');
-
-                if (selectedSeats.length === 0) {
-                    e.preventDefault();
-                    console.log('❌ Form submission blocked - no seats selected');
-                    showMessage("Vui lòng chọn ít nhất một ghế trước khi tiếp tục.", 'error');
-                    return false;
+                // Update display
+                function updateDisplay() {
+                    updateSelectedSeatsDisplay();
+                    updatePricing();
+                    updateCounters();
+                    updateProceedButton();
                 }
 
-                if (selectedSeats.length > MAX_SEATS) {
-                    e.preventDefault();
-                    console.log('❌ Form submission blocked - too many seats');
-                    showMessage(`Chỉ được chọn tối đa ${MAX_SEATS} ghế trong một lần đặt vé.`, 'error');
-                    return false;
+                function updateSelectedSeatsDisplay() {
+                    const display = document.getElementById('selectedSeatsDisplay');
+
+                    if (selectedSeats.length === 0) {
+                        display.innerHTML = '<span class="text-muted">Chưa chọn ghế nào</span>';
+                    } else {
+                        display.innerHTML = selectedSeats
+                            .sort()
+                            .map(seat => `<span class="selected-seat-tag">${seat}</span>`)
+                            .join('');
+                    }
                 }
 
-                console.log('✅ Form validation passed, submitting...');
-                console.log('Selected seats for submission:', selectedSeats);
+                function updatePricing() {
+                    const ticketTotal = selectedSeats.length * SEAT_PRICE;
+                    const concessionTotal = Object.entries(concessionQuantities)
+                        .reduce((total, [item, qty]) => total + (qty * CONCESSION_PRICES[item]), 0);
+                    const grandTotal = ticketTotal + concessionTotal;
 
-                // Add loading state
-                const submitBtn = form.querySelector('button[type="submit"]');
-                if (submitBtn) {
-                    submitBtn.innerHTML = '<i class="bi bi-arrow-repeat spinning me-2"></i>Đang xử lý...';
-                    submitBtn.disabled = true;
+                    document.getElementById('concessionTotal').textContent = concessionTotal.toLocaleString('vi-VN') + ' ₫';
+                    document.getElementById('totalPrice').textContent = grandTotal.toLocaleString('vi-VN') + ' ₫';
                 }
 
-                return true;
-            });
-        }
+                function updateCounters() {
+                    const seatCount = selectedSeats.length;
+                    const badge = document.getElementById('seatCountBadge');
+                    const warning = document.getElementById('maxSeatsWarning');
 
-        // Auto-hide alerts after 3 seconds
-        setTimeout(() => {
-            document.querySelectorAll('.alert.position-fixed').forEach(alert => {
-                if (alert.id !== 'tempMessage') {
-                    alert.remove();
+                    document.getElementById('seatCount').textContent = seatCount;
+                    badge.textContent = `${seatCount}/${MAX_SEATS}`;
+
+                    // Update badge color
+                    if (seatCount === 0) {
+                        badge.className = 'badge bg-secondary ms-2';
+                    } else if (seatCount >= MAX_SEATS) {
+                        badge.className = 'badge bg-danger ms-2';
+                        warning.classList.remove('d-none');
+                    } else {
+                        badge.className = 'badge bg-primary ms-2';
+                        warning.classList.add('d-none');
+                    }
                 }
-            });
-        }, 3000);
 
-        // Debug functions with enhanced testing
-        window.seatDebug = {
-            getSelected: () => {
-                console.log('Current selected seats:', selectedSeats);
-                return selectedSeats;
-            },
-
-            testClick: (seatNumber = 'A1') => {
-                console.log(`🧪 Testing click on seat ${seatNumber}...`);
-                const seat = document.querySelector(`[data-seat-info="${seatNumber}"]`);
-                if (seat) {
-                    seat.click();
-                    console.log(`✅ Clicked seat ${seatNumber}`);
-                } else {
-                    console.log(`❌ Seat ${seatNumber} not found`);
+                function updateProceedButton() {
+                    const proceedBtn = document.getElementById('proceedBtn');
+                    proceedBtn.disabled = selectedSeats.length === 0;
                 }
-            },
 
-            selectRandom: (count = 3) => {
-                console.log(`🧪 Selecting ${count} random seats...`);
-                const available = document.querySelectorAll('.seat-available:not(.seat-disabled)');
-                console.log('Available seats:', available.length);
-                for (let i = 0; i < Math.min(count, available.length, MAX_SEATS); i++) {
-                    available[i].click();
-                    console.log(`Clicked seat ${i + 1}:`, available[i].getAttribute('data-seat-info'));
+                // Show message
+                function showMessage(message, type = 'info') {
+                    // Remove existing message
+                    const existing = document.getElementById('tempMessage');
+                    if (existing) existing.remove();
+
+                    const alertClass = type === 'error' ? 'alert-danger' :
+                                      type === 'warning' ? 'alert-warning' :
+                                      type === 'success' ? 'alert-success' : 'alert-info';
+
+                    const messageEl = document.createElement('div');
+                    messageEl.id = 'tempMessage';
+                    messageEl.className = `alert ${alertClass} position-fixed`;
+                    messageEl.style.cssText = `
+                        top: 20px;
+                        right: 20px;
+                        z-index: 9999;
+                        min-width: 300px;
+                        box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+                        border-radius: 10px;
+                    `;
+
+                    const icon = type === 'error' ? 'exclamation-circle' :
+                                type === 'warning' ? 'exclamation-triangle' :
+                                type === 'success' ? 'check-circle' : 'info-circle';
+
+                    messageEl.innerHTML = `
+                        <i class="bi bi-${icon} me-2"></i>
+                        ${message}
+                    `;
+
+                    document.body.appendChild(messageEl);
+
+                    setTimeout(() => {
+                        if (messageEl.parentNode) {
+                            messageEl.remove();
+                        }
+                    }, 3000);
                 }
-            },
 
-            clearAll: () => {
-                console.log('🧹 Clearing all selected seats...');
-                document.querySelectorAll('.seat-selected').forEach(seat => {
-                    console.log('Clearing:', seat.getAttribute('data-seat-info'));
-                    seat.click();
-                });
-            },
+                // Proceed to payment
+                function proceedToPayment() {
+                    if (selectedSeats.length === 0) {
+                        showMessage('Vui lòng chọn ít nhất một ghế!', 'warning');
+                        return;
+                    }
 
-            selectMax: () => {
-                console.log(`🧪 Selecting max ${MAX_SEATS} seats...`);
-                const available = document.querySelectorAll('.seat-available:not(.seat-disabled)');
-                for (let i = 0; i < Math.min(MAX_SEATS, available.length); i++) {
-                    available[i].click();
+                    const proceedBtn = document.getElementById('proceedBtn');
+                    proceedBtn.innerHTML = '<i class="bi bi-arrow-repeat spin me-2"></i>Đang xử lý...';
+                    proceedBtn.disabled = true;
+
+                    // Simulate processing
+                    setTimeout(() => {
+                        const totalItems = Object.values(concessionQuantities).reduce((a, b) => a + b, 0);
+                        const concessionTotal = Object.entries(concessionQuantities)
+                            .reduce((total, [item, qty]) => total + (qty * CONCESSION_PRICES[item]), 0);
+                        const grandTotal = selectedSeats.length * SEAT_PRICE + concessionTotal;
+
+                        const summary = `
+        Ghế đã chọn: ${selectedSeats.join(', ')}
+        Số lượng đồ ăn/thức uống: ${totalItems}
+        Tổng tiền: ${grandTotal.toLocaleString('vi-VN')} ₫
+
+        Đặt vé thành công! Chuyển đến trang thanh toán...`;
+
+                        alert(summary);
+
+                        // Reset form for demo
+                        selectedSeats = [];
+                        concessionQuantities = { popcorn: 0, coke: 0, combo: 0 };
+
+                        // Reset UI
+                        document.querySelectorAll('.seat.selected').forEach(seat => {
+                            seat.classList.remove('selected');
+                            seat.classList.add('available');
+                        });
+
+                        document.querySelectorAll('.quantity-input').forEach(input => {
+                            input.value = 0;
+                        });
+
+                        updateDisplay();
+                        updateSeatStates();
+
+                        proceedBtn.innerHTML = '<i class="bi bi-credit-card me-2"></i>Tiến hành thanh toán';
+                        proceedBtn.disabled = true;
+
+                        showMessage('Đặt vé thành công! Form đã được reset để demo.', 'success');
+                    }, 1500);
                 }
-            },
 
-            getAvailableSeats: () => {
-                const available = document.querySelectorAll('.seat-available:not(.seat-disabled)');
-                return Array.from(available).map(seat => seat.getAttribute('data-seat-info'));
-            },
+                // Debug functions for testing
+                window.seatDebug = {
+                    selectSeats: (seats) => {
+                        seats.forEach(seatId => {
+                            const seat = document.getElementById(seatId);
+                            if (seat && seat.classList.contains('available')) {
+                                toggleSeat(seatId);
+                            }
+                        });
+                    },
 
-            getSelectedElements: () => {
-                return document.querySelectorAll('.seat-selected');
-            }
-        };
+                    clearAll: () => {
+                        selectedSeats.slice().forEach(seatId => toggleSeat(seatId));
+                    },
 
-        // Initialize display
-        updateDisplay();
+                    getSelected: () => selectedSeats,
 
-        console.log('✅ Seat selection initialized successfully!');
-        console.log('🔧 Debug functions: window.seatDebug');
-        console.log('   - seatDebug.getSelected() - Get selected seats');
-        console.log('   - seatDebug.selectRandom(n) - Select n random seats');
-        console.log('   - seatDebug.clearAll() - Clear all selections');
-        console.log('   - seatDebug.selectMax() - Select max seats');
-    });
-</script>
+                    addConcessions: () => {
+                        changeQuantity('popcorn', 2);
+                        changeQuantity('coke', 1);
+                        changeQuantity('combo', 1);
+                    }
+                };
+    </script>
+</body>
+</html>

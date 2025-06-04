@@ -229,7 +229,7 @@ namespace DKMovies.Controllers
         {
             try
             {
-                var theaters = await _context.TheaterConcession
+                var theaters = await _context.TheaterConcessions
                     .Include(tc => tc.Theater)
                     .Where(tc => tc.ConcessionID == concessionId &&
                                tc.IsAvailable &&
@@ -270,7 +270,7 @@ namespace DKMovies.Controllers
                 }
 
                 // Get concession theater IDs
-                var concessionTheaterIds = await _context.TheaterConcession
+                var concessionTheaterIds = await _context.TheaterConcessions
                     .Where(tc => tc.ConcessionID == concessionId && tc.IsAvailable && tc.StockLeft > 0)
                     .Select(tc => tc.TheaterID)
                     .ToListAsync();

@@ -1,0 +1,533 @@
+﻿@model DKMovies.Models.Ticket
+
+@{
+    ViewData["Title"] = "Chọn phương thức thanh toán";
+    var seatLabels = Model.TicketSeats
+        .OrderBy(s => s.Seat.RowLabel)
+        .ThenBy(s => s.Seat.SeatNumber)
+        .Select(s => $"{s.Seat.RowLabel}{s.Seat.SeatNumber}")
+        .ToList();
+
+    var paymentDeadline = Model.PurchaseTime.AddMinutes(15);
+    var timeRemaining = paymentDeadline - DateTime.Now;
+}
+
+<style>
+    .payment-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 3rem 0;
+        text-align: center;
+        border-radius: 0 0 30px 30px;
+        margin-bottom: 2rem;
+        box-shadow: 0 4px 20px rgba(102, 126, 234, 0.2);
+    }
+
+    .payment-container {
+        max-width: 1000px;
+        margin: 0 auto;
+    }
+
+    .payment-card {
+        background: white;
+        border-radius: 20px;
+        padding: 2rem;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        margin-bottom: 2rem;
+    }
+
+    .timer-section {
+        background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+        color: white;
+        border-radius: 15px;
+        padding: 1.5rem;
+        text-align: center;
+        margin-bottom: 2rem;
+        animation: pulse-warning 2s infinite;
+    }
+
+
+    .timer-countdown {
+        font-size: 2.5rem;
+        font-weight: 700;
+        margin: 0.5rem 0;
+        font-family: 'Monaco', 'Consolas', monospace;
+    }
+
+    .payment-methods {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: 1.5rem;
+        margin: 2rem 0;
+    }
+
+    .payment-method {
+        background: white;
+        border: 2px solid #e9ecef;
+        border-radius: 15px;
+        padding: 1.5rem;
+        text-decoration: none;
+        transition: all 0.3s ease;
+        cursor: pointer;
+        position: relative;
+        overflow: hidden;
+    }
+
+        .payment-method:hover {
+            border-color: #667eea;
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.15);
+            color: inherit;
+            text-decoration: none;
+        }
+
+        .payment-method.selected {
+            border-color: #667eea;
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
+        }
+
+        .payment-method::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+            transition: left 0.5s;
+        }
+
+        .payment-method:hover::before {
+            left: 100%;
+        }
+
+    .payment-icon {
+        font-size: 3rem;
+        color: #667eea;
+        margin-bottom: 1rem;
+        display: block;
+    }
+
+    .payment-name {
+        font-size: 1.3rem;
+        font-weight: 700;
+        color: #2c3e50;
+        margin-bottom: 0.5rem;
+    }
+
+    .payment-description {
+        font-size: 0.9rem;
+        color: #6c757d;
+        margin-bottom: 1rem;
+    }
+
+    .payment-features {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+    }
+
+        .payment-features li {
+            font-size: 0.8rem;
+            color: #28a745;
+            margin-bottom: 0.3rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+            .payment-features li::before {
+                content: '✓';
+                color: #28a745;
+                font-weight: bold;
+            }
+
+    .ticket-summary {
+        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+        border-radius: 15px;
+        padding: 1.5rem;
+        margin-bottom: 2rem;
+    }
+
+    .summary-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0.5rem 0;
+        border-bottom: 1px solid #dee2e6;
+    }
+
+        .summary-item:last-child {
+            border-bottom: none;
+            font-weight: 700;
+            font-size: 1.1rem;
+            color: #dc3545;
+        }
+
+    .action-buttons {
+        display: flex;
+        gap: 1rem;
+        justify-content: center;
+        margin-top: 2rem;
+        flex-wrap: wrap;
+    }
+
+    .btn-payment {
+        padding: 1rem 2rem;
+        border-radius: 25px;
+        font-weight: 600;
+        text-decoration: none;
+        transition: all 0.3s ease;
+        border: none;
+        min-width: 180px;
+        cursor: pointer;
+        font-size: 1rem;
+    }
+
+    .btn-primary-payment {
+        background: linear-gradient(45deg, #28a745, #20c997);
+        color: white;
+        box-shadow: 0 4px 15px rgba(40, 167, 69, 0.3);
+        animation: pulse-success 2s infinite;
+    }
+
+        .btn-primary-payment:hover {
+            background: linear-gradient(45deg, #20c997, #17a2b8);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(40, 167, 69, 0.4);
+            color: white;
+        }
+
+        .btn-primary-payment:disabled {
+            background: #6c757d;
+            cursor: not-allowed;
+            animation: none;
+            transform: none;
+            box-shadow: none;
+        }
+
+
+    .btn-secondary-payment {
+        background: #f8f9fa;
+        color: #495057;
+        border: 2px solid #dee2e6;
+    }
+
+        .btn-secondary-payment:hover {
+            background: #e9ecef;
+            color: #495057;
+            transform: translateY(-2px);
+        }
+
+    .security-note {
+        background: linear-gradient(135deg, #d1ecf1 0%, #bee5eb 100%);
+        border-radius: 15px;
+        padding: 1.5rem;
+        margin: 2rem 0;
+        border-left: 4px solid #17a2b8;
+    }
+
+    .quick-info {
+        background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%);
+        border-radius: 15px;
+        padding: 1rem;
+        margin: 1rem 0;
+        border-left: 4px solid #ffc107;
+        font-size: 0.9rem;
+    }
+
+ 
+
+    {
+        padding: 2rem 0;
+    }
+
+    .payment-card {
+        padding: 1.5rem;
+    }
+
+    .payment-methods {
+        grid-template-columns: 1fr;
+    }
+
+    .timer-countdown {
+        font-size: 2rem;
+    }
+
+    .action-buttons {
+        flex-direction: column;
+        align-items: center;
+    }
+
+    .btn-payment {
+        width: 100%;
+        max-width: 300px;
+    }
+
+    }
+</style>
+
+<div class="payment-header">
+    <div class="container">
+        <div class="text-center">
+            <i class="bi bi-credit-card" style="font-size: 4rem; margin-bottom: 1rem;"></i>
+            <h1 class="mb-3">Chọn phương thức thanh toán</h1>
+            <p class="mb-0 lead">Vui lòng chọn phương thức thanh toán phù hợp với bạn</p>
+        </div>
+    </div>
+</div>
+
+<div class="container pb-5">
+    <div class="payment-container">
+        <!-- Timer Section -->
+        <div class="timer-section">
+            <h5 class="mb-2">
+                <i class="bi bi-clock me-2"></i>
+                Thời gian còn lại để thanh toán
+            </h5>
+            <div class="timer-countdown" id="payment-countdown">
+                @($"{timeRemaining.Minutes:00}:{timeRemaining.Seconds:00}")
+            </div>
+            <p class="mb-0">Vé sẽ tự động hủy nếu không thanh toán đúng hạn</p>
+        </div>
+
+        <!-- Ticket Summary -->
+        <div class="payment-card">
+            <h4 class="text-center mb-4">
+                <i class="bi bi-receipt me-2"></i>
+                Thông tin đơn hàng
+            </h4>
+
+            <div class="ticket-summary">
+                <div class="summary-item">
+                    <span><i class="bi bi-film me-2"></i>Phim:</span>
+                    <span>@Model.ShowTime.Movie.Title</span>
+                </div>
+                <div class="summary-item">
+                    <span><i class="bi bi-building me-2"></i>Rạp:</span>
+                    <span>@Model.ShowTime.Auditorium.Theater.Name</span>
+                </div>
+                <div class="summary-item">
+                    <span><i class="bi bi-camera-reels me-2"></i>Phòng:</span>
+                    <span>@Model.ShowTime.Auditorium.Name</span>
+                </div>
+                <div class="summary-item">
+                    <span><i class="bi bi-calendar-event me-2"></i>Suất chiếu:</span>
+                    <span>@Model.ShowTime.StartTime.ToString("dd/MM/yyyy HH:mm")</span>
+                </div>
+                <div class="summary-item">
+                    <span><i class="bi bi-geo-alt me-2"></i>Ghế:</span>
+                    <span>@string.Join(", ", seatLabels)</span>
+                </div>
+                @if (Model.OrderItems?.Any() == true)
+                {
+                    <div class="summary-item">
+                        <span><i class="bi bi-cup-straw me-2"></i>Đồ ăn & nước uống:</span>
+                        <span>@Model.OrderItems.Sum(oi => oi.Quantity * oi.PriceAtPurchase).ToString("N0")₫</span>
+                    </div>
+                }
+                <div class="summary-item">
+                    <span><strong><i class="bi bi-cash me-2"></i>Tổng cộng:</strong></span>
+                    <span><strong>@Model.TotalPrice.ToString("N0") ₫</strong></span>
+                </div>
+            </div>
+
+            <div class="quick-info">
+                <i class="bi bi-info-circle me-2"></i>
+                <strong>Mã vé:</strong> #@Model.ID.ToString("D6") |
+                <strong>Khách hàng:</strong> @Model.User.Username
+            </div>
+        </div>
+
+        <!-- Payment Methods -->
+        <div class="payment-card">
+            <h4 class="text-center mb-4">
+                <i class="bi bi-wallet2 me-2"></i>
+                Chọn phương thức thanh toán
+            </h4>
+
+            <form id="paymentForm" asp-action="ProcessPayment" method="post">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="ticketId" value="@Model.ID" />
+                <input type="hidden" name="paymentMethod" id="selectedMethod" />
+
+
+                <div class="payment-methods">
+                    <!-- Cash -->
+                    <div class="payment-method" data-method="cash" onclick="selectPaymentMethod('cash')">
+                        <i class="payment-icon bi bi-cash"></i>
+                        <div class="payment-name">Tiền mặt</div>
+                        <div class="payment-description">Thanh toán tại quầy rạp</div>
+                        <ul class="payment-features">
+                            <li>Thanh toán khi đến rạp</li>
+                            <li>Không cần thẻ ngân hàng</li>
+                            <li>Nhận vé ngay tại quầy</li>
+                            <li>Hỗ trợ trực tiếp</li>
+                        </ul>
+                    </div>
+
+                    <!-- Stripe -->
+                    <div class="payment-method" data-method="stripe" onclick="selectPaymentMethod('stripe')">
+                        <i class="payment-icon bi bi-credit-card-2-front"></i>
+                        <div class="payment-name">Thẻ quốc tế</div>
+                        <div class="payment-description">Thanh toán bằng thẻ quốc tế</div>
+                        <ul class="payment-features">
+                            <li>Visa, MasterCard, JCB</li>
+                            <li>Bảo mật PCI DSS</li>
+                            <li>Thanh toán tức thì</li>
+                            <li>Hỗ trợ 3D Secure</li>
+                        </ul>
+                    </div>
+                </div>
+
+
+                <!-- Action Buttons -->
+                <div class="action-buttons">
+                    <button type="submit" class="btn-payment btn-primary-payment" id="paymentBtn" disabled>
+                        <i class="bi bi-lock me-2"></i>
+                        Tiến hành thanh toán
+                    </button>
+
+                    <a href="@Url.Action("OrderConfirmation", new { ticketId = Model.ID })" class="btn-payment btn-secondary-payment">
+                        <i class="bi bi-arrow-left me-2"></i>
+                        Quay lại
+                    </a>
+                </div>
+            </form>
+        </div>
+
+        <!-- Security Note -->
+        <div class="security-note">
+            <h6 class="fw-bold mb-3">
+                <i class="bi bi-shield-check me-2"></i>
+                Bảo mật thanh toán
+            </h6>
+            <div class="row">
+                <div class="col-md-6">
+                    <p class="mb-2"><i class="bi bi-check-circle text-success me-2"></i>Mã hóa SSL 256-bit</p>
+                    <p class="mb-2"><i class="bi bi-check-circle text-success me-2"></i>Tuân thủ chuẩn PCI DSS</p>
+                </div>
+                <div class="col-md-6">
+                    <p class="mb-2"><i class="bi bi-check-circle text-success me-2"></i>Không lưu trữ thông tin thẻ</p>
+                    <p class="mb-2"><i class="bi bi-check-circle text-success me-2"></i>Xác thực 3D Secure</p>
+                </div>
+            </div>
+            <p class="mb-0 mt-2"><small class="text-muted">Mọi giao dịch được bảo vệ và giám sát 24/7. Chúng tôi cam kết bảo mật tuyệt đối thông tin khách hàng.</small></p>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        let selectedPaymentMethod = null;
+        const paymentBtn = document.getElementById('paymentBtn');
+        const selectedMethodInput = document.getElementById('selectedMethod');
+
+        // Payment countdown timer
+        const countdownEl = document.getElementById('payment-countdown');
+        const deadline = new Date('@paymentDeadline.ToString("yyyy-MM-ddTHH:mm:ss")');
+
+        function updateCountdown() {
+            const now = new Date();
+            const diff = deadline - now;
+
+            if (diff <= 0) {
+                countdownEl.innerHTML = '<span class="text-danger">Hết hạn</span>';
+                // Disable all payment methods and redirect
+                document.querySelectorAll('.payment-method').forEach(method => {
+                    method.style.pointerEvents = 'none';
+                    method.style.opacity = '0.5';
+                });
+                paymentBtn.disabled = true;
+                paymentBtn.innerHTML = '<i class="bi bi-x-circle me-2"></i>Đã hết hạn';
+
+                setTimeout(() => {
+                    window.location.href = '@Url.Action("UserTickets")';
+                }, 3000);
+                return;
+            }
+
+            const minutes = Math.floor(diff / (1000 * 60));
+            const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+
+            countdownEl.innerHTML = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+
+            // Warning when less than 5 minutes
+            if (diff < 5 * 60 * 1000) {
+                countdownEl.style.color = '#ff6b6b';
+                countdownEl.style.animation = 'pulse 1s infinite';
+            }
+        }
+
+        updateCountdown();
+        const countdownInterval = setInterval(updateCountdown, 1000);
+
+        // Payment method selection
+        window.selectPaymentMethod = function(method) {
+            // Remove previous selection
+            document.querySelectorAll('.payment-method').forEach(el => {
+                el.classList.remove('selected');
+            });
+
+            // Add selection to clicked method
+            document.querySelector(`[data-method="${method}"]`).classList.add('selected');
+
+            selectedPaymentMethod = method;
+            selectedMethodInput.value = method;
+
+            // Enable payment button
+            paymentBtn.disabled = false;
+            paymentBtn.innerHTML = getPaymentButtonText(method);
+        };
+
+        function getPaymentButtonText(method) {
+            const texts = {
+                vnpay: '<i class="bi bi-credit-card me-2"></i>Thanh toán với VNPay',
+                momo: '<i class="bi bi-phone me-2"></i>Thanh toán với MoMo',
+                banking: '<i class="bi bi-bank me-2"></i>Chuyển khoản ngân hàng',
+                cash: '<i class="bi bi-cash me-2"></i>Thanh toán tại quầy',
+                stripe: '<i class="bi bi-credit-card-2-front me-2"></i>Thanh toán thẻ quốc tế'
+            };
+            return texts[method] || '<i class="bi bi-lock me-2"></i>Tiến hành thanh toán';
+        }
+
+        // Form submission with loading state
+        document.getElementById('paymentForm').addEventListener('submit', function(e) {
+            if (!selectedPaymentMethod) {
+                e.preventDefault();
+                alert('Vui lòng chọn phương thức thanh toán');
+                return;
+            }
+
+            // Add loading state
+            paymentBtn.disabled = true;
+            paymentBtn.innerHTML = '<i class="bi bi-arrow-repeat spinning me-2"></i>Đang xử lý...';
+
+            // Disable all payment methods
+            document.querySelectorAll('.payment-method').forEach(method => {
+                method.style.pointerEvents = 'none';
+                method.style.opacity = '0.7';
+            });
+        });
+
+        // Auto-check payment status every 30 seconds
+        setInterval(function() {
+            fetch('@Url.Action("CheckPaymentStatus", new { ticketId = Model.ID })')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'PAID' || data.status === 'CONFIRMED') {
+                        clearInterval(countdownInterval);
+                        window.location.href = '@Url.Action("OrderConfirmation", new { ticketId = Model.ID })';
+                    }
+                })
+                .catch(error => console.log('Payment check error:', error));
+        }, 30000);
+
+        // Add spinning animation
+        const style = document.createElement('style');
+        style.textContent = `
+
+        `;
+        document.head.appendChild(style);
+    });
+</script>

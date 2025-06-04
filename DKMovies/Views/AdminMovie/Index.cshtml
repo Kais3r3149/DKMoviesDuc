@@ -88,13 +88,12 @@ else
                                     <tr class="align-middle">
                                         <td class="fw-medium text-muted">@i</td>
                                         <td>
-                                            <div class="position-relative">
-                                        <img src="@Url.Content($"~/assets/images/{(string.IsNullOrWhiteSpace(movie.PosterImagePath) ? "default-poster.jpg" : movie.PosterImagePath)}")"
+                                    <div class="position-relative">
+                                        <img src="@Url.Content($"~/assets/images/movie_posters/{(string.IsNullOrWhiteSpace(movie.PosterImagePath) ? "default-poster.jpg" : movie.PosterImagePath.TrimStart('/'))}")"
                                              alt="@movie.Title"
                                              class="img-fluid"
-                                             style="height: 300px; object-fit: cover;" />
-
-                                            </div>
+                                             style="width: 80px; height: 120px; object-fit: cover; border-radius: 4px;" />
+                                    </div>
                                         </td>
                                         <td>
                                             <div>

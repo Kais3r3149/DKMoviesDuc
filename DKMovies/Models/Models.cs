@@ -186,7 +186,7 @@ namespace DKMovies.Models
         [Display(Name = "Created At")]
         public DateTime CreatedAt { get; set; }
 
-        // ✅ Các trường mới để xác thực và bảo mật
+        // ✅ Security and verification fields
         [Display(Name = "Email Confirmed")]
         public bool EmailConfirmed { get; set; } = false;
 
@@ -204,9 +204,14 @@ namespace DKMovies.Models
         [Display(Name = "2FA Expiry Time")]
         public DateTime? TwoFactorExpiry { get; set; }
 
-        public ICollection<Ticket> Tickets { get; set; }
-        public ICollection<Review> Reviews { get; set; }
-        public ICollection<Order> Orders { get; set; }
+        // Navigation properties
+        public ICollection<Ticket> Tickets { get; set; } = new List<Ticket>();
+        public ICollection<Review> Reviews { get; set; } = new List<Review>();
+        public ICollection<Order> Orders { get; set; } = new List<Order>();
+        public ICollection<CartItem> CartItems { get; set; } = new List<CartItem>();
+        public ICollection<WatchlistItem> WatchlistItems { get; set; } = new List<WatchlistItem>();
+        public ICollection<MovieUserFavourite> MovieUserFavourites { get; set; } = new List<MovieUserFavourite>();
+        public ICollection<WatchListSingular> WatchList { get; set; } = new List<WatchListSingular>();
     }
 
     // 7. THEATERS
@@ -441,12 +446,12 @@ namespace DKMovies.Models
 
     public enum TicketStatus
     {
-        PENDING,
-        CONFIRMED,
-        CANCELLED
+        PENDING,    // Chờ thanh toán/xác nhận
+        CONFIRMED,  // Đã xác nhận (thanh toán tại quầy)
+        PAID,       // Đã thanh toán online
+        CANCELLED   // Đã hủy
     }
 
-    // 13. TICKETS
     public class Ticket
     {
         [Key]
@@ -462,31 +467,37 @@ namespace DKMovies.Models
         [Display(Name = "Showtime ID")]
         public int ShowTimeID { get; set; }
 
-        [Display(Name = "Status")]
-        public TicketStatus Status { get; set; }
-
-
         [ForeignKey("ShowTimeID")]
         public ShowTime ShowTime { get; set; }
 
         [Display(Name = "Purchase Time")]
         public DateTime PurchaseTime { get; set; }
 
-        [NotMapped]
-        [Display(Name = "Total Price")]
-        public decimal TotalPrice
-        {
-            get
-            {
-                var seatCount = TicketSeats?.Count ?? 0;
-                var pricePerSeat = ShowTime?.Price ?? 0;
-                return pricePerSeat * seatCount;
-            }
-        }
+        [Display(Name = "Status")]
+        public TicketStatus Status { get; set; }
 
-        public ICollection<TicketPayment> TicketPayments { get; set; }
-        public ICollection<TicketSeat> TicketSeats { get; set; }
-        public ICollection<OrderItem> OrderItems { get; set; }
+        // ✅ NEW: Store calculated total price
+        [Required]
+        [Column(TypeName = "decimal(10,2)")]
+        [Display(Name = "Total Price")]
+        public decimal TotalPrice { get; set; }
+
+        // ✅ NEW: Payment tracking fields
+        [Display(Name = "Payment Time")]
+        public DateTime? PaymentTime { get; set; }
+
+        [MaxLength(100)]
+        [Display(Name = "Stripe Session ID")]
+        public string? StripeSessionId { get; set; }
+
+        [MaxLength(50)]
+        [Display(Name = "Payment Method")]
+        public string? PaymentMethod { get; set; } // "stripe", "cash", etc.
+
+        // Navigation properties
+        public ICollection<TicketPayment> TicketPayments { get; set; } = new List<TicketPayment>();
+        public ICollection<TicketSeat> TicketSeats { get; set; } = new List<TicketSeat>();
+        public ICollection<OrderItem> OrderItems { get; set; } = new List<OrderItem>();
     }
 
     public class TicketSeat
@@ -641,67 +652,62 @@ namespace DKMovies.Models
         [Display(Name = "Concession ID")]
         public int ID { get; set; }
 
-        [Required, MaxLength(100)]
+        [Required]
+        [MaxLength(100)]
         [Display(Name = "Concession Name")]
         public string Name { get; set; }
 
-        [MaxLength(255)]
+        [MaxLength(500)]
         [Display(Name = "Description")]
-        public string Description { get; set; }
+        public string? Description { get; set; }
 
+        [MaxLength(50)]
+        [Display(Name = "Category")]
+        public string? Category { get; set; } // "Food", "Drink", "Combo", etc.
+
+        [MaxLength(255)]
         [Display(Name = "Image Path")]
         public string? ImagePath { get; set; }
 
         [Display(Name = "Is Active")]
         public bool IsActive { get; set; } = true;
 
-        [Required, MaxLength(50)]
-        public string Category { get; set; }
-
-        // Navigation
-        public ICollection<TheaterConcession> TheaterConcessions { get; set; }
+        // Navigation properties
+        public ICollection<TheaterConcession> TheaterConcessions { get; set; } = new List<TheaterConcession>();
     }
 
 
 
-// 20. THEATER CONCESSIONS
+    // 20. THEATER CONCESSIONS
     public class TheaterConcession
     {
         [Key]
-        [Display(Name = "Theater Concession ID")]
         public int ID { get; set; }
 
         [Required]
-        [Display(Name = "Theater")]
         public int TheaterID { get; set; }
 
-        [ForeignKey("TheaterID")]
-        [ValidateNever]
-        public Theater Theater { get; set; }
-
         [Required]
-        [Display(Name = "Concession")]
         public int ConcessionID { get; set; }
 
-        [ForeignKey("ConcessionID")]
-        [ValidateNever]
-        public Concession Concession { get; set; }
-
         [Required]
-        [Range(0, 1000000)]
-        [Display(Name = "Giá bán (VND)")]
+        [Column(TypeName = "decimal(8,2)")]
         public decimal Price { get; set; }
 
         [Required]
-        [Range(0, int.MaxValue, ErrorMessage = "Tồn kho phải >= 0")]
-        [Display(Name = "Tồn kho")]
         public int StockLeft { get; set; }
 
-        [Display(Name = "Còn hàng")]
         public bool IsAvailable { get; set; } = true;
 
-        // Navigation
-        public ICollection<OrderItem> OrderItems { get; set; }
+        // Navigation properties
+        [ForeignKey("TheaterID")]
+        public virtual Theater Theater { get; set; }
+
+        [ForeignKey("ConcessionID")]
+        public virtual Concession Concession { get; set; }
+
+        public virtual ICollection<OrderItem> OrderItems { get; set; } = new List<OrderItem>();
+        public virtual ICollection<CartItem> CartItems { get; set; } = new List<CartItem>();
     }
 
     public class CartItem
@@ -711,6 +717,9 @@ namespace DKMovies.Models
 
         [Required]
         public int UserID { get; set; }
+
+        [ForeignKey("UserID")]
+        public User User { get; set; }
 
         [Required]
         public int TheaterConcessionID { get; set; }
@@ -762,23 +771,31 @@ namespace DKMovies.Models
         [Display(Name = "Order Item ID")]
         public int ID { get; set; }
 
-        [Display(Name = "Order ID")]
-        public int OrderID { get; set; }
+        // ✅ UPDATED: Link to Ticket instead of Order for movie tickets
+        [Display(Name = "Ticket ID")]
+        public int? TicketID { get; set; }
 
-        [ForeignKey("OrderID")]
-        public Order Order { get; set; }
+        [ForeignKey("TicketID")]
+        public Ticket? Ticket { get; set; }
 
-        [Display(Name = "Concession ID")]
-        public int ConcessionID { get; set; }
 
-        [ForeignKey("ConcessionID")]
-        public Concession Concession { get; set; }
 
+        // ✅ UPDATED: Link to TheaterConcession instead of Concession
+        [Display(Name = "Theater Concession ID")]
+        public int TheaterConcessionID { get; set; }
+
+        [ForeignKey("TheaterConcessionID")]
+        public TheaterConcession TheaterConcession { get; set; }
+
+        [Required]
+        [Range(1, 50)]
         [Display(Name = "Quantity")]
         public int Quantity { get; set; }
 
+        [Required]
+        [Column(TypeName = "decimal(8,2)")]
         [Display(Name = "Price At Purchase")]
-        public decimal PriceAtPurchase { get; set; }
+        public decimal PriceAtPurchase { get; set; } // Store price at time of purchase
     }
 
     // 23. ORDER PAYMENTS

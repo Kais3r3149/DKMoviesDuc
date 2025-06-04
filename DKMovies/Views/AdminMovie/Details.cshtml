@@ -29,7 +29,7 @@
     <div class="col-lg-4">
         <div class="card border-0 shadow-sm h-100">
             <div class="position-relative">
-                <img src="@(!string.IsNullOrWhiteSpace(Model.PosterImagePath) ? Model.PosterImagePath : "/images/default-poster.jpg")"
+                <img src="@Url.Content($"~/assets/images/movie_posters/{(string.IsNullOrWhiteSpace(Model.PosterImagePath) ? "default-poster.jpg" : Model.PosterImagePath.TrimStart('/'))}")"
                      alt="@Model.Title Poster"
                      class="card-img-top"
                      style="height: 500px; object-fit: cover;"

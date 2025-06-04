@@ -27,6 +27,11 @@
         TicketStatus.CANCELLED => "danger",
         _ => "secondary"
     };
+
+    // Tính toán thời gian còn lại để thanh toán (nếu đang chờ thanh toán)
+    var paymentDeadline = Model.PurchaseTime.AddMinutes(15); // 15 phút để hoàn tất thanh toán
+    var canPayNow = Model.Status == TicketStatus.PENDING && DateTime.Now < paymentDeadline;
+    var timeRemaining = paymentDeadline - DateTime.Now;
 }
 
 <style>
@@ -40,10 +45,35 @@
         box-shadow: 0 4px 20px rgba(40, 167, 69, 0.2);
     }
 
+    .pending-header {
+        background: linear-gradient(135deg, #ffc107 0%, #fd7e14 100%);
+        color: white;
+        padding: 3rem 0;
+        text-align: center;
+        border-radius: 0 0 30px 30px;
+        margin-bottom: 2rem;
+        box-shadow: 0 4px 20px rgba(255, 193, 7, 0.2);
+    }
+
     .success-icon {
         font-size: 4rem;
         margin-bottom: 1rem;
         animation: bounce 2s infinite;
+    }
+
+
+    {
+        transform: translateY(0);
+    }
+
+    40% {
+        transform: translateY(-30px);
+    }
+
+    60% {
+        transform: translateY(-15px);
+    }
+
     }
 
     .ticket-container {
@@ -60,11 +90,11 @@
         border: 2px dashed #dee2e6;
     }
 
-        .ticket-card::before {
+        .ticket-card::before,
+        .ticket-card::after {
             content: '';
             position: absolute;
             top: 50%;
-            left: -10px;
             width: 20px;
             height: 20px;
             background: #f8f9fa;
@@ -73,17 +103,12 @@
             box-shadow: inset 0 0 0 2px #dee2e6;
         }
 
+        .ticket-card::before {
+            left: -10px;
+        }
+
         .ticket-card::after {
-            content: '';
-            position: absolute;
-            top: 50%;
             right: -10px;
-            width: 20px;
-            height: 20px;
-            background: #f8f9fa;
-            border-radius: 50%;
-            transform: translateY(-50%);
-            box-shadow: inset 0 0 0 2px #dee2e6;
         }
 
     .ticket-header {
@@ -207,6 +232,83 @@
         margin-bottom: 1rem;
     }
 
+    /* Payment Section */
+    .payment-section {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 2rem;
+        border-radius: 20px;
+        margin: 2rem 0;
+        text-align: center;
+        box-shadow: 0 8px 25px rgba(102, 126, 234, 0.3);
+    }
+
+    .payment-timer {
+        background: rgba(255,255,255,0.1);
+        border-radius: 15px;
+        padding: 1rem;
+        margin: 1rem 0;
+        backdrop-filter: blur(10px);
+    }
+
+    .payment-countdown {
+        font-size: 2rem;
+        font-weight: 700;
+        margin: 0.5rem 0;
+    }
+
+    .payment-methods {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        gap: 1rem;
+        margin: 1.5rem 0;
+    }
+
+    .payment-method {
+        background: white;
+        color: #333;
+        padding: 1rem;
+        border-radius: 15px;
+        text-decoration: none;
+        transition: all 0.3s ease;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 0.5rem;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    }
+
+        .payment-method:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+            color: #333;
+        }
+
+        .payment-method i {
+            font-size: 2rem;
+            color: #667eea;
+        }
+
+    .qr-code-section {
+        background: #f8f9fa;
+        border-radius: 15px;
+        padding: 1.5rem;
+        text-align: center;
+        margin: 1.5rem 0;
+    }
+
+    .qr-placeholder {
+        width: 150px;
+        height: 150px;
+        background: white;
+        border: 2px dashed #dee2e6;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 1rem auto;
+        border-radius: 10px;
+    }
+
     .action-buttons {
         display: flex;
         gap: 1rem;
@@ -223,6 +325,7 @@
         transition: all 0.3s ease;
         border: none;
         min-width: 160px;
+        cursor: pointer;
     }
 
     .btn-primary-action {
@@ -250,20 +353,33 @@
             transform: translateY(-2px);
         }
 
-    .qr-code-section {
-        background: #f8f9fa;
-        border-radius: 15px;
-        padding: 1.5rem;
-        text-align: center;
-        margin: 1.5rem 0;
+    .btn-success-action {
+        background: linear-gradient(45deg, #28a745, #20c997);
+        color: white;
+        box-shadow: 0 4px 15px rgba(40,167,69,0.3);
+        animation: pulse 2s infinite;
     }
 
-    .important-notes {
-        background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%);
-        border-radius: 15px;
-        padding: 1.5rem;
-        margin-top: 2rem;
-        border-left: 4px solid #ffc107;
+        .btn-success-action:hover {
+            background: linear-gradient(45deg, #20c997, #17a2b8);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(40,167,69,0.4);
+            color: white;
+        }
+
+
+    {
+        box-shadow: 0 4px 15px rgba(40,167,69,0.3);
+    }
+
+    50% {
+        box-shadow: 0 4px 25px rgba(40,167,69,0.5);
+    }
+
+    100% {
+        box-shadow: 0 4px 15px rgba(40,167,69,0.3);
+    }
+
     }
 
     .countdown {
@@ -274,6 +390,16 @@
         text-align: center;
         margin: 1rem 0;
     }
+
+    .important-notes {
+        background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%);
+        border-radius: 15px;
+        padding: 1.5rem;
+        margin-top: 2rem;
+        border-left: 4px solid #ffc107;
+    }
+
+
 
     {
         padding: 2rem 0;
@@ -300,6 +426,10 @@
         font-size: 1.5rem;
     }
 
+    .payment-methods {
+        grid-template-columns: 1fr;
+    }
+
     .action-buttons {
         flex-direction: column;
         align-items: center;
@@ -312,13 +442,26 @@
 
     }</style>
 
-<div class="success-header">
-    <div class="container">
-        <div class="success-icon">🎉</div>
-        <h1 class="mb-3">Đặt vé thành công!</h1>
-        <p class="mb-0 lead">Cảm ơn bạn đã chọn DKMovies. Thông tin vé của bạn như sau:</p>
+@if (Model.Status == TicketStatus.CONFIRMED)
+{
+    <div class="success-header">
+        <div class="container">
+            <div class="success-icon">🎉</div>
+            <h1 class="mb-3">Đặt vé thành công!</h1>
+            <p class="mb-0 lead">Cảm ơn bạn đã chọn DKMovies. Thông tin vé của bạn như sau:</p>
+        </div>
     </div>
-</div>
+}
+else if (Model.Status == TicketStatus.PENDING)
+{
+    <div class="pending-header">
+        <div class="container">
+            <div class="success-icon">⏰</div>
+            <h1 class="mb-3">Chờ thanh toán</h1>
+            <p class="mb-0 lead">Vui lòng hoàn tất thanh toán trong thời gian quy định</p>
+        </div>
+    </div>
+}
 
 <div class="container pb-5">
     <div class="ticket-container">
@@ -347,6 +490,44 @@
                         @statusText
                     </span>
                 </div>
+
+                @if (Model.Status == TicketStatus.PENDING && canPayNow)
+                {
+                    <!-- Payment Section -->
+                    <div class="payment-section">
+                        <h4 class="mb-3">
+                            <i class="bi bi-credit-card me-2"></i>
+                            Hoàn tất thanh toán
+                        </h4>
+
+                        <div class="payment-timer">
+                            <div class="small mb-2">Thời gian còn lại:</div>
+                            <div class="payment-countdown" id="payment-countdown">
+                                @($"{timeRemaining.Minutes:00}:{timeRemaining.Seconds:00}")
+                            </div>
+                            <div class="small">Đơn hàng sẽ tự động hủy sau thời gian này</div>
+                        </div>
+
+                        <div class="payment-methods">
+                            <a href="@Url.Action("ProcessPayment", new { ticketId = Model.ID, method = "vnpay" })" class="payment-method">
+                                <i class="bi bi-credit-card"></i>
+                                <span>VNPay</span>
+                            </a>
+                            <a href="@Url.Action("ProcessPayment", new { ticketId = Model.ID, method = "momo" })" class="payment-method">
+                                <i class="bi bi-phone"></i>
+                                <span>MoMo</span>
+                            </a>
+                            <a href="@Url.Action("ProcessPayment", new { ticketId = Model.ID, method = "banking" })" class="payment-method">
+                                <i class="bi bi-bank"></i>
+                                <span>Banking</span>
+                            </a>
+                            <a href="@Url.Action("ProcessPayment", new { ticketId = Model.ID, method = "cash" })" class="payment-method">
+                                <i class="bi bi-cash"></i>
+                                <span>Tại quầy</span>
+                            </a>
+                        </div>
+                    </div>
+                }
 
                 <!-- Movie Info -->
                 <div class="movie-info">
@@ -456,38 +637,47 @@
                     <div class="label">Tổng tiền (@seatLabels.Count ghế × @Model.ShowTime.Price.ToString("N0")₫)</div>
                 </div>
 
-                <!-- QR Code Section -->
-                <div class="qr-code-section">
-                    <h6 class="mb-3">
-                        <i class="bi bi-qr-code me-2"></i>
-                        Mã QR để check-in tại rạp
-                    </h6>
-                    <div class="bg-white p-3 rounded d-inline-block">
-                        <div style="width: 150px; height: 150px; background: #f8f9fa; border: 2px dashed #dee2e6; display: flex; align-items: center; justify-content: center;">
+                @if (Model.Status == TicketStatus.CONFIRMED)
+                {
+                    <!-- QR Code Section -->
+                    <div class="qr-code-section">
+                        <h6 class="mb-3">
+                            <i class="bi bi-qr-code me-2"></i>
+                            Mã QR để check-in tại rạp
+                        </h6>
+                        <div class="qr-placeholder">
                             <span class="text-muted">QR Code<br>#@Model.ID</span>
                         </div>
+                        <p class="mt-2 mb-0 small text-muted">
+                            Vui lòng xuất trình mã QR này tại quầy để nhận vé
+                        </p>
                     </div>
-                    <p class="mt-2 mb-0 small text-muted">
-                        Vui lòng xuất trình mã QR này tại quầy để nhận vé
-                    </p>
-                </div>
 
-                <!-- Countdown for showtime -->
-                @if (Model.ShowTime.StartTime > DateTime.Now)
-                {
-                    <div class="countdown">
-                        <h6 class="mb-2">
-                            <i class="bi bi-stopwatch me-2"></i>
-                            Thời gian đến suất chiếu
-                        </h6>
-                        <div id="countdown-timer" data-showtime="@Model.ShowTime.StartTime.ToString("yyyy-MM-ddTHH:mm:ss")">
-                            <!-- Countdown will be populated by JavaScript -->
+                    <!-- Countdown for showtime -->
+                    @if (Model.ShowTime.StartTime > DateTime.Now)
+                    {
+                        <div class="countdown">
+                            <h6 class="mb-2">
+                                <i class="bi bi-stopwatch me-2"></i>
+                                Thời gian đến suất chiếu
+                            </h6>
+                            <div id="countdown-timer" data-showtime="@Model.ShowTime.StartTime.ToString("yyyy-MM-ddTHH:mm:ss")">
+                                <!-- Countdown will be populated by JavaScript -->
+                            </div>
                         </div>
-                    </div>
+                    }
                 }
 
                 <!-- Action Buttons -->
                 <div class="action-buttons">
+                    @if (Model.Status == TicketStatus.PENDING && canPayNow)
+                    {
+                        <button class="btn-action btn-success-action" onclick="window.location.reload()">
+                            <i class="bi bi-arrow-clockwise me-2"></i>
+                            Làm mới trang
+                        </button>
+                    }
+
                     <a href="@Url.Action("UserTickets", "Tickets")" class="btn-action btn-secondary-action">
                         <i class="bi bi-list me-2"></i>
                         Xem tất cả vé
@@ -505,13 +695,18 @@
                         Lưu ý quan trọng
                     </h6>
                     <ul class="mb-0 small">
+                        @if (Model.Status == TicketStatus.PENDING)
+                        {
+                            <li class="text-warning"><strong>Vui lòng hoàn tất thanh toán trong @timeRemaining.Minutes phút để giữ chỗ</strong></li>
+                            <li>Vé sẽ tự động hủy nếu không thanh toán đúng hạn</li>
+                        }
                         <li>Vui lòng đến rạp trước giờ chiếu <strong>15 phút</strong> để check-in</li>
                         <li>Mang theo <strong>giấy tờ tùy thân</strong> và <strong>mã QR</strong> này</li>
                         <li>Vé đã đặt <strong>không thể hoàn trả</strong> sau khi xác nhận</li>
                         <li>Liên hệ hotline <strong>1900-xxxx</strong> nếu cần hỗ trợ</li>
                         @if (Model.Status == TicketStatus.PENDING)
                         {
-                            <li class="text-warning"><strong>Vé đang chờ xác nhận, bạn có thể hủy trong vòng 2 giờ trước suất chiếu</strong></li>
+                            <li class="text-info"><strong>Bạn có thể hủy vé miễn phí trước khi thanh toán</strong></li>
                         }
                     </ul>
                 </div>
@@ -520,29 +715,104 @@
     </div>
 </div>
 
-<script>
-    document.addEventListener('DOMContentLoaded', function() {
-        // Countdown timer
-        const countdownEl = document.getElementById('countdown-timer');
-        if (countdownEl) {
-            const showtimeStr = countdownEl.dataset.showtime;
-            const showtime = new Date(showtimeStr);
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Payment countdown timer
+            const paymentCountdownEl = document.getElementById('payment-countdown');
+            if (paymentCountdownEl) {
+                const deadline = new Date('@paymentDeadline.ToString("yyyy-MM-ddTHH:mm:ss")');
 
-            function updateCountdown() {
-                const now = new Date();
-                const diff = showtime - now;
+                function updatePaymentCountdown() {
+                    const now = new Date();
+                    const diff = deadline - now;
 
-                if (diff <= 0) {
-                    countdownEl.innerHTML = '<strong class="text-light">Suất chiếu đã bắt đầu</strong>';
-                    return;
+                    if (diff <= 0) {
+                        paymentCountdownEl.innerHTML = '<span class="text-danger">Hết hạn</span>';
+                        // Reload page to update status
+                        setTimeout(() => window.location.reload(), 2000);
+                        return;
+                    }
+
+                    const minutes = Math.floor(diff / (1000 * 60));
+                    const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+
+                    paymentCountdownEl.innerHTML = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
                 }
 
-                const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-                const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-                const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-                const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+                updatePaymentCountdown();
+                setInterval(updatePaymentCountdown, 1000);
+            }
 
-                let countdownHtml = '';
-                if (days > 0) countdownHtml += `<span class="fw-bold">${days}</span> ngày `;
-                if (hours > 0) countdownHtml += `<span class="fw-bold">${hours}</span> giờ `;
-                countdownHtml += `<span class
+            // Showtime countdown timer
+            const countdownEl = document.getElementById('countdown-timer');
+            if (countdownEl) {
+                const showtimeStr = countdownEl.dataset.showtime;
+                const showtime = new Date(showtimeStr);
+
+                function updateCountdown() {
+                    const now = new Date();
+                    const diff = showtime - now;
+
+                    if (diff <= 0) {
+                        countdownEl.innerHTML = '<strong class="text-light">Suất chiếu đã bắt đầu</strong>';
+                        return;
+                    }
+
+                    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+                    const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+                    const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+                    const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+
+                    let countdownHtml = '';
+                    if (days > 0) countdownHtml += `<span class="fw-bold">${days}</span> ngày `;
+                    if (hours > 0) countdownHtml += `<span class="fw-bold">${hours}</span> giờ `;
+                    countdownHtml += `<span class="fw-bold">${minutes}</span> phút `;
+                    countdownHtml += `<span class="fw-bold">${seconds}</span> giây`;
+
+                    countdownEl.innerHTML = countdownHtml;
+                }
+
+                updateCountdown();
+                setInterval(updateCountdown, 1000);
+            }
+
+            // Auto refresh for pending payments
+        @if (Model.Status == TicketStatus.PENDING && canPayNow)
+        {
+            <text>
+                    // Check payment status every 30 seconds
+                    setInterval(function() {
+                        fetch('@Url.Action("CheckPaymentStatus", new { ticketId = Model.ID })')
+                            .then(response => response.json())
+                            .then(data => {
+                                if (data.status === 'CONFIRMED') {
+                                    window.location.reload();
+                                }
+                            })
+                            .catch(error => console.log('Payment check error:', error));
+                    }, 30000);
+            </text>
+        }
+
+            // Add payment method click tracking
+            const paymentMethods = document.querySelectorAll('.payment-method');
+            paymentMethods.forEach(method => {
+                method.addEventListener('click', function(e) {
+                    // Add loading state
+                    this.style.opacity = '0.7';
+                    this.style.pointerEvents = 'none';
+
+                    const loadingSpinner = document.createElement('div');
+                    loadingSpinner.innerHTML = '<i class="bi bi-arrow-repeat" style="animation: spin 1s linear infinite;"></i>';
+                    this.appendChild(loadingSpinner);
+                });
+            });
+
+            // Add spinning animation
+            const style = document.createElement('style');
+            style.textContent = `
+
+            `;
+            document.head.appendChild(style);
+        });
+    </script>

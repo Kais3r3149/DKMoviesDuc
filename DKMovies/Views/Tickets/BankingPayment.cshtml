@@ -1,0 +1,623 @@
+﻿@model DKMovies.Models.Ticket
+
+@{
+    ViewData["Title"] = "Thanh toán chuyển khoản";
+    var bankingInfo = ViewData["BankingInfo"] as dynamic;
+    var seatLabels = Model.TicketSeats
+        .OrderBy(s => s.Seat.RowLabel)
+        .ThenBy(s => s.Seat.SeatNumber)
+        .Select(s => $"{s.Seat.RowLabel}{s.Seat.SeatNumber}")
+        .ToList();
+}
+
+<style>
+    .banking-header {
+        background: linear-gradient(135deg, #17a2b8 0%, #138496 100%);
+        color: white;
+        padding: 3rem 0;
+        text-align: center;
+        border-radius: 0 0 30px 30px;
+        margin-bottom: 2rem;
+        box-shadow: 0 4px 20px rgba(23, 162, 184, 0.2);
+    }
+
+    .banking-container {
+        max-width: 800px;
+        margin: 0 auto;
+    }
+
+    .banking-card {
+        background: white;
+        border-radius: 20px;
+        padding: 2rem;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        margin-bottom: 2rem;
+    }
+
+    .bank-info {
+        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+        border-radius: 15px;
+        padding: 2rem;
+        margin-bottom: 2rem;
+        border-left: 4px solid #17a2b8;
+    }
+
+    .bank-detail {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0.8rem 0;
+        border-bottom: 1px solid #f1f3f4;
+    }
+
+        .bank-detail:last-child {
+            border-bottom: none;
+        }
+
+    .bank-label {
+        font-weight: 600;
+        color: #495057;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .bank-value {
+        font-weight: 700;
+        color: #212529;
+        font-family: 'Monaco', 'Consolas', monospace;
+        text-align: right;
+        position: relative;
+    }
+
+    .copy-btn {
+        background: linear-gradient(45deg, #17a2b8, #138496);
+        border: none;
+        border-radius: 8px;
+        color: white;
+        padding: 0.3rem 0.8rem;
+        font-size: 0.8rem;
+        margin-left: 0.5rem;
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+
+        .copy-btn:hover {
+            background: linear-gradient(45deg, #138496, #117a8b);
+            transform: translateY(-1px);
+        }
+
+        .copy-btn.copied {
+            background: linear-gradient(45deg, #28a745, #20c997);
+        }
+
+    .amount-highlight {
+        background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+        color: white;
+        padding: 1rem 2rem;
+        border-radius: 15px;
+        text-align: center;
+        font-size: 1.5rem;
+        font-weight: 700;
+        margin: 1.5rem 0;
+        box-shadow: 0 4px 15px rgba(220, 53, 69, 0.3);
+    }
+
+    .qr-section {
+        background: #f8f9fa;
+        border-radius: 15px;
+        padding: 2rem;
+        text-align: center;
+        margin: 2rem 0;
+    }
+
+    .qr-placeholder {
+        width: 200px;
+        height: 200px;
+        background: white;
+        border: 2px dashed #dee2e6;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        margin: 1rem auto;
+        border-radius: 10px;
+    }
+
+    .instructions {
+        background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%);
+        border-radius: 15px;
+        padding: 2rem;
+        margin: 2rem 0;
+        border-left: 4px solid #ffc107;
+    }
+
+    .step {
+        display: flex;
+        align-items: flex-start;
+        margin-bottom: 1rem;
+        padding: 0.5rem 0;
+    }
+
+    .step-number {
+        background: linear-gradient(45deg, #ffc107, #fd7e14);
+        color: white;
+        border-radius: 50%;
+        width: 30px;
+        height: 30px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 700;
+        margin-right: 1rem;
+        flex-shrink: 0;
+    }
+
+    .timer-section {
+        background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+        color: white;
+        border-radius: 15px;
+        padding: 1.5rem;
+        text-align: center;
+        margin: 2rem 0;
+    }
+
+    .timer-countdown {
+        font-size: 2rem;
+        font-weight: 700;
+        margin: 0.5rem 0;
+    }
+
+    .action-buttons {
+        display: flex;
+        gap: 1rem;
+        justify-content: center;
+        margin-top: 2rem;
+        flex-wrap: wrap;
+    }
+
+    .btn-action {
+        padding: 0.8rem 2rem;
+        border-radius: 25px;
+        font-weight: 600;
+        text-decoration: none;
+        transition: all 0.3s ease;
+        border: none;
+        min-width: 160px;
+        cursor: pointer;
+    }
+
+    .btn-primary-action {
+        background: linear-gradient(45deg, #17a2b8, #138496);
+        color: white;
+        box-shadow: 0 4px 15px rgba(23, 162, 184, 0.3);
+    }
+
+        .btn-primary-action:hover {
+            background: linear-gradient(45deg, #138496, #117a8b);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(23, 162, 184, 0.4);
+            color: white;
+        }
+
+    .btn-secondary-action {
+        background: #f8f9fa;
+        color: #495057;
+        border: 2px solid #dee2e6;
+    }
+
+        .btn-secondary-action:hover {
+            background: #e9ecef;
+            color: #495057;
+            transform: translateY(-2px);
+
+
+    {
+        padding: 2rem 0;
+    }
+
+    .banking-card {
+        padding: 1.5rem;
+    }
+
+    .bank-detail {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.5rem;
+    }
+
+    .bank-value {
+        text-align: left;
+        word-break: break-all;
+    }
+
+    .action-buttons {
+        flex-direction: column;
+        align-items: center;
+    }
+
+    .btn-action {
+        width: 100%;
+        max-width: 300px;
+    }
+
+    }
+</style>
+
+<div class="banking-header">
+    <div class="container">
+        <div class="text-center">
+            <i class="bi bi-bank" style="font-size: 4rem; margin-bottom: 1rem;"></i>
+            <h1 class="mb-3">Thanh toán chuyển khoản</h1>
+            <p class="mb-0 lead">Vui lòng chuyển khoản theo thông tin bên dưới</p>
+        </div>
+    </div>
+</div>
+
+<div class="container pb-5">
+    <div class="banking-container">
+        <!-- Timer Section -->
+        <div class="timer-section">
+            <h5 class="mb-2">
+                <i class="bi bi-clock me-2"></i>
+                Thời gian còn lại để thanh toán
+            </h5>
+            <div class="timer-countdown" id="payment-timer">
+                <!-- Will be updated by JavaScript -->
+            </div>
+            <p class="mb-0">Vé sẽ tự động hủy nếu không thanh toán đúng hạn</p>
+        </div>
+
+        <!-- Banking Information -->
+        <div class="banking-card">
+            <h4 class="text-center mb-4">
+                <i class="bi bi-credit-card me-2"></i>
+                Thông tin chuyển khoản
+            </h4>
+
+            <div class="bank-info">
+                <div class="bank-detail">
+                    <div class="bank-label">
+                        <i class="bi bi-credit-card-2-front"></i>
+                        Số tài khoản
+                    </div>
+                    <div class="bank-value">
+                        @bankingInfo.AccountNumber
+                        <button class="copy-btn" onclick="copyToClipboard('@bankingInfo.AccountNumber', this)">
+                            <i class="bi bi-copy"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="bank-detail">
+                    <div class="bank-label">
+                        <i class="bi bi-person"></i>
+                        Chủ tài khoản
+                    </div>
+                    <div class="bank-value">
+                        @bankingInfo.AccountName
+                        <button class="copy-btn" onclick="copyToClipboard('@bankingInfo.AccountName', this)">
+                            <i class="bi bi-copy"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="bank-detail">
+                    <div class="bank-label">
+                        <i class="bi bi-hash"></i>
+                        Mã giao dịch
+                    </div>
+                    <div class="bank-value">
+                        @bankingInfo.TransactionCode
+                        <button class="copy-btn" onclick="copyToClipboard('@bankingInfo.TransactionCode', this)">
+                            <i class="bi bi-copy"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="bank-detail">
+                    <div class="bank-label">
+                        <i class="bi bi-chat-text"></i>
+                        Nội dung chuyển khoản
+                    </div>
+                    <div class="bank-value">
+                        @bankingInfo.Note
+                        <button class="copy-btn" onclick="copyToClipboard('@bankingInfo.Note', this)">
+                            <i class="bi bi-copy"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Amount Highlight -->
+            <div class="amount-highlight">
+                <i class="bi bi-currency-dollar me-2"></i>
+                Số tiền: @bankingInfo.Amount.ToString("N0") VND
+                <button class="copy-btn" onclick="copyToClipboard('@bankingInfo.Amount', this)" style="margin-left: 1rem;">
+                    <i class="bi bi-copy"></i>
+                </button>
+            </div>
+
+            <!-- QR Code Section -->
+            <div class="qr-section">
+                <h6 class="mb-3">
+                    <i class="bi bi-qr-code me-2"></i>
+                    Mã QR chuyển khoản
+                </h6>
+                <div class="qr-placeholder">
+                    <i class="bi bi-qr-code" style="font-size: 3rem; color: #6c757d;"></i>
+                    <p class="text-muted mt-2 mb-0">QR Banking</p>
+                    <small class="text-muted">@bankingInfo.Amount.ToString("N0") VND</small>
+                </div>
+                <p class="text-muted">Quét mã QR để chuyển khoản tự động</p>
+            </div>
+
+            <!-- Instructions -->
+            <div class="instructions">
+                <h6 class="fw-bold mb-3">
+                    <i class="bi bi-info-circle me-2"></i>
+                    Hướng dẫn thanh toán
+                </h6>
+
+                <div class="step">
+                    <div class="step-number">1</div>
+                    <div>
+                        <strong>Mở ứng dụng ngân hàng</strong><br>
+                        Mở app Mobile Banking hoặc Internet Banking của bạn
+                    </div>
+                </div>
+
+                <div class="step">
+                    <div class="step-number">2</div>
+                    <div>
+                        <strong>Chuyển khoản theo thông tin trên</strong><br>
+                        Nhập chính xác số tài khoản và số tiền. Đặc biệt chú ý <strong>mã giao dịch</strong> và <strong>nội dung chuyển khoản</strong>
+                    </div>
+                </div>
+
+                <div class="step">
+                    <div class="step-number">3</div>
+                    <div>
+                        <strong>Xác nhận và thực hiện giao dịch</strong><br>
+                        Kiểm tra lại thông tin và thực hiện chuyển khoản
+                    </div>
+                </div>
+
+                <div class="step">
+                    <div class="step-number">4</div>
+                    <div>
+                        <strong>Chờ xác nhận</strong><br>
+                        Hệ thống sẽ tự động xác nhận sau khi nhận được tiền (5-10 phút)
+                    </div>
+                </div>
+
+                <div class="alert alert-warning mt-3">
+                    <i class="bi bi-exclamation-triangle me-2"></i>
+                    <strong>Lưu ý quan trọng:</strong>
+                    <ul class="mb-0 mt-2">
+                        <li>Phải nhập đúng <strong>mã giao dịch</strong> để hệ thống tự động xác nhận</li>
+                        <li>Nếu chuyển sai thông tin, vé có thể bị hủy sau 15 phút</li>
+                        <li>Liên hệ hotline <strong>1900-xxxx</strong> nếu cần hỗ trợ</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Ticket Information -->
+            <div class="banking-card" style="background: #f8f9fa;">
+                <h6 class="mb-3">
+                    <i class="bi bi-ticket-perforated me-2"></i>
+                    Thông tin vé đang thanh toán
+                </h6>
+
+                <div class="row">
+                    <div class="col-md-6">
+                        <p class="mb-1"><strong>Phim:</strong> @Model.ShowTime.Movie.Title</p>
+                        <p class="mb-1"><strong>Rạp:</strong> @Model.ShowTime.Auditorium.Theater.Name</p>
+                        <p class="mb-1"><strong>Phòng:</strong> @Model.ShowTime.Auditorium.Name</p>
+                        <p class="mb-1"><strong>Suất chiếu:</strong> @Model.ShowTime.StartTime.ToString("dd/MM/yyyy HH:mm")</p>
+                    </div>
+                    <div class="col-md-6">
+                        <p class="mb-1"><strong>Ghế:</strong> @string.Join(", ", seatLabels)</p>
+                        <p class="mb-1"><strong>Mã vé:</strong> #@Model.ID.ToString("D6")</p>
+                        <p class="mb-1"><strong>Tổng tiền:</strong> @Model.TotalPrice.ToString("N0") VND</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="action-buttons">
+                <button class="btn-action btn-primary-action" onclick="checkPaymentStatus()">
+                    <i class="bi bi-arrow-clockwise me-2"></i>
+                    Kiểm tra thanh toán
+                </button>
+
+                <a href="@Url.Action("OrderConfirmation", new { ticketId = Model.ID })" class="btn-action btn-secondary-action">
+                    <i class="bi bi-eye me-2"></i>
+                    Xem chi tiết vé
+                </a>
+
+                <a href="@Url.Action("UserTickets")" class="btn-action btn-secondary-action">
+                    <i class="bi bi-list me-2"></i>
+                    Danh sách vé
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Payment Status Modal -->
+<div class="modal fade" id="paymentStatusModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg" style="border-radius: 20px;">
+            <div class="modal-header border-0 pb-0">
+                <h5 class="modal-title">
+                    <i class="bi bi-search me-2"></i>
+                    Kiểm tra trạng thái thanh toán
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body pt-0">
+                <div id="payment-status-content">
+                    <div class="text-center">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Đang kiểm tra...</span>
+                        </div>
+                        <p class="mt-2">Đang kiểm tra trạng thái thanh toán...</p>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer border-0 pt-0">
+                <button type="button" class="btn btn-secondary rounded-pill" data-bs-dismiss="modal">
+                    Đóng
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Payment timer
+        const timerElement = document.getElementById('payment-timer');
+        const purchaseTime = new Date('@Model.PurchaseTime.ToString("yyyy-MM-ddTHH:mm:ss")');
+        const deadline = new Date(purchaseTime.getTime() + 15 * 60 * 1000); // 15 minutes
+
+        function updateTimer() {
+            const now = new Date();
+            const diff = deadline - now;
+
+            if (diff <= 0) {
+                timerElement.innerHTML = '<span class="text-danger">Hết hạn thanh toán</span>';
+                setTimeout(() => {
+                    window.location.href = '@Url.Action("UserTickets")';
+                }, 3000);
+                return;
+            }
+
+            const minutes = Math.floor(diff / (1000 * 60));
+            const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+
+            timerElement.innerHTML = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+        }
+
+        updateTimer();
+        const timerInterval = setInterval(updateTimer, 1000);
+
+        // Auto-check payment status every 30 seconds
+        setInterval(checkPaymentStatusAuto, 30000);
+    });
+
+    // Copy to clipboard function
+    function copyToClipboard(text, button) {
+        navigator.clipboard.writeText(text).then(function() {
+            const originalHTML = button.innerHTML;
+            button.innerHTML = '<i class="bi bi-check"></i>';
+            button.classList.add('copied');
+
+            setTimeout(() => {
+                button.innerHTML = originalHTML;
+                button.classList.remove('copied');
+            }, 2000);
+        }).catch(function(err) {
+            console.error('Could not copy text: ', err);
+            // Fallback for older browsers
+            const textArea = document.createElement('textarea');
+            textArea.value = text;
+            document.body.appendChild(textArea);
+            textArea.select();
+            document.execCommand('copy');
+            document.body.removeChild(textArea);
+
+            button.innerHTML = '<i class="bi bi-check"></i>';
+            button.classList.add('copied');
+
+            setTimeout(() => {
+                button.innerHTML = '<i class="bi bi-copy"></i>';
+                button.classList.remove('copied');
+            }, 2000);
+        });
+    }
+
+    // Manual payment status check
+    function checkPaymentStatus() {
+        const modal = new bootstrap.Modal(document.getElementById('paymentStatusModal'));
+        modal.show();
+
+        fetch('@Url.Action("CheckPaymentStatus", new { ticketId = Model.ID })')
+            .then(response => response.json())
+            .then(data => {
+                const content = document.getElementById('payment-status-content');
+
+                if (data.status === 'PAID' || data.status === 'CONFIRMED') {
+                    content.innerHTML = `
+                        <div class="text-center text-success">
+                            <i class="bi bi-check-circle" style="font-size: 3rem;"></i>
+                            <h5 class="mt-3">Thanh toán thành công!</h5>
+                            <p>Vé của bạn đã được xác nhận.</p>
+                        </div>
+                    `;
+
+                    setTimeout(() => {
+                        window.location.href = '@Url.Action("OrderConfirmation", new { ticketId = Model.ID })';
+                    }, 2000);
+                } else if (data.isExpired) {
+                    content.innerHTML = `
+                        <div class="text-center text-danger">
+                            <i class="bi bi-x-circle" style="font-size: 3rem;"></i>
+                            <h5 class="mt-3">Vé đã hết hạn</h5>
+                            <p>Thời gian thanh toán đã kết thúc.</p>
+                        </div>
+                    `;
+                } else {
+                    content.innerHTML = `
+                        <div class="text-center text-warning">
+                            <i class="bi bi-clock" style="font-size: 3rem;"></i>
+                            <h5 class="mt-3">Chưa nhận được thanh toán</h5>
+                            <p>Vui lòng kiểm tra lại sau vài phút.</p>
+                            <small class="text-muted">Còn ${data.remainingMinutes} phút để thanh toán</small>
+                        </div>
+                    `;
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                document.getElementById('payment-status-content').innerHTML = `
+                    <div class="text-center text-danger">
+                        <i class="bi bi-exclamation-triangle" style="font-size: 3rem;"></i>
+                        <h5 class="mt-3">Có lỗi xảy ra</h5>
+                        <p>Không thể kiểm tra trạng thái thanh toán.</p>
+                    </div>
+                `;
+            });
+    }
+
+    // Auto payment status check
+    function checkPaymentStatusAuto() {
+        fetch('@Url.Action("CheckPaymentStatus", new { ticketId = Model.ID })')
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'PAID' || data.status === 'CONFIRMED') {
+                    // Payment successful, redirect to confirmation
+                    window.location.href = '@Url.Action("OrderConfirmation", new { ticketId = Model.ID })';
+                } else if (data.isExpired) {
+                    // Ticket expired, redirect to user tickets
+                    window.location.href = '@Url.Action("UserTickets")';
+                }
+            })
+            .catch(error => {
+                console.log('Auto-check error:', error);
+            });
+    }
+</script><i class="bi bi-bank"></i>
+                        Ngân hàng
+                    </div>
+<div class="bank-value">
+    @bankingInfo.BankName
+    <button class="copy-btn" onclick="copyToClipboard('@bankingInfo.BankName', this)">
+        <i class="bi bi-copy"></i>
+    </button>
+</div>
+                </div>
+
+<div class="bank-detail">
+    <div class="bank-label">

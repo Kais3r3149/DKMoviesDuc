@@ -95,7 +95,7 @@ public class CartController : Controller
 
             // Trừ kho
             item.TheaterConcession.StockLeft -= item.Quantity;
-            _context.TheaterConcession.Update(item.TheaterConcession);
+            _context.TheaterConcessions.Update(item.TheaterConcession);
         }
 
         // 3. Xóa giỏ hàng
@@ -172,7 +172,7 @@ public class CartController : Controller
         }
 
         // Kiểm tra món ăn tại rạp có khả dụng không
-        var item = await _context.TheaterConcession
+        var item = await _context.TheaterConcessions
             .Include(tc => tc.Concession)
             .Include(tc => tc.Theater)
             .FirstOrDefaultAsync(tc => tc.ID == theaterConcessionId && tc.IsAvailable && tc.StockLeft >= quantity);
