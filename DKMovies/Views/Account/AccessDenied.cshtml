@@ -1,0 +1,107 @@
+﻿<!-- Views/Account/AccessDenied.cshtml -->
+@{
+    ViewData["Title"] = "Truy cập bị từ chối";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8 col-lg-6 text-center">
+            <div class="error-page">
+                <!-- Icon -->
+                <div class="mb-4">
+                    <i class="fas fa-ban fa-5x text-danger"></i>
+                </div>
+
+                <!-- Error Code -->
+                <h1 class="display-1 text-danger fw-bold">403</h1>
+
+                <!-- Error Message -->
+                <h2 class="mb-3">Truy cập bị từ chối</h2>
+                <p class="lead text-muted mb-4">
+                    Bạn không có quyền truy cập vào trang này.
+                    Vui lòng liên hệ quản trị viên nếu bạn cho rằng đây là lỗi.
+                </p>
+
+                <!-- User Info -->
+                @if (User.Identity.IsAuthenticated)
+                {
+                    <div class="alert alert-info mb-4">
+                        <i class="fas fa-info-circle me-2"></i>
+                        Bạn đang đăng nhập với tài khoản: <strong>@User.Identity.Name</strong>
+                        <br>
+                        Loại tài khoản: <strong>@(User.FindFirst("UserType")?.Value ?? "User")</strong>
+                    </div>
+                }
+
+                <!-- Action Buttons -->
+                <div class="mt-4">
+                    <a href="javascript:history.back()" class="btn btn-secondary me-2">
+                        <i class="fas fa-arrow-left me-1"></i> Quay lại
+                    </a>
+
+                    @if (User.Identity.IsAuthenticated)
+                    {
+                        var userType = User.FindFirst("UserType")?.Value;
+                        if (userType == "Admin")
+                        {
+                            <a href="/Admin/Dashboard" class="btn btn-primary me-2">
+                                <i class="fas fa-tachometer-alt me-1"></i> Admin Dashboard
+                            </a>
+                        }
+                        else
+                        {
+                            <a href="/" class="btn btn-primary me-2">
+                                <i class="fas fa-home me-1"></i> Trang chủ
+                            </a>
+                        }
+
+                        <a href="/Account/Logout" class="btn btn-outline-danger">
+                            <i class="fas fa-sign-out-alt me-1"></i> Đăng xuất
+                        </a>
+                    }
+                    else
+                    {
+                        <a href="/Account/Login" class="btn btn-primary me-2">
+                            <i class="fas fa-sign-in-alt me-1"></i> Đăng nhập
+                        </a>
+                        <a href="/" class="btn btn-outline-primary">
+                            <i class="fas fa-home me-1"></i> Trang chủ
+                        </a>
+                    }
+                </div>
+
+                <!-- Help Text -->
+                <div class="mt-5">
+                    <small class="text-muted">
+                        <i class="fas fa-question-circle me-1"></i>
+                        Cần hỗ trợ? Liên hệ:
+                        <a href="mailto:support@dkmovies.com">support@dkmovies.com</a>
+                    </small>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .error-page {
+        padding: 2rem;
+    }
+
+    .display-1 {
+        font-size: 6rem;
+        line-height: 1;
+    }
+
+
+    {
+        font-size: 4rem;
+    }
+
+    .fa-5x {
+        font-size: 3em !important;
+    }
+
+    }
+</style>

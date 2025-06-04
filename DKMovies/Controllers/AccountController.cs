@@ -54,7 +54,6 @@ namespace DKMovies.Controllers
                 </body>
                 </html>";
 
-
             var smtp = new SmtpClient
             {
                 Host = "smtp.gmail.com",
@@ -78,7 +77,26 @@ namespace DKMovies.Controllers
         [HttpGet]
         public IActionResult Login()
         {
+            // Nếu đã đăng nhập, chuyển hướng theo role
+            if (User.Identity.IsAuthenticated)
+            {
+                return RedirectBasedOnRole();
+            }
             return View();
+        }
+
+        private IActionResult RedirectBasedOnRole()
+        {
+            var userType = User.FindFirst("UserType")?.Value;
+
+            if (userType == "Admin")
+            {
+                return RedirectToAction("Dashboard", "Admin");
+            }
+            else
+            {
+                return RedirectToAction("Index", "Home");
+            }
         }
 
         [HttpPost]
@@ -86,15 +104,33 @@ namespace DKMovies.Controllers
         public async Task<IActionResult> Login(string username, string password, bool rememberMe)
         {
             var hashedPassword = HashPassword(password);
-            var user = await _context.Users.FirstOrDefaultAsync(u => u.Username == username || u.Email == username);
 
-            if (user != null && user.PasswordHash == hashedPassword)
+            // Kiểm tra Admin trước - ưu tiên admin login
+            var admin = await _context.Admins
+                .Include(a => a.Employee)
+                .ThenInclude(e => e.Role)
+                .Include(a => a.Employee.Theater)
+                .FirstOrDefaultAsync(a => a.Username == username);
+
+            if (admin != null && admin.PasswordHash == hashedPassword)
+            {
+                await SignInAdmin(admin, rememberMe);
+                TempData["ToastSuccess"] = "🎉 Đăng nhập thành công!";
+                // Chuyển hướng đến trang admin
+                return RedirectToAction("Dashboard", "Admin");
+            }
+
+            // Kiểm tra User thường
+            var user = await _context.Users.FirstOrDefaultAsync(u =>
+                (u.Username == username || u.Email == username) && u.PasswordHash == hashedPassword);
+
+            if (user != null)
             {
                 if (!user.EmailConfirmed)
                 {
                     ViewData["ToastError"] = "⚠️ Vui lòng xác minh email trước khi đăng nhập.";
                     ViewBag.ActiveTab = "login";
-                    return View("Login");
+                    return View();
                 }
 
                 if (user.TwoFactorEnabled)
@@ -113,12 +149,13 @@ namespace DKMovies.Controllers
 
                 await SignInUser(user, rememberMe);
                 TempData["ToastSuccess"] = "🎉 Đăng nhập thành công!";
+                // User thường vào trang chủ
                 return RedirectToAction("Index", "Home");
             }
 
             ViewData["ToastError"] = "❌ Tên đăng nhập hoặc mật khẩu không đúng.";
             ViewBag.ActiveTab = "login";
-            return View("Login");
+            return View();
         }
 
         private async Task SignInUser(User user, bool rememberMe)
@@ -127,7 +164,9 @@ namespace DKMovies.Controllers
             {
                 new Claim(ClaimTypes.Name, user.Username),
                 new Claim(ClaimTypes.NameIdentifier, user.ID.ToString()),
-                new Claim(ClaimTypes.Role, "User")
+                new Claim(ClaimTypes.Role, "User"),
+                new Claim(ClaimTypes.Email, user.Email),
+                new Claim("UserType", "User")
             };
 
             var identity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
@@ -138,6 +177,47 @@ namespace DKMovies.Controllers
                 IsPersistent = rememberMe,
                 ExpiresUtc = rememberMe ? DateTime.UtcNow.AddDays(30) : DateTime.UtcNow.AddHours(1)
             });
+        }
+
+        private async Task SignInAdmin(Admin admin, bool rememberMe)
+        {
+            // Xác định role dựa trên EmployeeRole
+            string role = DetermineRole(admin.Employee?.Role?.Name);
+
+            var claims = new List<Claim>
+            {
+                new Claim(ClaimTypes.Name, admin.Username),
+                new Claim(ClaimTypes.NameIdentifier, admin.ID.ToString()),
+                new Claim(ClaimTypes.Role, role),
+                new Claim(ClaimTypes.Email, admin.Employee?.Email ?? ""),
+                new Claim("UserType", "Admin"),
+                new Claim("EmployeeId", admin.EmployeeID.ToString()),
+                new Claim("TheaterId", admin.Employee?.TheaterID.ToString() ?? ""),
+                new Claim("TheaterName", admin.Employee?.Theater?.Name ?? "")
+            };
+
+            var identity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
+            var principal = new ClaimsPrincipal(identity);
+
+            await HttpContext.SignInAsync("MyCookieAuth", principal, new AuthenticationProperties
+            {
+                IsPersistent = rememberMe,
+                ExpiresUtc = rememberMe ? DateTime.UtcNow.AddDays(30) : DateTime.UtcNow.AddHours(1)
+            });
+        }
+
+        private string DetermineRole(string employeeRoleName)
+        {
+            if (string.IsNullOrEmpty(employeeRoleName))
+                return "Employee";
+
+            return employeeRoleName.ToLower() switch
+            {
+                "superadmin" or "super admin" => "SuperAdmin",
+                "admin" or "administrator" => "Admin",
+                "manager" => "Admin",
+                _ => "Employee"
+            };
         }
 
         [HttpGet]
@@ -176,29 +256,25 @@ namespace DKMovies.Controllers
             return View();
         }
 
-
-
         private async Task Send2FACodeEmail(string toEmail, string code)
         {
             var fromAddress = new MailAddress("ducn3683@gmail.com", "DKMovies");
             var toAddress = new MailAddress(toEmail);
             const string fromPassword = "ubuj nryh dbrf mrcd"; // Không có dấu cách nếu bạn 
-            string subject = "🎬 DKMovies - Xác nhận tài khoản";
+            string subject = "🎬 DKMovies - Mã xác thực 2FA";
             string body = $@"
                 <html>
                 <body style='font-family: Arial, sans-serif;'>
-                    <h2 style='color:#2c3e50;'>Xác nhận đăng ký DKMovies</h2>
+                    <h2 style='color:#2c3e50;'>Mã xác thực đăng nhập DKMovies</h2>
                     <p>Xin chào,</p>
-                    <p>Cảm ơn bạn đã đăng ký tài khoản tại <strong>DKMovies</strong>.</p>
+                    <p>Mã xác thực 2FA của bạn là:</p>
                     <p style='font-size:18px;'>
-                        🔐 Mã xác nhận của bạn là:<br />
-                        <span style='font-size:24px; font-weight:bold; color:#2ecc71;'>{code}</span>
+                        🔐 <span style='font-size:24px; font-weight:bold; color:#2ecc71;'>{code}</span>
                     </p>
-                    <p>Mã này có hiệu lực trong vài phút. Vui lòng không chia sẻ mã này với bất kỳ ai.</p>
+                    <p>Mã này có hiệu lực trong 5 phút. Vui lòng không chia sẻ mã này với bất kỳ ai.</p>
                     <p>Trân trọng,<br />Đội ngũ DKMovies</p>
                 </body>
-                </html>";   
-
+                </html>";
 
             var smtp = new SmtpClient
             {
@@ -219,7 +295,6 @@ namespace DKMovies.Controllers
                 await smtp.SendMailAsync(message);
             }
         }
-
 
         [HttpGet]
         public IActionResult SignUp() => View();
@@ -281,8 +356,6 @@ namespace DKMovies.Controllers
             return RedirectToAction("VerifyEmail");
         }
 
-
-
         [HttpGet]
         public IActionResult VerifyEmail()
         {
@@ -320,14 +393,9 @@ namespace DKMovies.Controllers
             {
                 try
                 {
-                    // Cập nhật trạng thái xác nhận email
                     user.EmailConfirmed = true;
                     user.ConfirmationCode = null;
-
-                    // Đảm bảo Entity Framework theo dõi thay đổi
                     _context.Entry(user).State = EntityState.Modified;
-
-                    // Lưu thay đổi và kiểm tra kết quả
                     var result = await _context.SaveChangesAsync();
 
                     if (result > 0)
@@ -344,8 +412,6 @@ namespace DKMovies.Controllers
                 }
                 catch (Exception ex)
                 {
-                    // Log lỗi để debug
-                    // Bạn có thể log ex.Message để xem lỗi cụ thể
                     ViewData["ToastError"] = "❌ Có lỗi xảy ra khi cập nhật thông tin. Vui lòng thử lại.";
                     ViewBag.Email = email;
                     return View();
@@ -357,10 +423,6 @@ namespace DKMovies.Controllers
             return View();
         }
 
-
-
-
-
         [HttpGet]
         public IActionResult AdminLogin() => View();
 
@@ -368,14 +430,22 @@ namespace DKMovies.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> AdminLogin(string username, string password)
         {
-            var admin = await _context.Admins.FirstOrDefaultAsync(a => a.Username == username);
+            // CẬP NHẬT: Sử dụng bảng Admins mới với relationship
+            var admin = await _context.Admins
+                .Include(a => a.Employee)
+                .ThenInclude(e => e.Role)
+                .FirstOrDefaultAsync(a => a.Username == username);
+
             if (admin != null && admin.PasswordHash == HashPassword(password))
             {
+                // Sử dụng session như cũ để không phá vỡ code hiện tại
                 HttpContext.Session.SetString("Username", admin.Username);
                 HttpContext.Session.SetString("UserID", admin.ID.ToString());
-                HttpContext.Session.SetString("Role", "Admin");
+                HttpContext.Session.SetString("Role", DetermineRole(admin.Employee?.Role?.Name));
+
                 return RedirectToAction("AdminDashboard", "Admin");
             }
+
             ModelState.AddModelError("", "Tên đăng nhập hoặc mật khẩu không hợp lệ.");
             return View();
         }
@@ -386,6 +456,4 @@ namespace DKMovies.Controllers
             return RedirectToAction("Login", "Account");
         }
     }
-
-
 }

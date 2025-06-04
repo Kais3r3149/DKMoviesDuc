@@ -325,8 +325,8 @@
         <nav class="sidebar-nav">
             <div class="nav-section-title">Tổng quan</div>
             <div class="nav-item">
-                <a class="nav-link @(ViewContext.RouteData.Values["Action"]?.ToString() == "Index" && ViewContext.RouteData.Values["Controller"]?.ToString() == "Admins" ? "active" : "")"
-                   href="@Url.Action("Index", "Admins")">
+                <a class="nav-link @(ViewContext.RouteData.Values["Action"]?.ToString() == "Index" && ViewContext.RouteData.Values["Controller"]?.ToString() == "Admin" ? "active" : "")"
+                   href="@Url.Action("Index", "Admin")">
                     <i class="fas fa-tachometer-alt nav-icon"></i>
                     <span class="nav-text">Bảng điều khiển</span>
                 </a>
@@ -372,7 +372,7 @@
             <div class="nav-section-title">Báo cáo & Thống kê</div>
             <div class="nav-item">
                 <a class="nav-link @(ViewContext.RouteData.Values["Action"]?.ToString() == "MovieDashboard" ? "active" : "")"
-                   href="@Url.Action("MovieDashboard", "Admins")">
+                   href="@Url.Action("MovieDashboard", "Admin")">
                     <i class="fas fa-chart-line nav-icon"></i>
                     <span class="nav-text">Thống kê phim</span>
                 </a>

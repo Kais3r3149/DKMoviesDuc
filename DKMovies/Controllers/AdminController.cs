@@ -9,11 +9,11 @@ using DKMovies.Models.ViewModels;
 
 namespace DKMovies.Controllers
 {
-    public class AdminsController : Controller
+    public class AdminController : Controller
     {
         private readonly ApplicationDbContext _context;
 
-        public AdminsController(ApplicationDbContext context)
+        public AdminController(ApplicationDbContext context)
         {
             _context = context;
         }

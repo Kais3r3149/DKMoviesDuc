@@ -1,5 +1,6 @@
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using DKMovies.Models;
+using DKMovies.Middleware; // Thêm using cho middleware
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -21,6 +22,7 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
 
 builder.Services.AddHttpContextAccessor();
 
+// Cấu hình Authentication
 builder.Services.AddAuthentication("MyCookieAuth")
     .AddCookie("MyCookieAuth", options =>
     {
@@ -29,7 +31,23 @@ builder.Services.AddAuthentication("MyCookieAuth")
         options.Cookie.Name = "DKMovies.Auth";
         options.ExpireTimeSpan = TimeSpan.FromDays(30);
         options.SlidingExpiration = true;
+        options.Cookie.HttpOnly = true;
+        options.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
     });
+
+// Thêm Authorization policies
+builder.Services.AddAuthorization(options =>
+{
+    options.AddPolicy("AdminOnly", policy =>
+        policy.RequireClaim("UserType", "Admin"));
+
+    options.AddPolicy("SuperAdminOnly", policy =>
+        policy.RequireClaim("UserType", "Admin")
+               .RequireClaim(System.Security.Claims.ClaimTypes.Role, "SuperAdmin"));
+
+    options.AddPolicy("UserOnly", policy =>
+        policy.RequireClaim("UserType", "User"));
+});
 
 var app = builder.Build();
 
@@ -46,16 +64,37 @@ app.UseStaticFiles();
 
 // Add session middleware before routing
 app.UseSession();
-
 app.UseRouting();
-
 app.UseAuthentication();
+
+// Thêm middleware bảo vệ admin routes
+app.UseMiddleware<AdminAccessMiddleware>();
+
 // Authorization middleware (to check session state for role-based access)
 app.UseAuthorization();
+
+// Thêm route cho admin
+app.MapControllerRoute(
+    name: "admin",
+    pattern: "Admin/{action=Dashboard}/{id?}",
+    defaults: new { controller = "Admin" });
 
 app.MapControllerRoute(
     name: "default",
     pattern: "{controller=Home}/{action=Index}/{id?}");
 
+
+
 // Run the application
 app.Run();
+
+// Method để tạo dữ liệu mặc định
+
+
+// Helper method để hash password
+string HashPassword(string password)
+{
+    using var sha256 = System.Security.Cryptography.SHA256.Create();
+    byte[] bytes = sha256.ComputeHash(System.Text.Encoding.UTF8.GetBytes(password));
+    return Convert.ToBase64String(bytes);
+}
