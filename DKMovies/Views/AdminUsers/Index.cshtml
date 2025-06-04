@@ -1,0 +1,471 @@
+﻿@model IEnumerable<DKMovies.Models.User>
+
+@{
+    ViewData["Title"] = "Quản lý người dùng";
+    Layout = "~/Views/Shared/_AdminLayout.cshtml";
+}
+
+<div class="mb-4">
+    <div class="d-flex align-items-center justify-content-between">
+        <div>
+            <h2 class="mb-1 fw-bold text-dark">
+                <i class="fas fa-users text-primary me-2"></i>Quản lý người dùng
+            </h2>
+            <p class="text-muted mb-0">Quản lý tài khoản người dùng trong hệ thống</p>
+        </div>
+        <!-- ❌ KHÔNG có nút Create - Users tự đăng ký -->
+    </div>
+</div>
+
+<!-- Statistics Cards -->
+<div class="row g-3 mb-4">
+    <div class="col-xl-3 col-md-6">
+        <div class="card border-0 bg-primary text-white shadow-sm">
+            <div class="card-body p-3">
+                <div class="d-flex align-items-center">
+                    <div class="flex-grow-1">
+                        <h6 class="text-white-50 mb-1">Tổng người dùng</h6>
+                        <h4 class="mb-0" id="totalUsers">@ViewBag.TotalUsers</h4>
+                    </div>
+                    <div class="ms-3">
+                        <i class="fas fa-users fa-2x opacity-75"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6">
+        <div class="card border-0 bg-success text-white shadow-sm">
+            <div class="card-body p-3">
+                <div class="d-flex align-items-center">
+                    <div class="flex-grow-1">
+                        <h6 class="text-white-50 mb-1">Mới tháng này</h6>
+                        <h4 class="mb-0" id="newUsers">0</h4>
+                    </div>
+                    <div class="ms-3">
+                        <i class="fas fa-user-plus fa-2x opacity-75"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6">
+        <div class="card border-0 bg-info text-white shadow-sm">
+            <div class="card-body p-3">
+                <div class="d-flex align-items-center">
+                    <div class="flex-grow-1">
+                        <h6 class="text-white-50 mb-1">Đã mua vé</h6>
+                        <h4 class="mb-0" id="activeUsers">0</h4>
+                    </div>
+                    <div class="ms-3">
+                        <i class="fas fa-ticket-alt fa-2x opacity-75"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6">
+        <div class="card border-0 bg-warning text-white shadow-sm">
+            <div class="card-body p-3">
+                <div class="d-flex align-items-center">
+                    <div class="flex-grow-1">
+                        <h6 class="text-white-50 mb-1">Đã xác thực</h6>
+                        <h4 class="mb-0" id="verifiedUsers">0</h4>
+                    </div>
+                    <div class="ms-3">
+                        <i class="fas fa-check-circle fa-2x opacity-75"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Search & Filter -->
+<div class="card border-0 shadow-sm mb-4">
+    <div class="card-header bg-white border-bottom-0 py-3">
+        <h5 class="card-title mb-0 fw-semibold">
+            <i class="fas fa-search text-primary me-2"></i>Tìm kiếm và lọc
+        </h5>
+    </div>
+    <div class="card-body">
+        <form method="get" class="row g-3">
+            <div class="col-md-4">
+                <label class="form-label fw-medium">Từ khóa</label>
+                <input type="text" name="searchString" value="@ViewData["CurrentFilter"]" 
+                       class="form-control" placeholder="Tìm theo tên, email, username, SĐT...">
+            </div>
+            <div class="col-md-3">
+                <label class="form-label fw-medium">Sắp xếp theo</label>
+                @{
+                    var currentSort = ViewData["CurrentSort"]?.ToString() ?? "";
+                }
+
+                <select name="sortOrder" class="form-select">
+                    <option value="" selected="@(currentSort == "" ? "selected" : null)">Tên (A-Z)</option>
+                    <option value="name_desc" selected="@(currentSort == "name_desc" ? "selected" : null)">Tên (Z-A)</option>
+                    <option value="Date" selected="@(currentSort == "Date" ? "selected" : null)">Ngày tạo (Cũ nhất)</option>
+                    <option value="date_desc" selected="@(currentSort == "date_desc" ? "selected" : null)">Ngày tạo (Mới nhất)</option>
+                    <option value="Email" selected="@(currentSort == "Email" ? "selected" : null)">Email (A-Z)</option>
+                    <option value="email_desc" selected="@(currentSort == "email_desc" ? "selected" : null)">Email (Z-A)</option>
+                </select>
+
+            </div>
+            <div class="col-md-3">
+                <label class="form-label fw-medium">Trạng thái</label>
+                <select name="status" class="form-select">
+                    <option value="">Tất cả</option>
+                    <option value="verified">Đã xác thực email</option>
+                    <option value="unverified">Chưa xác thực email</option>
+                    <option value="2fa">Bật 2FA</option>
+                    <option value="active">Đã mua vé</option>
+                </select>
+            </div>
+            <div class="col-md-2 d-flex align-items-end">
+                <button type="submit" class="btn btn-primary w-100">
+                    <i class="fas fa-search me-1"></i>Tìm kiếm
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Users Table -->
+<div class="card border-0 shadow-sm">
+    <div class="card-header bg-white border-bottom-0 py-3">
+        <div class="d-flex justify-content-between align-items-center">
+            <h5 class="card-title mb-0 fw-semibold">
+                <i class="fas fa-list text-info me-2"></i>Danh sách người dùng
+            </h5>
+            <span class="badge bg-light text-dark">@ViewBag.TotalUsers người dùng</span>
+        </div>
+    </div>
+    <div class="card-body p-0">
+        @if (Model.Any())
+        {
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th class="border-0 fw-semibold">
+                                <a asp-action="Index" asp-route-sortOrder="@ViewData["NameSortParm"]" 
+                                   asp-route-searchString="@ViewData["CurrentFilter"]" 
+                                   class="text-decoration-none text-dark">
+                                    Người dùng <i class="fas fa-sort"></i>
+                                </a>
+                            </th>
+                            <th class="border-0 fw-semibold">
+                                <a asp-action="Index" asp-route-sortOrder="@ViewData["EmailSortParm"]" 
+                                   asp-route-searchString="@ViewData["CurrentFilter"]" 
+                                   class="text-decoration-none text-dark">
+                                    Liên hệ <i class="fas fa-sort"></i>
+                                </a>
+                            </th>
+                            <th class="border-0 fw-semibold text-center">Trạng thái</th>
+                            <th class="border-0 fw-semibold text-center">Hoạt động</th>
+                            <th class="border-0 fw-semibold">
+                                <a asp-action="Index" asp-route-sortOrder="@ViewData["DateSortParm"]" 
+                                   asp-route-searchString="@ViewData["CurrentFilter"]" 
+                                   class="text-decoration-none text-dark">
+                                    Ngày tạo <i class="fas fa-sort"></i>
+                                </a>
+                            </th>
+                            <th class="border-0 fw-semibold text-center">Thao tác</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var user in Model)
+                        {
+                            <tr>
+                                <td class="align-middle">
+                                    <div class="d-flex align-items-center">
+                                        <img src="@(!string.IsNullOrEmpty(user.ProfileImagePath) ? user.ProfileImagePath : "/images/default-avatar.png")" 
+                                             alt="Avatar" class="rounded-circle me-3" 
+                                             style="width: 50px; height: 50px; object-fit: cover;">
+                                        <div>
+                                            <h6 class="mb-1 fw-semibold">@user.FullName</h6>
+                                            <div class="text-muted small">
+                                                <span class="me-2">@@@user.Username</span>
+                                                @if (!string.IsNullOrEmpty(user.Gender))
+                                                {
+                                                    <span class="badge badge-soft-secondary">@user.Gender</span>
+                                                }
+                                            </div>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td class="align-middle">
+                                    <div>
+                                        <div class="fw-medium mb-1">
+                                            <i class="fas fa-envelope text-muted me-1"></i>@user.Email
+                                        </div>
+                                        @if (!string.IsNullOrEmpty(user.Phone))
+                                        {
+                                            <div class="text-muted small">
+                                                <i class="fas fa-phone text-muted me-1"></i>@user.Phone
+                                            </div>
+                                        }
+                                    </div>
+                                </td>
+                                <td class="align-middle text-center">
+                                    <div class="d-flex flex-column gap-1">
+                                        <button class="btn btn-sm @(user.EmailConfirmed ? "btn-success" : "btn-outline-warning") border-0" 
+                                                onclick="toggleEmailConfirmation(@user.ID, this)">
+                                            <i class="fas @(user.EmailConfirmed ? "fa-check" : "fa-times") me-1"></i>
+                                            @(user.EmailConfirmed ? "Đã xác thực" : "Chưa xác thực")
+                                        </button>
+                                        @if (user.TwoFactorEnabled)
+                                        {
+                                            <span class="badge bg-info">
+                                                <i class="fas fa-shield-alt me-1"></i>2FA
+                                            </span>
+                                        }
+                                    </div>
+                                </td>
+                                <td class="align-middle text-center">
+                                    <div class="d-flex flex-column align-items-center gap-1">
+                                        <span class="badge bg-primary">
+                                            <i class="fas fa-ticket-alt me-1"></i>@user.Tickets.Count() vé
+                                        </span>
+                                        <span class="badge bg-warning text-dark">
+                                            <i class="fas fa-star me-1"></i>@user.Reviews.Count() đánh giá
+                                        </span>
+                                    </div>
+                                </td>
+                                <td class="align-middle">
+                                    <div>
+                                        <div class="fw-medium">@user.CreatedAt.ToString("dd/MM/yyyy")</div>
+                                        <small class="text-muted">@user.CreatedAt.ToString("HH:mm")</small>
+                                    </div>
+                                </td>
+                                <td class="align-middle text-center">
+                                    <div class="btn-group" role="group">
+                                        <a asp-action="Details" asp-route-id="@user.ID" 
+                                           class="btn btn-sm btn-outline-info" title="Xem chi tiết">
+                                            <i class="fas fa-eye"></i>
+                                        </a>
+                                        <a asp-action="Edit" asp-route-id="@user.ID" 
+                                           class="btn btn-sm btn-outline-warning" title="Chỉnh sửa">
+                                            <i class="fas fa-edit"></i>
+                                        </a>
+                                        <a asp-action="Delete" asp-route-id="@user.ID" 
+                                           class="btn btn-sm btn-outline-danger" title="Xóa">
+                                            <i class="fas fa-trash"></i>
+                                        </a>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+        else
+        {
+            <div class="text-center py-5">
+                <i class="fas fa-users text-muted fs-1 mb-3"></i>
+                <h5 class="text-muted">Không tìm thấy người dùng nào</h5>
+                <p class="text-muted mb-0">Thử thay đổi bộ lọc hoặc từ khóa tìm kiếm.</p>
+            </div>
+        }
+    </div>
+    
+    @if (Model.Any())
+    {
+        <!-- Pagination -->
+        <div class="card-footer bg-white border-top-0 py-3">
+            <div class="d-flex justify-content-between align-items-center">
+                <div class="text-muted">
+                    Hiển thị @((ViewBag.CurrentPage - 1) * 10 + 1) - @Math.Min(ViewBag.CurrentPage * 10, ViewBag.TotalUsers) 
+                    trong tổng số @ViewBag.TotalUsers người dùng
+                </div>
+                
+                @if (ViewBag.TotalPages > 1)
+                {
+                    <nav aria-label="User pagination">
+                        <ul class="pagination pagination-sm mb-0">
+                            @if (ViewBag.CurrentPage > 1)
+                            {
+                                <li class="page-item">
+                                    <a class="page-link" asp-action="Index" 
+                                       asp-route-page="@(ViewBag.CurrentPage - 1)"
+                                       asp-route-searchString="@ViewData["CurrentFilter"]"
+                                       asp-route-sortOrder="@ViewData["CurrentSort"]">
+                                        <i class="fas fa-chevron-left"></i>
+                                    </a>
+                                </li>
+                            }
+                            
+                            @for (int i = Math.Max(1, ViewBag.CurrentPage - 2); i <= Math.Min(ViewBag.TotalPages, ViewBag.CurrentPage + 2); i++)
+                            {
+                                <li class="page-item @(i == ViewBag.CurrentPage ? "active" : "")">
+                                    <a class="page-link" asp-action="Index" 
+                                       asp-route-page="@i"
+                                       asp-route-searchString="@ViewData["CurrentFilter"]"
+                                       asp-route-sortOrder="@ViewData["CurrentSort"]">@i</a>
+                                </li>
+                            }
+                            
+                            @if (ViewBag.CurrentPage < ViewBag.TotalPages)
+                            {
+                                <li class="page-item">
+                                    <a class="page-link" asp-action="Index" 
+                                       asp-route-page="@(ViewBag.CurrentPage + 1)"
+                                       asp-route-searchString="@ViewData["CurrentFilter"]"
+                                       asp-route-sortOrder="@ViewData["CurrentSort"]">
+                                        <i class="fas fa-chevron-right"></i>
+                                    </a>
+                                </li>
+                            }
+                        </ul>
+                    </nav>
+                }
+            </div>
+        </div>
+    }
+</div>
+
+<style>
+    .badge-soft-secondary {
+        background-color: #f8f9fa;
+        color: #6c757d;
+        border: 1px solid #dee2e6;
+    }
+
+    .card {
+        transition: all 0.3s ease;
+    }
+
+    .card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 25px rgba(0,0,0,0.1) !important;
+    }
+
+    .table th a {
+        transition: all 0.3s ease;
+    }
+
+    .table th a:hover {
+        color: #0d6efd !important;
+    }
+
+    .btn {
+        transition: all 0.3s ease;
+    }
+
+    .btn:hover {
+        transform: translateY(-1px);
+    }
+
+
+        
+        .btn-group .btn {
+            padding: 0.25rem 0.5rem;
+        }
+    }
+</style>
+
+@section Scripts {
+    <script>
+        // Auto-refresh statistics every 30 seconds
+        setInterval(loadUserStatistics, 30000);
+        
+        // Load statistics on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            loadUserStatistics();
+        });
+
+        async function loadUserStatistics() {
+            try {
+                const response = await fetch('@Url.Action("GetUserStatistics", "AdminUsers")');
+                const result = await response.json();
+                
+                if (result.success) {
+                    document.getElementById('totalUsers').textContent = result.data.totalUsers.toLocaleString();
+                    document.getElementById('newUsers').textContent = result.data.newUsersThisMonth.toLocaleString();
+                    document.getElementById('activeUsers').textContent = result.data.activeUsers.toLocaleString();
+                    document.getElementById('verifiedUsers').textContent = result.data.verifiedUsers.toLocaleString();
+                }
+            } catch (error) {
+                console.error('Error loading statistics:', error);
+            }
+        }
+
+        async function toggleEmailConfirmation(userId, button) {
+            const originalText = button.innerHTML;
+            button.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Đang xử lý...';
+            button.disabled = true;
+            
+            try {
+                const response = await fetch('@Url.Action("ToggleEmailConfirmation", "AdminUsers")', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'RequestVerificationToken': document.querySelector('[name="__RequestVerificationToken"]')?.value
+                    },
+                    body: JSON.stringify({ userId: userId })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    if (result.newStatus) {
+                        button.className = 'btn btn-sm btn-success border-0';
+                        button.innerHTML = '<i class="fas fa-check me-1"></i>Đã xác thực';
+                    } else {
+                        button.className = 'btn btn-sm btn-outline-warning border-0';
+                        button.innerHTML = '<i class="fas fa-times me-1"></i>Chưa xác thực';
+                    }
+                    showToast(result.message, 'success');
+                } else {
+                    button.innerHTML = originalText;
+                    showToast(result.message || 'Có lỗi xảy ra', 'error');
+                }
+            } catch (error) {
+                button.innerHTML = originalText;
+                showToast('Có lỗi xảy ra khi cập nhật trạng thái', 'error');
+                console.error('Error:', error);
+            } finally {
+                button.disabled = false;
+            }
+        }
+
+        function showToast(message, type) {
+            const toast = document.createElement('div');
+            toast.className = `alert alert-${type === 'success' ? 'success' : 'danger'} position-fixed`;
+            toast.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
+            toast.innerHTML = `
+                <i class="fas fa-${type === 'success' ? 'check' : 'exclamation-triangle'} me-2"></i>
+                ${message}
+                <button type="button" class="btn-close ms-2" onclick="this.parentElement.remove()"></button>
+            `;
+            
+            document.body.appendChild(toast);
+            
+            setTimeout(() => {
+                if (toast.parentElement) {
+                    toast.remove();
+                }
+            }, 3000);
+        }
+
+        // Handle image loading errors
+        document.addEventListener('DOMContentLoaded', function() {
+            document.querySelectorAll('img').forEach(img => {
+                img.addEventListener('error', function() {
+                    if (this.src.includes('default-avatar.png')) return;
+                    this.src = '/images/default-avatar.png';
+                    this.alt = 'Ảnh đại diện không khả dụng';
+                });
+            });
+        });
+    </script>
+}
+
+@{
+    // Include anti-forgery token for AJAX requests
+    Html.AntiForgeryToken();
+}

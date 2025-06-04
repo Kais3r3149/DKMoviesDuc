@@ -1,0 +1,192 @@
+﻿@using DKMovies.Models
+@model DKMovies.Models.User
+
+@{
+    ViewData["Title"] = "Chi tiết người dùng - " + Model.FullName;
+    Layout = "~/Views/Shared/_AdminLayout.cshtml";
+}
+
+<div class="mb-4">
+    <div class="d-flex align-items-center justify-content-between">
+        <div>
+            <h2 class="mb-1 fw-bold text-dark">
+                <i class="fas fa-user text-primary me-2"></i>Chi tiết người dùng
+            </h2>
+            <p class="text-muted mb-0">Thông tin chi tiết và hoạt động của @Model.FullName</p>
+        </div>
+        <a asp-action="Index" class="btn btn-outline-secondary btn-sm">
+            <i class="fas fa-arrow-left me-1"></i>Quay lại danh sách
+        </a>
+    </div>
+</div>
+
+<div class="row g-4">
+    <!-- User Profile Card -->
+    <div class="col-lg-4">
+        <div class="card border-0 shadow-sm">
+            <div class="card-body text-center p-4">
+                <img src="@(!string.IsNullOrEmpty(Model.ProfileImagePath) ? Model.ProfileImagePath : "/images/default-avatar.png")"
+                     alt="@Model.FullName"
+                     class="rounded-circle border border-3 border-light shadow mb-3"
+                     style="width: 150px; height: 150px; object-fit: cover;">
+
+                <h4 class="fw-bold mb-1">@Model.FullName</h4>
+                <p class="text-muted mb-3">@@@Model.Username</p>
+
+                <div class="d-flex justify-content-center gap-2 mb-3">
+                    @if (Model.EmailConfirmed)
+                    {
+                        <span class="badge bg-success">
+                            <i class="fas fa-check me-1"></i>Email xác thực
+                        </span>
+                    }
+                    else
+                    {
+                        <span class="badge bg-warning">
+                            <i class="fas fa-exclamation me-1"></i>Chưa xác thực
+                        </span>
+                    }
+
+                    @if (Model.TwoFactorEnabled)
+                    {
+                        <span class="badge bg-info">
+                            <i class="fas fa-shield-alt me-1"></i>2FA
+                        </span>
+                    }
+                </div>
+
+                <!-- Quick Stats -->
+                <div class="row g-2 text-center">
+                    <div class="col-4">
+                        <div class="bg-light rounded p-2">
+                            <h5 class="text-primary mb-0">@Model.Tickets.Count()</h5>
+                            <small class="text-muted">Vé đã mua</small>
+                        </div>
+                    </div>
+                    <div class="col-4">
+                        <div class="bg-light rounded p-2">
+                            <h5 class="text-warning mb-0">@Model.Reviews.Count()</h5>
+                            <small class="text-muted">Đánh giá</small>
+                        </div>
+                    </div>
+                    <div class="col-4">
+                        <div class="bg-light rounded p-2">
+                            <h5 class="text-info mb-0">@Model.Orders.Count()</h5>
+                            <small class="text-muted">Đơn hàng</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- User Information -->
+    <div class="col-lg-8">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-white border-bottom-0 py-3">
+                <h5 class="card-title mb-0 fw-semibold">
+                    <i class="fas fa-info-circle text-info me-2"></i>Thông tin cá nhân
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <strong>Email:</strong>
+                        <div class="mt-1">
+                            <i class="fas fa-envelope text-muted me-2"></i>@Model.Email
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <strong>Số điện thoại:</strong>
+                        <div class="mt-1">
+                            <i class="fas fa-phone text-muted me-2"></i>
+                            @(!string.IsNullOrEmpty(Model.Phone) ? Model.Phone : "Chưa cập nhật")
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <strong>Giới tính:</strong>
+                        <div class="mt-1">
+                            <i class="fas fa-venus-mars text-muted me-2"></i>
+                            @(!string.IsNullOrEmpty(Model.Gender) ? Model.Gender : "Chưa cập nhật")
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <strong>Ngày sinh:</strong>
+                        <div class="mt-1">
+                            <i class="fas fa-birthday-cake text-muted me-2"></i>
+                            @(Model.BirthDate?.ToString("dd/MM/yyyy") ?? "Chưa cập nhật")
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <strong>Ngày tạo tài khoản:</strong>
+                        <div class="mt-1">
+                            <i class="fas fa-calendar text-muted me-2"></i>
+                            @Model.CreatedAt.ToString("dd/MM/yyyy HH:mm")
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <strong>Mã xác thực:</strong>
+                        <div class="mt-1">
+                            <i class="fas fa-key text-muted me-2"></i>
+                            @(!string.IsNullOrEmpty(Model.ConfirmationCode) ? Model.ConfirmationCode : "Chưa có")
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Purchase History -->
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-white border-bottom-0 py-3">
+                <h5 class="card-title mb-0 fw-semibold">
+                    <i class="fas fa-ticket-alt text-primary me-2"></i>Lịch sử mua vé
+                </h5>
+            </div>
+            <div class="card-body">
+                @if (Model.Tickets.Any())
+                {
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Phim</th>
+                                    <th>Rạp</th>
+                                    <th>Suất chiếu</th>
+                                    <th>Ghế</th>
+                                    <th>Giá</th>
+                                    <th>Ngày mua</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var ticket in Model.Tickets)
+                                {
+                                    <tr>
+                                        <td>@ticket.ShowTime?.Movie?.Title</td>
+                                        <td>@ticket.ShowTime?.Auditorium?.Theater?.Name</td>
+                                        <td>@ticket.ShowTime?.StartTime.ToString("dd/MM/yyyy HH:mm")</td>
+                                        <td>
+                                            @string.Join(", ", ticket.TicketSeats.Select(s => s.SeatID))
+                                        </td>
+                                        <td>@String.Format("{0:N0} ₫", ticket.TotalPrice)</td>
+                                        <td>@ticket.PurchaseTime.ToString("dd/MM/yyyy HH:mm")</td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+                else
+                {
+                    <div class="text-center py-4">
+                        <i class="fas fa-info-circle text-muted fs-1 mb-3"></i>
+                        <h6 class="text-muted">Người dùng chưa mua vé nào.</h6>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+</div>

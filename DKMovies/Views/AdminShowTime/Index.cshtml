@@ -93,18 +93,18 @@ else
                             <tr class="align-middle @(isPast ? "table-secondary" : "")">
                                 <td class="fw-medium text-muted">@i</td>
                                 <td>
-                                    <div class="d-flex align-items-center">
-                                        <img src="@(!string.IsNullOrWhiteSpace(showTime.Movie?.PosterImagePath) ? showTime.Movie.PosterImagePath : "/images/default-poster.jpg")"
+                                    <div class="d-flex gap-3 align-items-start">
+                                        <img src="@Url.Content($"~/assets/images/movie_posters/{(string.IsNullOrWhiteSpace(showTime.Movie?.PosterImagePath) ? "default-poster.jpg" : showTime.Movie.PosterImagePath.TrimStart('/'))}")"
                                              alt="@showTime.Movie?.Title"
-                                             class="rounded shadow-sm me-3"
-                                             style="width: 40px; height: 60px; object-fit: cover;"
-                                             onerror="this.src='/images/default-poster.jpg'" />
+                                             class="img-fluid"
+                                             style="width: 80px; height: 120px; object-fit: cover; border-radius: 4px;" />
                                         <div>
                                             <div class="fw-semibold text-dark">@showTime.Movie?.Title</div>
                                             <small class="text-muted">ID: @showTime.MovieID</small>
                                         </div>
                                     </div>
                                 </td>
+
                                 <td>
                                     <div>
                                         <div class="fw-medium">@showTime.Auditorium?.Theater?.Name</div>

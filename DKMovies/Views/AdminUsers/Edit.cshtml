@@ -1,0 +1,365 @@
+﻿@using DKMovies.Models
+@model DKMovies.Models.User
+
+@{
+    ViewData["Title"] = "Chỉnh sửa người dùng - " + Model.FullName;
+    Layout = "~/Views/Shared/_AdminLayout.cshtml";
+}
+
+<div class="mb-4">
+    <div class="d-flex align-items-center justify-content-between">
+        <div>
+            <h2 class="mb-1 fw-bold text-dark">
+                <i class="fas fa-user-edit text-warning me-2"></i>Chỉnh sửa người dùng
+            </h2>
+            <p class="text-muted mb-0">Cập nhật thông tin người dùng @Model.FullName</p>
+        </div>
+        <a asp-action="Index" class="btn btn-outline-secondary btn-sm">
+            <i class="fas fa-arrow-left me-1"></i>Quay lại danh sách
+        </a>
+    </div>
+</div>
+
+<form asp-action="Edit" method="post" enctype="multipart/form-data" id="userForm">
+    <input asp-for="ID" type="hidden" />
+
+    <div class="row g-4">
+        <!-- Profile Image Upload -->
+        <div class="col-lg-4">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-header bg-white border-bottom-0 py-3">
+                    <h5 class="card-title mb-0 fw-semibold">
+                        <i class="fas fa-camera text-primary me-2"></i>Ảnh đại diện
+                    </h5>
+                </div>
+                <div class="card-body text-center">
+                    <div class="mb-3">
+                        <img id="profilePreview"
+                             src="@(!string.IsNullOrEmpty(Model.ProfileImagePath) ? Model.ProfileImagePath : "/images/default-avatar.png")"
+                             alt="Preview"
+                             class="rounded-circle border border-3 border-light shadow"
+                             style="width: 150px; height: 150px; object-fit: cover;">
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="profileImage" class="btn btn-outline-primary">
+                            <i class="fas fa-upload me-2"></i>Thay đổi ảnh
+                        </label>
+                        <input type="file" id="profileImage" name="profileImage"
+                               accept="image/*" style="display: none;" onchange="previewImage(this)">
+                    </div>
+
+                    <small class="text-muted">
+                        Định dạng: JPG, PNG, GIF<br>
+                        Kích thước tối đa: 5MB
+                    </small>
+                </div>
+            </div>
+        </div>
+
+        <!-- User Information -->
+        <div class="col-lg-8">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white border-bottom-0 py-3">
+                    <h5 class="card-title mb-0 fw-semibold">
+                        <i class="fas fa-info-circle text-info me-2"></i>Thông tin người dùng
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        <!-- Login Information -->
+                        <div class="col-12">
+                            <h6 class="fw-bold text-primary mb-3">
+                                <i class="fas fa-key me-2"></i>Thông tin đăng nhập
+                            </h6>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label asp-for="Username" class="form-label fw-medium">
+                                Tên đăng nhập <span class="text-danger">*</span>
+                            </label>
+                            <input asp-for="Username" class="form-control" placeholder="Nhập tên đăng nhập">
+                            <span asp-validation-for="Username" class="text-danger small"></span>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label asp-for="Email" class="form-label fw-medium">
+                                Email <span class="text-danger">*</span>
+                            </label>
+                            <input asp-for="Email" type="email" class="form-control" placeholder="email@example.com">
+                            <span asp-validation-for="Email" class="text-danger small"></span>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label for="newPassword" class="form-label fw-medium">
+                                Mật khẩu mới (để trống nếu không đổi)
+                            </label>
+                            <input type="password" id="newPassword" name="newPassword" class="form-control" placeholder="Nhập mật khẩu mới">
+                        </div>
+
+                        <div class="col-md-6">
+                            <label for="confirmPassword" class="form-label fw-medium">Xác nhận mật khẩu mới</label>
+                            <input type="password" id="confirmPassword" name="confirmPassword" class="form-control" placeholder="Xác nhận mật khẩu mới">
+                        </div>
+
+                        <!-- Personal Information -->
+                        <div class="col-12">
+                            <hr class="my-4">
+                            <h6 class="fw-bold text-primary mb-3">
+                                <i class="fas fa-user me-2"></i>Thông tin cá nhân
+                            </h6>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label asp-for="FullName" class="form-label fw-medium">Họ và tên</label>
+                            <input asp-for="FullName" class="form-control" placeholder="Nhập họ và tên đầy đủ">
+                            <span asp-validation-for="FullName" class="text-danger small"></span>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label asp-for="Phone" class="form-label fw-medium">Số điện thoại</label>
+                            <input asp-for="Phone" class="form-control" placeholder="0123456789">
+                            <span asp-validation-for="Phone" class="text-danger small"></span>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label asp-for="BirthDate" class="form-label fw-medium">Ngày sinh</label>
+                            <input asp-for="BirthDate" type="date" class="form-control">
+                            <span asp-validation-for="BirthDate" class="text-danger small"></span>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label asp-for="Gender" class="form-label fw-medium">Giới tính</label>
+                            <select asp-for="Gender" class="form-select">
+                                <option value="">Chọn giới tính</option>
+                                <option value="Nam">Nam</option>
+                                <option value="Nữ">Nữ</option>
+                                <option value="Khác">Khác</option>
+                            </select>
+                            <span asp-validation-for="Gender" class="text-danger small"></span>
+                        </div>
+
+                        <!-- Account Settings -->
+                        <div class="col-12">
+                            <hr class="my-4">
+                            <h6 class="fw-bold text-primary mb-3">
+                                <i class="fas fa-cog me-2"></i>Cài đặt tài khoản
+                            </h6>
+                        </div>
+
+                        <div class="col-md-6">
+                            <div class="form-check form-switch">
+                                <input asp-for="EmailConfirmed" class="form-check-input" type="checkbox">
+                                <label asp-for="EmailConfirmed" class="form-check-label fw-medium">
+                                    Email đã xác thực
+                                </label>
+                            </div>
+                            <small class="text-muted">Cho phép người dùng đăng nhập mà không cần xác thực email</small>
+                        </div>
+
+                        <div class="col-md-6">
+                            <div class="form-check form-switch">
+                                <input asp-for="TwoFactorEnabled" class="form-check-input" type="checkbox">
+                                <label asp-for="TwoFactorEnabled" class="form-check-label fw-medium">
+                                    Bật xác thực 2 bước
+                                </label>
+                            </div>
+                            <small class="text-muted">Yêu cầu mã xác thực khi đăng nhập</small>
+                        </div>
+
+                        <!-- Account Information (Read-only) -->
+                        <div class="col-12">
+                            <hr class="my-4">
+                            <h6 class="fw-bold text-secondary mb-3">
+                                <i class="fas fa-info me-2"></i>Thông tin tài khoản
+                            </h6>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label fw-medium">Ngày tạo tài khoản</label>
+                            <input type="text" class="form-control" value="@Model.CreatedAt.ToString("dd/MM/yyyy HH:mm")" readonly>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label fw-medium">Mã xác thực hiện tại</label>
+                            <input type="text" class="form-control" value="@(!string.IsNullOrEmpty(Model.ConfirmationCode) ? Model.ConfirmationCode : "Chưa có")" readonly>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Action Buttons -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <a asp-action="Index" class="btn btn-outline-secondary">
+                    <i class="fas fa-times me-2"></i>Hủy bỏ
+                </a>
+                <div class="d-flex gap-2">
+                    <a asp-action="Details" asp-route-id="@Model.ID" class="btn btn-outline-info">
+                        <i class="fas fa-eye me-2"></i>Xem chi tiết
+                    </a>
+                    <button type="button" class="btn btn-outline-primary" onclick="resetForm()">
+                        <i class="fas fa-undo me-2"></i>Reset
+                    </button>
+                    <button type="submit" class="btn btn-success" id="submitBtn">
+                        <i class="fas fa-save me-2"></i>Cập nhật
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</form>
+
+<style>
+    .card {
+        transition: all 0.3s ease;
+    }
+
+        .card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.1) !important;
+        }
+
+    .form-control:focus,
+    .form-select:focus {
+        border-color: #0d6efd;
+        box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25);
+    }
+
+    .btn {
+        transition: all 0.3s ease;
+    }
+
+        .btn:hover {
+            transform: translateY(-1px);
+        }
+
+    .form-check-input:checked {
+        background-color: #0d6efd;
+        border-color: #0d6efd;
+    }
+
+
+
+    {
+        flex-direction: column;
+        gap: 1rem;
+    }
+
+    .d-flex.justify-content-between .d-flex {
+        justify-content: center;
+    }
+
+    }
+</style>
+
+@section Scripts {
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+
+    <script>
+        function previewImage(input) {
+            if (input.files && input.files[0]) {
+                const reader = new FileReader();
+
+                reader.onload = function(e) {
+                    document.getElementById('profilePreview').src = e.target.result;
+                }
+
+                reader.readAsDataURL(input.files[0]);
+            }
+        }
+
+        function resetForm() {
+            if (confirm('Bạn có chắc muốn reset form? Tất cả thay đổi sẽ bị mất.')) {
+                location.reload();
+            }
+        }
+
+        // Password confirmation validation
+        document.getElementById('confirmPassword').addEventListener('input', function() {
+            const password = document.getElementById('newPassword').value;
+            const confirmPassword = this.value;
+
+            if (password && confirmPassword && password !== confirmPassword) {
+                this.setCustomValidity('Mật khẩu xác nhận không khớp');
+                this.classList.add('is-invalid');
+            } else {
+                this.setCustomValidity('');
+                this.classList.remove('is-invalid');
+            }
+        });
+
+        document.getElementById('newPassword').addEventListener('input', function() {
+            const confirmPassword = document.getElementById('confirmPassword');
+            if (confirmPassword.value) {
+                confirmPassword.dispatchEvent(new Event('input'));
+            }
+        });
+
+        // Form validation and submission
+        document.getElementById('userForm').addEventListener('submit', function(e) {
+            const password = document.getElementById('newPassword').value;
+            const confirmPassword = document.getElementById('confirmPassword').value;
+
+            if (password && confirmPassword && password !== confirmPassword) {
+                e.preventDefault();
+                alert('Mật khẩu xác nhận không khớp');
+                return;
+            }
+
+            const submitBtn = document.getElementById('submitBtn');
+
+            // Add loading state
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Đang cập nhật...';
+            submitBtn.disabled = true;
+
+            // Re-enable button after 3 seconds in case of error
+            setTimeout(() => {
+                submitBtn.innerHTML = '<i class="fas fa-save me-2"></i>Cập nhật';
+                submitBtn.disabled = false;
+            }, 3000);
+        });
+
+        // Auto-focus first input
+        document.addEventListener('DOMContentLoaded', function() {
+            document.querySelector('input[name="Username"]').focus();
+        });
+
+        // Handle image upload errors
+        document.getElementById('profileImage').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                // Check file size (5MB)
+                if (file.size > 5 * 1024 * 1024) {
+                    alert('Kích thước file quá lớn. Vui lòng chọn file nhỏ hơn 5MB.');
+                    e.target.value = '';
+                    return;
+                }
+
+                // Check file type
+                const allowedTypes = ['image/jpeg', 'image/png', 'image/gif'];
+                if (!allowedTypes.includes(file.type)) {
+                    alert('Định dạng file không được hỗ trợ. Vui lòng chọn file JPG, PNG hoặc GIF.');
+                    e.target.value = '';
+                    return;
+                }
+            }
+        });
+
+        // Handle image loading errors
+        document.addEventListener('DOMContentLoaded', function() {
+            document.querySelectorAll('img').forEach(img => {
+                img.addEventListener('error', function() {
+                    if (this.src.includes('default-avatar.png')) return;
+                    this.src = '/images/default-avatar.png';
+                    this.alt = 'Ảnh đại diện không khả dụng';
+                });
+            });
+        });
+    </script>
+}

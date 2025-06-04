@@ -8,19 +8,19 @@ using Microsoft.EntityFrameworkCore;
 using DKMovies.Models;
 using Microsoft.AspNetCore.Hosting;
 using System.IO;
+using Microsoft.AspNetCore.Authorization;
 using System.Text;
 using System.Security.Cryptography;
-using Microsoft.AspNetCore.Authorization;
 
 namespace DKMovies.Controllers
 {
     [Authorize(Roles = "Admin")] // Admin only
-    public class UsersController : Controller
+    public class AdminUsersController : Controller
     {
         private readonly ApplicationDbContext _context;
         private readonly IWebHostEnvironment _webHostEnvironment;
 
-        public UsersController(ApplicationDbContext context, IWebHostEnvironment webHostEnvironment)
+        public AdminUsersController(ApplicationDbContext context, IWebHostEnvironment webHostEnvironment)
         {
             _context = context;
             _webHostEnvironment = webHostEnvironment;
@@ -35,7 +35,7 @@ namespace DKMovies.Controllers
             }
         }
 
-        // GET: Users
+        // GET: AdminUsers
         public async Task<IActionResult> Index(string searchString, string sortOrder, int page = 1)
         {
             ViewData["CurrentSort"] = sortOrder;
@@ -97,7 +97,7 @@ namespace DKMovies.Controllers
             return View(pagedUsers);
         }
 
-        // GET: Users/Details/5
+        // GET: AdminUsers/Details/5
         public async Task<IActionResult> Details(int? id)
         {
             if (id == null)
@@ -132,13 +132,13 @@ namespace DKMovies.Controllers
             return View(user);
         }
 
-        // GET: Users/Create
+        // GET: AdminUsers/Create
         public IActionResult Create()
         {
             return View();
         }
 
-        // POST: Users/Create
+        // POST: AdminUsers/Create
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Create([Bind("Username,Email,PasswordHash,FullName,Phone,BirthDate,Gender")] User user, IFormFile? profileImage)
@@ -180,7 +180,7 @@ namespace DKMovies.Controllers
                 user.EmailConfirmed = false;
                 user.TwoFactorEnabled = false;
 
-                // Hash password using SHA256
+                // Hash password using the same method as existing UsersController
                 user.PasswordHash = HashPassword(user.PasswordHash);
 
                 _context.Add(user);
@@ -192,7 +192,7 @@ namespace DKMovies.Controllers
             return View(user);
         }
 
-        // GET: Users/Edit/5
+        // GET: AdminUsers/Edit/5
         public async Task<IActionResult> Edit(int? id)
         {
             if (id == null)
@@ -208,7 +208,7 @@ namespace DKMovies.Controllers
             return View(user);
         }
 
-        // POST: Users/Edit/5
+        // POST: AdminUsers/Edit/5
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Edit(int id, [Bind("ID,Username,Email,FullName,Phone,BirthDate,Gender,EmailConfirmed,TwoFactorEnabled")] User user, IFormFile? profileImage, string? newPassword)
@@ -250,7 +250,7 @@ namespace DKMovies.Controllers
                     user.TwoFactorCode = existingUser.TwoFactorCode;
                     user.TwoFactorExpiry = existingUser.TwoFactorExpiry;
 
-                    // Update password if provided - using SHA256
+                    // Update password if provided
                     if (!string.IsNullOrEmpty(newPassword))
                     {
                         user.PasswordHash = HashPassword(newPassword);
@@ -305,7 +305,7 @@ namespace DKMovies.Controllers
             return View(user);
         }
 
-        // GET: Users/Delete/5
+        // GET: AdminUsers/Delete/5
         public async Task<IActionResult> Delete(int? id)
         {
             if (id == null)
@@ -327,7 +327,7 @@ namespace DKMovies.Controllers
             return View(user);
         }
 
-        // POST: Users/Delete/5
+        // POST: AdminUsers/Delete/5
         [HttpPost, ActionName("Delete")]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> DeleteConfirmed(int id)
@@ -441,7 +441,8 @@ namespace DKMovies.Controllers
                     return Json(new { success = false, message = "Người dùng không tồn tại" });
                 }
 
-                // Generate a confirmation code
+                // TODO: Implement email service
+                // For now, just generate a confirmation code
                 user.ConfirmationCode = Guid.NewGuid().ToString("N")[..8].ToUpper();
                 await _context.SaveChangesAsync();
 
