@@ -47,7 +47,7 @@ namespace DKMovies.Controllers
             var users = _context.Users
                 .Include(u => u.Tickets)
                 .Include(u => u.Reviews)
-                .Include(u => u.Orders)
+                //.Include(u => u.Orders)
                 .AsQueryable();
 
             // Search functionality
@@ -118,8 +118,8 @@ namespace DKMovies.Controllers
                         .ThenInclude(ts => ts.Seat)
                 .Include(u => u.Reviews)
                     .ThenInclude(r => r.Movie)
-                .Include(u => u.Orders)
-                    .ThenInclude(o => o.OrderItems)
+                //.Include(u => u.Orders)
+                    //.ThenInclude(o => o.OrderItems)
                 .Include(u => u.WatchlistItems)
                     .ThenInclude(w => w.Movie)
                 .FirstOrDefaultAsync(m => m.ID == id);
@@ -316,7 +316,7 @@ namespace DKMovies.Controllers
             var user = await _context.Users
                 .Include(u => u.Tickets)
                 .Include(u => u.Reviews)
-                .Include(u => u.Orders)
+                //.Include(u => u.Orders)
                 .FirstOrDefaultAsync(m => m.ID == id);
 
             if (user == null)
@@ -335,7 +335,7 @@ namespace DKMovies.Controllers
             var user = await _context.Users
                 .Include(u => u.Tickets)
                 .Include(u => u.Reviews)
-                .Include(u => u.Orders)
+                //.Include(u => u.Orders)
                 .FirstOrDefaultAsync(u => u.ID == id);
 
             if (user != null)
