@@ -1,28 +1,27 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using DKMovies.Models;
-using DKMovies.Middleware; // Thêm using cho middleware
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 builder.Services.AddControllersWithViews();
 
-// Add session service to handle login/logout state
-builder.Services.AddDistributedMemoryCache(); // Enable memory cache for session storage
+// Session configuration
+builder.Services.AddDistributedMemoryCache();
 builder.Services.AddSession(options =>
 {
-    options.IdleTimeout = TimeSpan.FromMinutes(30); // Set session timeout
-    options.Cookie.HttpOnly = true; // Ensure the session cookie is only accessible via HTTP
-    options.Cookie.IsEssential = true; // Make the session cookie essential for the app to function
+    options.IdleTimeout = TimeSpan.FromMinutes(30);
+    options.Cookie.HttpOnly = true;
+    options.Cookie.IsEssential = true;
 });
 
-// Add DbContext for SQL Server connection
+// Database context
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
 builder.Services.AddHttpContextAccessor();
 
-// Cấu hình Authentication
+// Authentication (cookie-based)
 builder.Services.AddAuthentication("MyCookieAuth")
     .AddCookie("MyCookieAuth", options =>
     {
@@ -35,15 +34,11 @@ builder.Services.AddAuthentication("MyCookieAuth")
         options.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
     });
 
-// Thêm Authorization policies
+// Authorization policies
 builder.Services.AddAuthorization(options =>
 {
-    options.AddPolicy("AdminOnly", policy =>
+    options.AddPolicy("Admin", policy =>
         policy.RequireClaim("UserType", "Admin"));
-
-    options.AddPolicy("SuperAdminOnly", policy =>
-        policy.RequireClaim("UserType", "Admin")
-               .RequireClaim(System.Security.Claims.ClaimTypes.Role, "SuperAdmin"));
 
     options.AddPolicy("UserOnly", policy =>
         policy.RequireClaim("UserType", "User"));
@@ -51,29 +46,23 @@ builder.Services.AddAuthorization(options =>
 
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
+// Error handling
 if (!app.Environment.IsDevelopment())
 {
     app.UseExceptionHandler("/Home/Error");
-    // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
     app.UseHsts();
 }
 
 app.UseHttpsRedirection();
 app.UseStaticFiles();
 
-// Add session middleware before routing
+// Middlewares
 app.UseSession();
 app.UseRouting();
 app.UseAuthentication();
-
-// Thêm middleware bảo vệ admin routes
-app.UseMiddleware<AdminAccessMiddleware>();
-
-// Authorization middleware (to check session state for role-based access)
 app.UseAuthorization();
 
-// Thêm route cho admin
+// Routing
 app.MapControllerRoute(
     name: "admin",
     pattern: "Admin/{action=Dashboard}/{id?}",
@@ -83,18 +72,4 @@ app.MapControllerRoute(
     name: "default",
     pattern: "{controller=Home}/{action=Index}/{id?}");
 
-
-
-// Run the application
 app.Run();
-
-// Method để tạo dữ liệu mặc định
-
-
-// Helper method để hash password
-string HashPassword(string password)
-{
-    using var sha256 = System.Security.Cryptography.SHA256.Create();
-    byte[] bytes = sha256.ComputeHash(System.Text.Encoding.UTF8.GetBytes(password));
-    return Convert.ToBase64String(bytes);
-}

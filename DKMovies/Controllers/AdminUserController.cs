@@ -15,12 +15,12 @@ using System.Security.Cryptography;
 namespace DKMovies.Controllers
 {
     [Authorize(Roles = "Admin")] // Admin only
-    public class AdminUsersController : Controller
+    public class AdminUserController : Controller
     {
         private readonly ApplicationDbContext _context;
         private readonly IWebHostEnvironment _webHostEnvironment;
 
-        public AdminUsersController(ApplicationDbContext context, IWebHostEnvironment webHostEnvironment)
+        public AdminUserController(ApplicationDbContext context, IWebHostEnvironment webHostEnvironment)
         {
             _context = context;
             _webHostEnvironment = webHostEnvironment;

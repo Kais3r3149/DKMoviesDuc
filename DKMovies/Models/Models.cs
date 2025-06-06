@@ -186,6 +186,13 @@ namespace DKMovies.Models
         [Display(Name = "Created At")]
         public DateTime CreatedAt { get; set; }
 
+        // ✅ Role Authorization
+        [Display(Name = "Role")]
+        public int RoleID { get; set; } = 1; // Default to User role
+
+        [ForeignKey("RoleID")]
+        public virtual Role? Role { get; set; }
+
         // ✅ Security and verification fields
         [Display(Name = "Email Confirmed")]
         public bool EmailConfirmed { get; set; } = false;
@@ -204,14 +211,137 @@ namespace DKMovies.Models
         [Display(Name = "2FA Expiry Time")]
         public DateTime? TwoFactorExpiry { get; set; }
 
-        // Navigation properties
-        public ICollection<Ticket> Tickets { get; set; } = new List<Ticket>();
-        public ICollection<Review> Reviews { get; set; } = new List<Review>();
-        public ICollection<Order> Orders { get; set; } = new List<Order>();
-        public ICollection<CartItem> CartItems { get; set; } = new List<CartItem>();
-        public ICollection<WatchlistItem> WatchlistItems { get; set; } = new List<WatchlistItem>();
-        public ICollection<MovieUserFavourite> MovieUserFavourites { get; set; } = new List<MovieUserFavourite>();
-        public ICollection<WatchListSingular> WatchList { get; set; } = new List<WatchListSingular>();
+        // ✅ Account Status
+        [Display(Name = "Is Active")]
+        public bool IsActive { get; set; } = true;
+
+        [Display(Name = "Last Login")]
+        public DateTime? LastLoginAt { get; set; }
+
+        // ✅ Navigation properties
+        public virtual ICollection<Ticket> Tickets { get; set; } = new List<Ticket>();
+        public virtual ICollection<Review> Reviews { get; set; } = new List<Review>();
+        public virtual ICollection<Order> Orders { get; set; } = new List<Order>();
+        public virtual ICollection<CartItem> CartItems { get; set; } = new List<CartItem>();
+        public virtual ICollection<WatchlistItem> WatchlistItems { get; set; } = new List<WatchlistItem>();
+        public virtual ICollection<MovieUserFavourite> MovieUserFavourites { get; set; } = new List<MovieUserFavourite>();
+        public virtual ICollection<WatchListSingular> WatchList { get; set; } = new List<WatchListSingular>();
+
+        // ✅ Helper methods for role checking
+        [NotMapped]
+        public bool IsAdmin => RoleID == 2;
+
+        [NotMapped]
+        public bool IsUser => RoleID == 1;
+
+        [NotMapped]
+        public string RoleName => Role?.Name ?? (RoleID == 1 ? "User" : RoleID == 2 ? "Admin" : "Unknown");
+
+        // ✅ Helper methods for display
+        [NotMapped]
+        [Display(Name = "Display Name")]
+        public string DisplayName => !string.IsNullOrEmpty(FullName) ? FullName : Username;
+
+        [NotMapped]
+        [Display(Name = "Profile Picture")]
+        public string ProfilePictureUrl => !string.IsNullOrEmpty(ProfileImagePath)
+            ? $"/images/profiles/{ProfileImagePath}"
+            : "/images/default-avatar.png";
+
+        [NotMapped]
+        [Display(Name = "Age")]
+        public int? Age
+        {
+            get
+            {
+                if (BirthDate == null) return null;
+                var today = DateTime.Today;
+                var age = today.Year - BirthDate.Value.Year;
+                if (BirthDate.Value.Date > today.AddYears(-age)) age--;
+                return age;
+            }
+        }
+
+        [NotMapped]
+        [Display(Name = "Member Since")]
+        public string MemberSince => CreatedAt.ToString("MMM yyyy");
+
+        [NotMapped]
+        [Display(Name = "Account Status")]
+        public string AccountStatus
+        {
+            get
+            {
+                if (!IsActive) return "Deactivated";
+                if (!EmailConfirmed) return "Pending Verification";
+                return "Active";
+            }
+        }
+
+        // ✅ Validation methods
+        public bool IsValidForLogin()
+        {
+            return IsActive && EmailConfirmed;
+        }
+
+        public bool CanPerformAction(string action)
+        {
+            if (!IsValidForLogin()) return false;
+
+            return action.ToLower() switch
+            {
+                "book_tickets" => true,
+                "write_reviews" => true,
+                "manage_profile" => true,
+                "manage_movies" => IsAdmin,
+                "manage_users" => IsAdmin,
+                "manage_theaters" => IsAdmin,
+                "view_reports" => IsAdmin,
+                _ => false
+            };
+        }
+
+        // ✅ Update last login
+        public void UpdateLastLogin()
+        {
+            LastLoginAt = DateTime.UtcNow;
+        }
+
+        // ✅ Generate display initials for avatar
+        [NotMapped]
+        public string Initials
+        {
+            get
+            {
+                if (!string.IsNullOrEmpty(FullName))
+                {
+                    var nameParts = FullName.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+                    if (nameParts.Length >= 2)
+                        return $"{nameParts[0][0]}{nameParts[^1][0]}".ToUpper();
+                    if (nameParts.Length == 1)
+                        return nameParts[0][0].ToString().ToUpper();
+                }
+                return Username[0].ToString().ToUpper();
+            }
+        }
+    }
+
+    // ✅ Role model (if not exists)
+    public class Role
+    {
+        [Key]
+        public int ID { get; set; }
+
+        [Required, MaxLength(50)]
+        [Display(Name = "Role Name")]
+        public string Name { get; set; }
+
+        [MaxLength(255)]
+        [Display(Name = "Description")]
+        public string? Description { get; set; }
+
+        // Navigation property
+        public virtual ICollection<User> Users { get; set; } = new List<User>();
     }
 
     // 7. THEATERS

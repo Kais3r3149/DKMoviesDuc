@@ -6,17 +6,29 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using DKMovies.Models;
 using DKMovies.Models.ViewModels;
+using Microsoft.AspNetCore.Authorization;
+using System.Security.Claims;
+using System.IO;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Hosting;
+using System.Security.Cryptography;
+using System.Text;
 
 namespace DKMovies.Controllers
 {
+    [Authorize(Policy = "Admin")]
     public class AdminController : Controller
     {
         private readonly ApplicationDbContext _context;
+        private readonly IWebHostEnvironment _webHostEnvironment;
 
-        public AdminController(ApplicationDbContext context)
+        public AdminController(ApplicationDbContext context, IWebHostEnvironment webHostEnvironment)
         {
             _context = context;
+            _webHostEnvironment = webHostEnvironment;
         }
+
+        // ===== DASHBOARD ACTIONS =====
 
         // GET: Admins Dashboard
         public async Task<IActionResult> Index()
@@ -79,7 +91,12 @@ namespace DKMovies.Controllers
             }
         }
 
-        // ===== SỬA MovieDashboard ACTION TRONG AdminsController =====
+        // Add a simple Home action to handle navigation to main dashboard
+        public IActionResult Home()
+        {
+            return RedirectToAction("Index");
+        }
+
         public async Task<IActionResult> MovieDashboard()
         {
             try
@@ -191,6 +208,244 @@ namespace DKMovies.Controllers
             }
         }
 
+        // ===== PROFILE MANAGEMENT ACTIONS =====
+
+        // GET: Admin Profile
+        [HttpGet]
+        public async Task<IActionResult> Profile()
+        {
+            try
+            {
+                var adminId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
+
+                var admin = await _context.Admins
+                    .Include(a => a.Employee)
+                    .ThenInclude(e => e.Role)
+                    .Include(a => a.Employee.Theater)
+                    .FirstOrDefaultAsync(a => a.ID == adminId);
+
+                if (admin == null)
+                {
+                    TempData["ToastError"] = "❌ Không tìm thấy thông tin admin.";
+                    return RedirectToAction("Index");
+                }
+
+                var profileViewModel = new AdminProfileViewModel
+                {
+                    AdminId = admin.ID,
+                    Username = admin.Username,
+                    EmployeeId = admin.EmployeeID,
+                    FullName = admin.Employee?.FullName ?? "",
+                    Email = admin.Employee?.Email ?? "",
+                    Phone = admin.Employee?.Phone ?? "",
+                    Gender = admin.Employee?.Gender ?? "",
+                    DateOfBirth = admin.Employee?.DateOfBirth,
+                    CitizenID = admin.Employee?.CitizenID ?? "",
+                    Address = admin.Employee?.Address ?? "",
+                    HireDate = admin.Employee?.HireDate ?? DateTime.Now,
+                    Salary = admin.Employee?.Salary ?? 0,
+                    RoleName = admin.Employee?.Role?.Name ?? "",
+                    TheaterName = admin.Employee?.Theater?.Name ?? "",
+                    TheaterLocation = admin.Employee?.Theater?.Location ?? "",
+                    ProfileImagePath = admin.Employee?.ProfileImagePath,
+                    CreatedAt = admin.CreatedAt
+                };
+
+                return View(profileViewModel);
+            }
+            catch (Exception ex)
+            {
+                TempData["ToastError"] = "❌ Có lỗi xảy ra khi tải thông tin profile.";
+                return RedirectToAction("Index");
+            }
+        }
+
+        // GET: Edit Admin Profile
+        [HttpGet]
+        public async Task<IActionResult> EditProfile()
+        {
+            try
+            {
+                var adminId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
+
+                var admin = await _context.Admins
+                    .Include(a => a.Employee)
+                    .ThenInclude(e => e.Role)
+                    .Include(a => a.Employee.Theater)
+                    .FirstOrDefaultAsync(a => a.ID == adminId);
+
+                if (admin == null)
+                {
+                    TempData["ToastError"] = "❌ Không tìm thấy thông tin admin.";
+                    return RedirectToAction("Index");
+                }
+
+                var editViewModel = new EditAdminProfileViewModel
+                {
+                    AdminId = admin.ID,
+                    Username = admin.Username,
+                    EmployeeId = admin.EmployeeID,
+                    FullName = admin.Employee?.FullName ?? "",
+                    Email = admin.Employee?.Email ?? "",
+                    Phone = admin.Employee?.Phone ?? "",
+                    Gender = admin.Employee?.Gender ?? "",
+                    DateOfBirth = admin.Employee?.DateOfBirth,
+                    CitizenID = admin.Employee?.CitizenID ?? "",
+                    Address = admin.Employee?.Address ?? "",
+                    CurrentProfileImagePath = admin.Employee?.ProfileImagePath
+                };
+
+                return View(editViewModel);
+            }
+            catch (Exception ex)
+            {
+                TempData["ToastError"] = "❌ Có lỗi xảy ra khi tải form chỉnh sửa.";
+                return RedirectToAction("Profile");
+            }
+        }
+
+        // POST: Update Admin Profile
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> EditProfile(EditAdminProfileViewModel model)
+        {
+            if (!ModelState.IsValid)
+            {
+                return View(model);
+            }
+
+            try
+            {
+                var admin = await _context.Admins
+                    .Include(a => a.Employee)
+                    .FirstOrDefaultAsync(a => a.ID == model.AdminId);
+
+                if (admin == null)
+                {
+                    TempData["ToastError"] = "❌ Không tìm thấy thông tin admin.";
+                    return RedirectToAction("Index");
+                }
+
+                // Check if username is already taken by another admin
+                if (admin.Username != model.Username)
+                {
+                    var usernameExists = await _context.Admins
+                        .AnyAsync(a => a.Username == model.Username && a.ID != model.AdminId);
+
+                    var userUsernameExists = await _context.Users
+                        .AnyAsync(u => u.Username == model.Username);
+
+                    if (usernameExists || userUsernameExists)
+                    {
+                        ModelState.AddModelError("Username", "Tên đăng nhập đã tồn tại trong hệ thống.");
+                        return View(model);
+                    }
+
+                    admin.Username = model.Username;
+                }
+
+                // Check if email is already taken by another employee
+                if (admin.Employee?.Email != model.Email)
+                {
+                    var emailExists = await _context.Employees
+                        .AnyAsync(e => e.Email == model.Email && e.ID != admin.EmployeeID);
+
+                    if (emailExists)
+                    {
+                        ModelState.AddModelError("Email", "Email đã được sử dụng bởi nhân viên khác.");
+                        return View(model);
+                    }
+                }
+
+                // Handle profile image upload
+                string profileImagePath = admin.Employee?.ProfileImagePath;
+                if (model.ProfileImage != null && model.ProfileImage.Length > 0)
+                {
+                    profileImagePath = await SaveProfileImage(model.ProfileImage);
+
+                    // Delete old image if exists
+                    if (!string.IsNullOrEmpty(admin.Employee?.ProfileImagePath))
+                    {
+                        DeleteOldImage(admin.Employee.ProfileImagePath);
+                    }
+                }
+
+                // Update employee information
+                if (admin.Employee != null)
+                {
+                    admin.Employee.FullName = model.FullName;
+                    admin.Employee.Email = model.Email;
+                    admin.Employee.Phone = model.Phone;
+                    admin.Employee.Gender = model.Gender;
+                    admin.Employee.DateOfBirth = model.DateOfBirth;
+                    admin.Employee.CitizenID = model.CitizenID;
+                    admin.Employee.Address = model.Address;
+                    admin.Employee.ProfileImagePath = profileImagePath;
+                }
+
+                await _context.SaveChangesAsync();
+                TempData["ToastSuccess"] = "✅ Cập nhật thông tin thành công!";
+                return RedirectToAction("Profile");
+            }
+            catch (Exception ex)
+            {
+                TempData["ToastError"] = "❌ Có lỗi xảy ra khi cập nhật thông tin.";
+                return View(model);
+            }
+        }
+
+        // GET: Change Password
+        [HttpGet]
+        public IActionResult ChangePassword()
+        {
+            return View(new ChangePasswordViewModel());
+        }
+
+        // POST: Change Password
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> ChangePassword(ChangePasswordViewModel model)
+        {
+            if (!ModelState.IsValid)
+            {
+                return View(model);
+            }
+
+            try
+            {
+                var adminId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
+                var admin = await _context.Admins.FindAsync(adminId);
+
+                if (admin == null)
+                {
+                    TempData["ToastError"] = "❌ Không tìm thấy thông tin admin.";
+                    return RedirectToAction("Index");
+                }
+
+                // Verify current password
+                var currentPasswordHash = HashPassword(model.CurrentPassword);
+                if (admin.PasswordHash != currentPasswordHash)
+                {
+                    ModelState.AddModelError("CurrentPassword", "Mật khẩu hiện tại không đúng.");
+                    return View(model);
+                }
+
+                // Update password
+                admin.PasswordHash = HashPassword(model.NewPassword);
+                await _context.SaveChangesAsync();
+
+                TempData["ToastSuccess"] = "✅ Đổi mật khẩu thành công!";
+                return RedirectToAction("Profile");
+            }
+            catch (Exception ex)
+            {
+                TempData["ToastError"] = "❌ Có lỗi xảy ra khi đổi mật khẩu.";
+                return View(model);
+            }
+        }
+
+        // ===== API ENDPOINTS FOR DASHBOARD =====
+
         // ===== NEW REAL-TIME TOP 5 MOVIES API =====
         [HttpGet]
         public async Task<JsonResult> GetTop5MoviesRealTime()
@@ -240,204 +495,6 @@ namespace DKMovies.Controllers
             }
         }
 
-        // ===== SIMPLE AUTO SHOWTIME MANAGEMENT =====
-        [HttpPost]
-        public async Task<JsonResult> AutoManageShowtimes()
-        {
-            try
-            {
-                var result = await PerformSimpleAutoManagement();
-                return Json(new
-                {
-                    success = true,
-                    message = "Quản lý suất chiếu tự động hoàn thành",
-                    addedCount = result.AddedCount,
-                    removedCount = result.RemovedCount,
-                    details = result.Details
-                });
-            }
-            catch (Exception ex)
-            {
-                return Json(new { success = false, error = "Lỗi khi quản lý suất chiếu tự động" });
-            }
-        }
-
-        // Simplified auto management logic
-        private async Task<SimpleAutoResult> PerformSimpleAutoManagement()
-        {
-            var result = new SimpleAutoResult();
-            var now = DateTime.Now;
-            var oneWeekAgo = now.AddDays(-7);
-
-            try
-            {
-                // Get movie performance from last week
-                var moviePerformance = await _context.Tickets
-                    .Include(t => t.ShowTime)
-                    .ThenInclude(st => st.Movie)
-                    .Where(t => t.PurchaseTime >= oneWeekAgo &&
-                               t.ShowTime != null &&
-                               t.ShowTime.Movie != null)
-                    .GroupBy(t => t.ShowTime.MovieID)
-                    .Select(g => new
-                    {
-                        MovieID = g.Key,
-                        MovieTitle = g.First().ShowTime.Movie.Title,
-                        TicketsSold = g.Count(),
-                        TotalRevenue = g.Sum(t => t.ShowTime.Price)
-                    })
-                    .ToListAsync();
-
-                if (!moviePerformance.Any())
-                {
-                    result.Details.Add("Không có dữ liệu performance để phân tích");
-                    return result;
-                }
-
-                // Calculate averages
-                var avgRevenue = moviePerformance.Average(x => (double)x.TotalRevenue);
-                var avgTickets = moviePerformance.Average(x => x.TicketsSold);
-
-                // Identify top performers (above 120% of average)
-                var topPerformers = moviePerformance
-                    .Where(x => x.TotalRevenue >= (decimal)(avgRevenue * 1.2) ||
-                               x.TicketsSold >= avgTickets * 1.2)
-                    .OrderByDescending(x => x.TotalRevenue)
-                    .Take(2) // Top 2 only
-                    .ToList();
-
-                // Identify poor performers (below 50% of average)
-                var poorPerformers = moviePerformance
-                    .Where(x => x.TotalRevenue <= (decimal)(avgRevenue * 0.5) &&
-                               x.TicketsSold <= avgTickets * 0.5)
-                    .ToList();
-
-                // Remove some showtimes for poor performers
-                foreach (var poor in poorPerformers)
-                {
-                    var removed = await RemovePoorPerformingShowtimes(poor.MovieID, poor.MovieTitle);
-                    result.RemovedCount += removed;
-                    if (removed > 0)
-                    {
-                        result.Details.Add($"Xóa {removed} suất chiếu của '{poor.MovieTitle}' (doanh thu thấp)");
-                    }
-                }
-
-                // Add showtimes for top performers
-                foreach (var top in topPerformers)
-                {
-                    var added = await AddShowtimesForTopMovie(top.MovieID, top.MovieTitle);
-                    result.AddedCount += added;
-                    if (added > 0)
-                    {
-                        result.Details.Add($"Thêm {added} suất chiếu cho '{top.MovieTitle}' (doanh thu cao)");
-                    }
-                }
-
-                await _context.SaveChangesAsync();
-                return result;
-            }
-            catch (Exception ex)
-            {
-                result.Details.Add($"Lỗi: {ex.Message}");
-                return result;
-            }
-        }
-
-        private async Task<int> RemovePoorPerformingShowtimes(int movieId, string movieTitle)
-        {
-            var now = DateTime.Now;
-
-            // Get future showtimes with no tickets
-            var showtimesToRemove = await _context.ShowTimes
-                .Where(st => st.MovieID == movieId &&
-                            st.StartTime > now.AddHours(3)) // At least 3 hours in future
-                .Include(st => st.Tickets)
-                .Where(st => !st.Tickets.Any()) // No tickets sold
-                .OrderBy(st => st.StartTime)
-                .Take(2) // Remove max 2 showtimes
-                .ToListAsync();
-
-            if (showtimesToRemove.Any())
-            {
-                _context.ShowTimes.RemoveRange(showtimesToRemove);
-            }
-
-            return showtimesToRemove.Count;
-        }
-
-        private async Task<int> AddShowtimesForTopMovie(int movieId, string movieTitle)
-        {
-            var movie = await _context.Movies.FindAsync(movieId);
-            if (movie == null) return 0;
-
-            var now = DateTime.Now;
-            var addedCount = 0;
-
-            // Try to add 1-2 showtimes for next few days
-            var targetTimes = new[]
-            {
-                now.AddDays(1).Date.AddHours(19), // Tomorrow 7 PM
-                now.AddDays(2).Date.AddHours(21)  // Day after 9 PM
-            };
-
-            foreach (var targetTime in targetTimes)
-            {
-                var bestAuditorium = await FindAvailableAuditorium(targetTime, movie.DurationMinutes);
-                if (bestAuditorium != null)
-                {
-                    var newShowtime = new ShowTime
-                    {
-                        MovieID = movieId,
-                        AuditoriumID = bestAuditorium.ID,
-                        StartTime = targetTime,
-                        DurationMinutes = movie.DurationMinutes,
-                        SubtitleLanguageID = 1, // Default
-                        Is3D = false,
-                        Price = GetOptimalPrice(movieId)
-                    };
-
-                    _context.ShowTimes.Add(newShowtime);
-                    addedCount++;
-                }
-            }
-
-            return addedCount;
-        }
-
-        private async Task<Auditorium> FindAvailableAuditorium(DateTime targetTime, int duration)
-        {
-            var auditoriums = await _context.Auditoriums.ToListAsync();
-
-            foreach (var auditorium in auditoriums)
-            {
-                // Check for conflicts
-                var hasConflict = await _context.ShowTimes
-                    .AnyAsync(st => st.AuditoriumID == auditorium.ID &&
-                                   targetTime < st.StartTime.AddMinutes(st.DurationMinutes + 30) &&
-                                   targetTime.AddMinutes(duration + 30) > st.StartTime);
-
-                if (!hasConflict)
-                {
-                    return auditorium;
-                }
-            }
-
-            return null;
-        }
-
-        private decimal GetOptimalPrice(int movieId)
-        {
-            var avgPrice = _context.ShowTimes
-                .Where(st => st.MovieID == movieId)
-                .Select(st => st.Price)
-                .DefaultIfEmpty(10.0m)
-                .Average();
-
-            return Math.Max(5.0m, Math.Min(20.0m, avgPrice * 1.05m));
-        }
-
-        // ===== THAY THẾ METHOD GetRevenueChartData =====
         [HttpGet]
         public async Task<JsonResult> GetRevenueChartData(string period = "7days")
         {
@@ -670,7 +727,249 @@ namespace DKMovies.Controllers
             }
         }
 
-        // Helper method to calculate time ago
+        // ===== AUTO SHOWTIME MANAGEMENT =====
+        [HttpPost]
+        public async Task<JsonResult> AutoManageShowtimes()
+        {
+            try
+            {
+                var result = await PerformSimpleAutoManagement();
+                return Json(new
+                {
+                    success = true,
+                    message = "Quản lý suất chiếu tự động hoàn thành",
+                    addedCount = result.AddedCount,
+                    removedCount = result.RemovedCount,
+                    details = result.Details
+                });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, error = "Lỗi khi quản lý suất chiếu tự động" });
+            }
+        }
+
+        // ===== PRIVATE HELPER METHODS =====
+
+        private string HashPassword(string password)
+        {
+            using (SHA256 sha256 = SHA256.Create())
+            {
+                byte[] bytes = sha256.ComputeHash(Encoding.UTF8.GetBytes(password));
+                return Convert.ToBase64String(bytes);
+            }
+        }
+
+        private async Task<string> SaveProfileImage(IFormFile imageFile)
+        {
+            try
+            {
+                var uploadsFolder = Path.Combine(_webHostEnvironment.WebRootPath, "uploads", "profiles");
+                if (!Directory.Exists(uploadsFolder))
+                {
+                    Directory.CreateDirectory(uploadsFolder);
+                }
+
+                var uniqueFileName = Guid.NewGuid().ToString() + "_" + imageFile.FileName;
+                var filePath = Path.Combine(uploadsFolder, uniqueFileName);
+
+                using (var fileStream = new FileStream(filePath, FileMode.Create))
+                {
+                    await imageFile.CopyToAsync(fileStream);
+                }
+
+                return "/uploads/profiles/" + uniqueFileName;
+            }
+            catch (Exception)
+            {
+                return null;
+            }
+        }
+
+        private void DeleteOldImage(string imagePath)
+        {
+            try
+            {
+                if (!string.IsNullOrEmpty(imagePath))
+                {
+                    var fullPath = Path.Combine(_webHostEnvironment.WebRootPath, imagePath.TrimStart('/'));
+                    if (System.IO.File.Exists(fullPath))
+                    {
+                        System.IO.File.Delete(fullPath);
+                    }
+                }
+            }
+            catch (Exception)
+            {
+                // Log error but don't throw
+            }
+        }
+
+        // Simplified auto management logic
+        private async Task<SimpleAutoResult> PerformSimpleAutoManagement()
+        {
+            var result = new SimpleAutoResult();
+            var now = DateTime.Now;
+            var oneWeekAgo = now.AddDays(-7);
+
+            try
+            {
+                var moviePerformance = await _context.Tickets
+                    .Include(t => t.ShowTime)
+                    .ThenInclude(st => st.Movie)
+                    .Where(t => t.PurchaseTime >= oneWeekAgo &&
+                               t.ShowTime != null &&
+                               t.ShowTime.Movie != null)
+                    .GroupBy(t => t.ShowTime.MovieID)
+                    .Select(g => new
+                    {
+                        MovieID = g.Key,
+                        MovieTitle = g.First().ShowTime.Movie.Title,
+                        TicketsSold = g.Count(),
+                        TotalRevenue = g.Sum(t => t.ShowTime.Price)
+                    })
+                    .ToListAsync();
+
+                if (!moviePerformance.Any())
+                {
+                    result.Details.Add("Không có dữ liệu performance để phân tích");
+                    return result;
+                }
+
+                var avgRevenue = moviePerformance.Average(x => (double)x.TotalRevenue);
+                var avgTickets = moviePerformance.Average(x => x.TicketsSold);
+
+                var topPerformers = moviePerformance
+                    .Where(x => x.TotalRevenue >= (decimal)(avgRevenue * 1.2) ||
+                               x.TicketsSold >= avgTickets * 1.2)
+                    .OrderByDescending(x => x.TotalRevenue)
+                    .Take(2)
+                    .ToList();
+
+                var poorPerformers = moviePerformance
+                    .Where(x => x.TotalRevenue <= (decimal)(avgRevenue * 0.5) &&
+                               x.TicketsSold <= avgTickets * 0.5)
+                    .ToList();
+
+                foreach (var poor in poorPerformers)
+                {
+                    var removed = await RemovePoorPerformingShowtimes(poor.MovieID, poor.MovieTitle);
+                    result.RemovedCount += removed;
+                    if (removed > 0)
+                    {
+                        result.Details.Add($"Xóa {removed} suất chiếu của '{poor.MovieTitle}' (doanh thu thấp)");
+                    }
+                }
+
+                foreach (var top in topPerformers)
+                {
+                    var added = await AddShowtimesForTopMovie(top.MovieID, top.MovieTitle);
+                    result.AddedCount += added;
+                    if (added > 0)
+                    {
+                        result.Details.Add($"Thêm {added} suất chiếu cho '{top.MovieTitle}' (doanh thu cao)");
+                    }
+                }
+
+                await _context.SaveChangesAsync();
+                return result;
+            }
+            catch (Exception ex)
+            {
+                result.Details.Add($"Lỗi: {ex.Message}");
+                return result;
+            }
+        }
+
+        private async Task<int> RemovePoorPerformingShowtimes(int movieId, string movieTitle)
+        {
+            var now = DateTime.Now;
+            var showtimesToRemove = await _context.ShowTimes
+                .Where(st => st.MovieID == movieId &&
+                            st.StartTime > now.AddHours(3))
+                .Include(st => st.Tickets)
+                .Where(st => !st.Tickets.Any())
+                .OrderBy(st => st.StartTime)
+                .Take(2)
+                .ToListAsync();
+
+            if (showtimesToRemove.Any())
+            {
+                _context.ShowTimes.RemoveRange(showtimesToRemove);
+            }
+
+            return showtimesToRemove.Count;
+        }
+
+        private async Task<int> AddShowtimesForTopMovie(int movieId, string movieTitle)
+        {
+            var movie = await _context.Movies.FindAsync(movieId);
+            if (movie == null) return 0;
+
+            var now = DateTime.Now;
+            var addedCount = 0;
+
+            var targetTimes = new[]
+            {
+                now.AddDays(1).Date.AddHours(19),
+                now.AddDays(2).Date.AddHours(21)
+            };
+
+            foreach (var targetTime in targetTimes)
+            {
+                var bestAuditorium = await FindAvailableAuditorium(targetTime, movie.DurationMinutes);
+                if (bestAuditorium != null)
+                {
+                    var newShowtime = new ShowTime
+                    {
+                        MovieID = movieId,
+                        AuditoriumID = bestAuditorium.ID,
+                        StartTime = targetTime,
+                        DurationMinutes = movie.DurationMinutes,
+                        SubtitleLanguageID = 1,
+                        Is3D = false,
+                        Price = GetOptimalPrice(movieId)
+                    };
+
+                    _context.ShowTimes.Add(newShowtime);
+                    addedCount++;
+                }
+            }
+
+            return addedCount;
+        }
+
+        private async Task<Auditorium> FindAvailableAuditorium(DateTime targetTime, int duration)
+        {
+            var auditoriums = await _context.Auditoriums.ToListAsync();
+
+            foreach (var auditorium in auditoriums)
+            {
+                var hasConflict = await _context.ShowTimes
+                    .AnyAsync(st => st.AuditoriumID == auditorium.ID &&
+                                   targetTime < st.StartTime.AddMinutes(st.DurationMinutes + 30) &&
+                                   targetTime.AddMinutes(duration + 30) > st.StartTime);
+
+                if (!hasConflict)
+                {
+                    return auditorium;
+                }
+            }
+
+            return null;
+        }
+
+        private decimal GetOptimalPrice(int movieId)
+        {
+            var avgPrice = _context.ShowTimes
+                .Where(st => st.MovieID == movieId)
+                .Select(st => st.Price)
+                .DefaultIfEmpty(10.0m)
+                .Average();
+
+            return Math.Max(5.0m, Math.Min(20.0m, avgPrice * 1.05m));
+        }
+
         private string GetTimeAgo(DateTime dateTime)
         {
             var timeSpan = DateTime.Now - dateTime;
@@ -684,15 +983,8 @@ namespace DKMovies.Controllers
             else
                 return dateTime.ToString("dd/MM/yyyy");
         }
-
-        // Add a simple Home action to handle navigation to main dashboard
-        public IActionResult Home()
-        {
-            return RedirectToAction("Index");
-        }
     }
 
-    // Simple result class for auto management
     public class SimpleAutoResult
     {
         public int AddedCount { get; set; } = 0;
