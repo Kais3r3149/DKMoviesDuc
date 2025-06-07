@@ -58,48 +58,48 @@
                 <div class="position-absolute top-0 end-0 m-3">
                     <span class="badge @GetCategoryBadgeClass(Model.Category)">
                         <i class="@GetCategoryIcon(Model.Category) me-1"></i>
-                        @Model.Category
+                        @GetCategoryDisplayName(Model.Category)
                     </span>
                 </div>
             </div>
 
             <div class="card-body text-center p-4">
                 <h4 class="card-title fw-bold mb-2 text-danger">@Model.Name</h4>
-                <div class="fs-4 fw-bold text-success mb-3">
-                    @String.Format("{0:N0} ₫", Model.Price)
-                </div>
 
                 <div class="d-flex justify-content-center gap-2 mb-3">
-                    <span class="badge @(Model.IsAvailable ? "bg-success" : "bg-danger")">
-                        <i class="fas @(Model.IsAvailable ? "fa-check" : "fa-times") me-1"></i>
-                        @(Model.IsAvailable ? "Đang bán" : "Ngưng bán")
+                    <span class="badge @(Model.IsActive ? "bg-success" : "bg-danger")">
+                        <i class="fas @(Model.IsActive ? "fa-check" : "fa-times") me-1"></i>
+                        @(Model.IsActive ? "Hoạt động" : "Ngưng hoạt động")
                     </span>
-                    @if (Model.StockQuantity <= 10)
-                    {
-                        <span class="badge bg-warning text-dark">
-                            <i class="fas fa-exclamation-triangle me-1"></i>Sắp hết
-                        </span>
-                    }
                 </div>
 
                 <!-- Product Stats -->
                 <div class="row g-2 text-center">
                     <div class="col-4">
                         <div class="bg-light rounded p-2">
-                            <h6 class="text-info mb-0">@Model.StockQuantity</h6>
+                            <h6 class="text-info mb-0">@Model.TheaterConcessions.Count()</h6>
+                            <small class="text-muted">Rạp áp dụng</small>
+                        </div>
+                    </div>
+                    <div class="col-4">
+                        <div class="bg-light rounded p-2">
+                            <h6 class="text-warning mb-0">
+                                @if (Model.TheaterConcessions.Any())
+                                {
+                                    @Model.TheaterConcessions.Average(tc => tc.Price).ToString("N0")
+                                }
+                                else
+                                {
+                                    <text>0</text>
+                                }
+                            </h6>
+                            <small class="text-muted">Giá TB (k₫)</small>
+                        </div>
+                    </div>
+                    <div class="col-4">
+                        <div class="bg-light rounded p-2">
+                            <h6 class="text-success mb-0">@Model.TheaterConcessions.Sum(tc => tc.StockLeft)</h6>
                             <small class="text-muted">Tồn kho</small>
-                        </div>
-                    </div>
-                    <div class="col-4">
-                        <div class="bg-light rounded p-2">
-                            <h6 class="text-warning mb-0">@GetSoldQuantity()</h6>
-                            <small class="text-muted">Đã bán</small>
-                        </div>
-                    </div>
-                    <div class="col-4">
-                        <div class="bg-light rounded p-2">
-                            <h6 class="text-success mb-0">@GetDaysActive()</h6>
-                            <small class="text-muted">Ngày</small>
                         </div>
                     </div>
                 </div>
@@ -127,27 +127,19 @@
                     </div>
                     <div class="col-md-6">
                         <label class="form-label fw-medium text-muted">Danh mục:</label>
-                        <div class="fw-bold">@Model.Category</div>
-                    </div>
-                    <div class="col-md-6">
-                        <label class="form-label fw-medium text-muted">Giá bán:</label>
-                        <div class="fw-bold text-success">@String.Format("{0:N0} VND", Model.Price)</div>
-                    </div>
-                    <div class="col-md-6">
-                        <label class="form-label fw-medium text-muted">Tồn kho:</label>
-                        <div class="fw-bold">@Model.StockQuantity sản phẩm</div>
+                        <div class="fw-bold">@GetCategoryDisplayName(Model.Category)</div>
                     </div>
                     <div class="col-md-6">
                         <label class="form-label fw-medium text-muted">Trạng thái:</label>
-                        <div class="fw-bold">@(Model.IsAvailable ? "Đang bán" : "Ngưng bán")</div>
+                        <div class="fw-bold">@(Model.IsActive ? "Hoạt động" : "Ngưng hoạt động")</div>
                     </div>
                     <div class="col-md-6">
-                        <label class="form-label fw-medium text-muted">Ngày tạo:</label>
-                        <div class="fw-bold">@Model.CreatedAt.ToString("dd/MM/yyyy HH:mm")</div>
+                        <label class="form-label fw-medium text-muted">Số rạp áp dụng:</label>
+                        <div class="fw-bold">@Model.TheaterConcessions.Count() rạp</div>
                     </div>
                     <div class="col-md-6">
-                        <label class="form-label fw-medium text-muted">Thời gian tồn tại:</label>
-                        <div class="fw-bold">@((DateTime.Now - Model.CreatedAt).Days) ngày</div>
+                        <label class="form-label fw-medium text-muted">Tổng tồn kho:</label>
+                        <div class="fw-bold">@Model.TheaterConcessions.Sum(tc => tc.StockLeft) sản phẩm</div>
                     </div>
                     @if (!string.IsNullOrEmpty(Model.Description))
                     {
@@ -175,26 +167,16 @@
                 </h5>
             </div>
             <div class="card-body">
-                @if (GetSoldQuantity() > 0 || HasActiveOrders())
+                @if (Model.TheaterConcessions.Any())
                 {
-                    <div class="alert alert-danger" role="alert">
+                    <div class="alert alert-warning" role="alert">
                         <h6 class="alert-heading">
-                            <i class="fas fa-ban me-2"></i>Cảnh báo: Có dữ liệu liên quan!
+                            <i class="fas fa-exclamation-triangle me-2"></i>Cảnh báo: Có dữ liệu liên quan!
                         </h6>
                         <p class="mb-0">Sản phẩm này có dữ liệu liên quan trong hệ thống:</p>
                         <ul class="mt-2 mb-0">
-                            @if (GetSoldQuantity() > 0)
-                            {
-                                <li><strong>@GetSoldQuantity() sản phẩm đã bán</strong> - Lịch sử giao dịch</li>
-                            }
-                            @if (HasActiveOrders())
-                            {
-                                <li><strong>Đơn hàng đang xử lý</strong> - Có thể ảnh hưởng đến khách hàng</li>
-                            }
-                            @if (Model.StockQuantity > 0)
-                            {
-                                <li><strong>@Model.StockQuantity sản phẩm tồn kho</strong> - Giá trị hàng hóa</li>
-                            }
+                            <li><strong>@Model.TheaterConcessions.Count() rạp đang áp dụng</strong> - Cài đặt giá và tồn kho</li>
+                            <li><strong>@Model.TheaterConcessions.Sum(tc => tc.StockLeft) sản phẩm tồn kho</strong> - Giá trị hàng hóa</li>
                         </ul>
                     </div>
                 }
@@ -213,40 +195,43 @@
                         <i class="fas fa-info-circle me-2"></i>Thông tin sẽ bị xóa vĩnh viễn
                     </h6>
                     <ul class="mb-0">
-                        <li><strong>Thông tin sản phẩm</strong> - Tên, mô tả, giá bán</li>
+                        <li><strong>Thông tin sản phẩm</strong> - Tên, mô tả, danh mục</li>
                         <li><strong>Hình ảnh sản phẩm</strong> - File ảnh trên server (nếu có)</li>
-                        <li><strong>Dữ liệu tồn kho</strong> - Số lượng và trạng thái bán hàng</li>
-                        <li><strong>Cài đặt danh mục</strong> - Phân loại sản phẩm</li>
-                        @if (GetSoldQuantity() > 0)
-                        {
-                            <li><strong>⚠️ Lưu ý:</strong> Lịch sử bán hàng sẽ bị ảnh hưởng</li>
-                        }
+                        <li><strong>Cài đặt theo rạp</strong> - Giá bán và tồn kho tại các rạp</li>
+                        <li><strong>Trạng thái hoạt động</strong> - Cấu hình hiển thị</li>
                     </ul>
                 </div>
 
-                <div class="mt-3">
-                    <h6 class="fw-bold mb-2">Thống kê tài chính:</h6>
-                    <div class="row g-3">
-                        <div class="col-md-4">
-                            <div class="border rounded p-3 text-center">
-                                <div class="text-muted small">Giá trị tồn kho</div>
-                                <div class="fw-bold text-warning">@String.Format("{0:N0} ₫", Model.StockQuantity * Model.Price)</div>
+                @if (Model.TheaterConcessions.Any())
+                {
+                    <div class="mt-3">
+                        <h6 class="fw-bold mb-2">Thống kê tài chính:</h6>
+                        <div class="row g-3">
+                            <div class="col-md-4">
+                                <div class="border rounded p-3 text-center">
+                                    <div class="text-muted small">Giá trị tồn kho</div>
+                                    <div class="fw-bold text-warning">
+                                        @Model.TheaterConcessions.Sum(tc => tc.StockLeft * tc.Price).ToString("N0") ₫
+                                    </div>
+                                </div>
                             </div>
-                        </div>
-                        <div class="col-md-4">
-                            <div class="border rounded p-3 text-center">
-                                <div class="text-muted small">Doanh thu ước tính</div>
-                                <div class="fw-bold text-success">@String.Format("{0:N0} ₫", GetSoldQuantity() * Model.Price)</div>
+                            <div class="col-md-4">
+                                <div class="border rounded p-3 text-center">
+                                    <div class="text-muted small">Giá trung bình</div>
+                                    <div class="fw-bold text-info">
+                                        @Model.TheaterConcessions.Average(tc => tc.Price).ToString("N0") ₫
+                                    </div>
+                                </div>
                             </div>
-                        </div>
-                        <div class="col-md-4">
-                            <div class="border rounded p-3 text-center">
-                                <div class="text-muted small">Tổng giá trị</div>
-                                <div class="fw-bold text-info">@String.Format("{0:N0} ₫", (Model.StockQuantity + GetSoldQuantity()) * Model.Price)</div>
+                            <div class="col-md-4">
+                                <div class="border rounded p-3 text-center">
+                                    <div class="text-muted small">Tổng tồn kho</div>
+                                    <div class="fw-bold text-success">@Model.TheaterConcessions.Sum(tc => tc.StockLeft) sản phẩm</div>
+                                </div>
                             </div>
                         </div>
                     </div>
-                </div>
+                }
             </div>
         </div>
     </div>
@@ -266,10 +251,10 @@
                 <a asp-action="Edit" asp-route-id="@Model.ID" class="btn btn-outline-warning">
                     <i class="fas fa-edit me-2"></i>Chỉnh sửa thay vì xóa
                 </a>
-                @if (Model.IsAvailable)
+                @if (Model.IsActive)
                 {
-                    <button class="btn btn-outline-secondary" onclick="toggleAvailability()" title="Ngưng bán thay vì xóa">
-                        <i class="fas fa-pause me-2"></i>Ngưng bán trước
+                    <button class="btn btn-outline-secondary" onclick="toggleStatus()" title="Ngưng hoạt động trước khi xóa">
+                        <i class="fas fa-pause me-2"></i>Ngưng hoạt động trước
                     </button>
                 }
                 <form asp-action="Delete" method="post" class="d-inline" onsubmit="return confirmDelete()">
@@ -288,11 +273,11 @@
     {
         return category switch
         {
-            "Đồ uống" => "bg-info text-white",
-            "Bắp rang" => "bg-warning text-dark",
-            "Kẹo" => "bg-danger text-white",
+            "Food" => "bg-danger text-white",
+            "Drink" => "bg-info text-white",
             "Combo" => "bg-success text-white",
-            "Đồ ăn nhanh" => "bg-primary text-white",
+            "Snack" => "bg-warning text-dark",
+            "Dessert" => "bg-pink text-white",
             _ => "bg-secondary text-white"
         };
     }
@@ -301,42 +286,26 @@
     {
         return category switch
         {
-            "Đồ uống" => "fas fa-coffee",
-            "Bắp rang" => "fas fa-seedling",
-            "Kẹo" => "fas fa-candy-cane",
+            "Food" => "fas fa-utensils",
+            "Drink" => "fas fa-coffee",
             "Combo" => "fas fa-box-open",
-            "Đồ ăn nhanh" => "fas fa-hamburger",
-            _ => "fas fa-utensils"
+            "Snack" => "fas fa-cookie",
+            "Dessert" => "fas fa-ice-cream",
+            _ => "fas fa-question"
         };
     }
 
-    private int GetSoldQuantity()
+    private string GetCategoryDisplayName(string category)
     {
-        try
+        return category switch
         {
-            return Model.OrderItems?.Where(oi => oi.Order.Status == "COMPLETED").Sum(oi => oi.Quantity) ?? 0;
-        }
-        catch
-        {
-            return 0;
-        }
-    }
-
-    private int GetDaysActive()
-    {
-        return (DateTime.Now - Model.CreatedAt).Days;
-    }
-
-    private bool HasActiveOrders()
-    {
-        try
-        {
-            return Model.OrderItems?.Any(oi => oi.Order.Status == "PENDING") ?? false;
-        }
-        catch
-        {
-            return false;
-        }
+            "Food" => "Đồ ăn",
+            "Drink" => "Đồ uống",
+            "Combo" => "Combo",
+            "Snack" => "Snack",
+            "Dessert" => "Tráng miệng",
+            _ => "Khác"
+        };
     }
 }
 
@@ -371,36 +340,23 @@
         transition: all 0.3s ease;
     }
 
+    .bg-pink {
+        background-color: #e83e8c !important;
+    }
+
     /* Danger pulse animation */
     .text-danger {
         animation: dangerPulse 2s infinite;
     }
 
-    @keyframes dangerPulse {
-        0%, 100%
 
-    {
-        opacity: 1;
-    }
-
-    50% {
-        opacity: 0.7;
-    }
-
-    }
 
     /* Warning overlay */
     .position-absolute.top-0.start-0 {
         border-radius: 0 0 0.375rem 0.375rem;
     }
 
-    @media (max-width: 768px) {
-        .d-flex.justify-content-between
 
-    {
-        flex-direction: column;
-        gap: 1rem;
-    }
 
     .d-flex.justify-content-between .d-flex {
         justify-content: center;
@@ -418,81 +374,41 @@
         transform: translateY(-2px);
         transition: all 0.3s ease;
     }
-
-    /* Confirmation modal styles */
-    .swal2-popup {
-        border-radius: 15px;
-    }
-
-    .swal2-title {
-        color: #dc3545;
-    }
 </style>
 
 @section Scripts {
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-
     <script>
         function confirmDelete() {
             event.preventDefault();
 
             const productName = '@Model.Name';
-            const soldQuantity = @GetSoldQuantity();
-            const stockValue = @(Model.StockQuantity * Model.Price);
-            const hasActiveOrders = @HasActiveOrders().ToString().ToLower();
+            const theaterCount = @Model.TheaterConcessions.Count();
+            const totalStock = @Model.TheaterConcessions.Sum(tc => tc.StockLeft);
+            const isActive = @Model.IsActive.ToString().ToLower();
 
-            let warningText = `Sản phẩm này có ${soldQuantity} đã bán và giá trị tồn kho ${stockValue.toLocaleString('vi-VN')} ₫.`;
-            if (hasActiveOrders) {
-                warningText += ' Có đơn hàng đang xử lý.';
+            let warningText = `Sản phẩm này đang áp dụng tại ${theaterCount} rạp với ${totalStock} sản phẩm tồn kho.`;
+            if (isActive) {
+                warningText += ' Sản phẩm đang ở trạng thái hoạt động.';
             }
 
-            Swal.fire({
-                title: 'Xác nhận xóa sản phẩm?',
-                html: `
-                    <div class="text-start">
-                        <p><strong>Sản phẩm:</strong> ${productName}</p>
-                        <p><strong>ID:</strong> #@Model.ID</p>
-                        <p class="text-warning"><i class="fas fa-exclamation-triangle me-2"></i>${warningText}</p>
-                        <div class="alert alert-danger mt-3">
-                            <small><strong>Để xác nhận:</strong> Nhập tên sản phẩm bên dưới</small>
-                        </div>
-                    </div>
-                `,
-                input: 'text',
-                inputPlaceholder: 'Nhập: ' + productName,
-                icon: 'warning',
-                showCancelButton: true,
-                confirmButtonColor: '#dc3545',
-                cancelButtonColor: '#6c757d',
-                confirmButtonText: 'Xóa vĩnh viễn',
-                cancelButtonText: 'Hủy bỏ',
-                reverseButtons: true,
-                inputValidator: (value) => {
-                    if (!value) {
-                        return 'Vui lòng nhập tên sản phẩm để xác nhận'
-                    }
-                    if (value !== productName) {
-                        return 'Tên sản phẩm không chính xác'
-                    }
-                }
-            }).then((result) => {
-                if (result.isConfirmed) {
-                    // Show loading state
-                    const deleteBtn = document.getElementById('deleteBtn');
-                    deleteBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Đang xóa...';
-                    deleteBtn.disabled = true;
+            const confirmed = confirm(`Xác nhận xóa sản phẩm?\n\nSản phẩm: ${productName}\nID: #@Model.ID\n\n${warningText}\n\nHành động này không thể hoàn tác!`);
 
-                    // Submit form
-                    event.target.submit();
-                }
-            });
+            if (confirmed) {
+                // Show loading state
+                const deleteBtn = document.getElementById('deleteBtn');
+                deleteBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Đang xóa...';
+                deleteBtn.disabled = true;
+
+                // Submit form
+                event.target.submit();
+            }
 
             return false;
         }
 
-        async function toggleAvailability() {
+        async function toggleStatus() {
             try {
-                const response = await fetch('@Url.Action("ToggleAvailability", "AdminConcession")', {
+                const response = await fetch('@Url.Action("ToggleActiveStatus", "AdminConcession")', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -504,24 +420,13 @@
                 const result = await response.json();
 
                 if (result.success) {
-                    Swal.fire({
-                        title: 'Thành công!',
-                        text: result.message,
-                        icon: 'success',
-                        timer: 2000,
-                        showConfirmButton: false
-                    }).then(() => {
-                        location.reload();
-                    });
+                    alert('Đã cập nhật trạng thái sản phẩm.');
+                    location.reload();
                 } else {
                     throw new Error(result.message || 'Có lỗi xảy ra');
                 }
             } catch (error) {
-                Swal.fire({
-                    title: 'Lỗi!',
-                    text: 'Có lỗi xảy ra khi cập nhật trạng thái',
-                    icon: 'error'
-                });
+                alert('Có lỗi xảy ra khi cập nhật trạng thái');
             }
         }
 
@@ -535,63 +440,23 @@
                 }, index * 200);
             });
 
-            // Show warning for high-value products
-            const stockValue = @(Model.StockQuantity * Model.Price);
-            const soldQuantity = @GetSoldQuantity();
+            // Show warning for products with data
+            const theaterCount = @Model.TheaterConcessions.Count();
+            const totalStock = @Model.TheaterConcessions.Sum(tc => tc.StockLeft);
 
-            if (stockValue > 1000000 || soldQuantity > 50) {
+            if (theaterCount > 0 || totalStock > 0) {
                 setTimeout(() => {
-                    Swal.fire({
-                        title: 'Cảnh báo giá trị cao',
-                        text: 'Sản phẩm này có giá trị cao hoặc đã bán nhiều. Hãy cân nhắc kỹ trước khi xóa.',
-                        icon: 'warning',
-                        timer: 4000,
-                        toast: true,
-                        position: 'top-end',
-                        showConfirmButton: false
-                    });
+                    alert('Cảnh báo: Sản phẩm này có dữ liệu liên quan. Hãy cân nhắc kỹ trước khi xóa.');
                 }, 1000);
             }
 
-            // Show notification if product is still available
-            if (@Model.IsAvailable.ToString().ToLower()) {
+            // Show notification if product is still active
+            if (@Model.IsActive.ToString().ToLower()) {
                 setTimeout(() => {
-                    Swal.fire({
-                        title: 'Lưu ý',
-                        text: 'Sản phẩm này đang được bán. Khuyên bạn ngưng bán trước khi xóa.',
-                        icon: 'info',
-                        timer: 3000,
-                        toast: true,
-                        position: 'top-end',
-                        showConfirmButton: false
-                    });
+                    alert('Lưu ý: Sản phẩm này đang hoạt động. Khuyên bạn ngưng hoạt động trước khi xóa.');
                 }, 1500);
             }
-
-            // Animate financial stats
-            const statElements = document.querySelectorAll('.border .fw-bold');
-            statElements.forEach((el, index) => {
-                setTimeout(() => {
-                    el.style.animation = 'countUp 1s ease-out forwards';
-                }, index * 200);
-            });
         });
-
-        // Add count-up animation
-        const style = document.createElement('style');
-        style.textContent = `
-        @keyframes countUp {
-                from {
-                    opacity: 0;
-                    transform: translateY(20px);
-                }
-                to {
-                    opacity: 1;
-                    transform: translateY(0);
-                }
-            }
-        `;
-        document.head.appendChild(style);
     </script>
 }
 

@@ -25,7 +25,6 @@ namespace DKMovies.Controllers
             ViewData["NameSortParm"] = String.IsNullOrEmpty(sortOrder) ? "name_desc" : "";
             ViewData["CategorySortParm"] = sortOrder == "Category" ? "category_desc" : "Category";
 
-            // ✅ SỬA: Include TheaterConcessions để tính toán price và stock
             var concessions = from c in _context.Concessions
                               .Include(c => c.TheaterConcessions)
                               select c;
@@ -34,8 +33,8 @@ namespace DKMovies.Controllers
             if (!String.IsNullOrEmpty(searchString))
             {
                 concessions = concessions.Where(c => c.Name.Contains(searchString)
-                                                  || c.Description.Contains(searchString)
-                                                  || c.Category.Contains(searchString));
+                                                  || (c.Description != null && c.Description.Contains(searchString))
+                                                  || (c.Category != null && c.Category.Contains(searchString)));
             }
 
             // Filter by category
@@ -86,13 +85,10 @@ namespace DKMovies.Controllers
             ViewBag.TotalPages = (int)Math.Ceiling((double)totalConcessions / pageSize);
             ViewBag.TotalConcessions = totalConcessions;
 
-            // ✅ SỬA: Statistics theo database schema mới
+            // Statistics
             ViewBag.ActiveConcessions = await _context.Concessions.CountAsync(c => c.IsActive);
             ViewBag.AvailableConcessions = await _context.TheaterConcessions.CountAsync(tc => tc.IsAvailable);
             ViewBag.LowStockItems = await _context.TheaterConcessions.CountAsync(tc => tc.StockLeft <= 10);
-            ViewBag.TotalRevenue = await _context.OrderItems
-                .Where(oi => oi.Order != null && oi.Order.OrderStatus == "COMPLETED")
-                .SumAsync(oi => oi.Quantity * oi.PriceAtPurchase);
 
             return View(concessionList);
         }
@@ -105,8 +101,6 @@ namespace DKMovies.Controllers
             var concession = await _context.Concessions
                 .Include(c => c.TheaterConcessions)
                     .ThenInclude(tc => tc.Theater)
-                .Include(c => c.TheaterConcessions)
-                    .ThenInclude(tc => tc.OrderItems)
                 .FirstOrDefaultAsync(c => c.ID == id);
 
             if (concession == null) return NotFound();
@@ -319,134 +313,7 @@ namespace DKMovies.Controllers
             return RedirectToAction(nameof(Index));
         }
 
-        // ✅ GET: AdminConcession/ManageTheaterConcessions
-        public async Task<IActionResult> ManageTheaterConcessions(int? concessionId)
-        {
-            if (concessionId == null) return NotFound();
-
-            var concession = await _context.Concessions
-                .Include(c => c.TheaterConcessions)
-                    .ThenInclude(tc => tc.Theater)
-                .FirstOrDefaultAsync(c => c.ID == concessionId);
-
-            if (concession == null) return NotFound();
-
-            ViewBag.AvailableTheaters = await _context.Theaters
-                .Where(t => !concession.TheaterConcessions.Any(tc => tc.TheaterID == t.ID))
-                .ToListAsync();
-
-            return View(concession);
-        }
-
-        // ✅ POST: Add Concession to Theater
-        [HttpPost]
-        public async Task<JsonResult> AddConcessionToTheater([FromBody] AddConcessionToTheaterRequest request)
-        {
-            try
-            {
-                var existingTheaterConcession = await _context.TheaterConcessions
-                    .FirstOrDefaultAsync(tc => tc.TheaterID == request.TheaterID && tc.ConcessionID == request.ConcessionID);
-
-                if (existingTheaterConcession != null)
-                {
-                    return Json(new { success = false, message = "Sản phẩm đã tồn tại tại rạp này" });
-                }
-
-                var theaterConcession = new TheaterConcession
-                {
-                    TheaterID = request.TheaterID,
-                    ConcessionID = request.ConcessionID,
-                    Price = request.Price,
-                    StockLeft = request.StockLeft,
-                    IsAvailable = true
-                };
-
-                _context.TheaterConcessions.Add(theaterConcession);
-                await _context.SaveChangesAsync();
-
-                return Json(new
-                {
-                    success = true,
-                    message = "Đã thêm sản phẩm vào rạp thành công"
-                });
-            }
-            catch (Exception ex)
-            {
-                return Json(new { success = false, message = ex.Message });
-            }
-        }
-
-        // ✅ POST: Update Theater Concession
-        [HttpPost]
-        public async Task<JsonResult> UpdateTheaterConcession([FromBody] UpdateTheaterConcessionRequest request)
-        {
-            try
-            {
-                var theaterConcession = await _context.TheaterConcessions.FindAsync(request.TheaterConcessionID);
-                if (theaterConcession == null)
-                {
-                    return Json(new { success = false, message = "Không tìm thấy sản phẩm tại rạp" });
-                }
-
-                theaterConcession.Price = request.Price;
-                theaterConcession.StockLeft = request.StockLeft;
-                theaterConcession.IsAvailable = request.IsAvailable;
-
-                await _context.SaveChangesAsync();
-
-                return Json(new
-                {
-                    success = true,
-                    message = "Đã cập nhật thông tin sản phẩm tại rạp"
-                });
-            }
-            catch (Exception ex)
-            {
-                return Json(new { success = false, message = ex.Message });
-            }
-        }
-
-        // API: Get Concession Statistics
-        [HttpGet]
-        public async Task<JsonResult> GetConcessionStatistics()
-        {
-            try
-            {
-                var totalConcessions = await _context.Concessions.CountAsync();
-                var activeConcessions = await _context.Concessions.CountAsync(c => c.IsActive);
-                var availableConcessions = await _context.TheaterConcessions.CountAsync(tc => tc.IsAvailable);
-                var lowStockItems = await _context.TheaterConcessions.CountAsync(tc => tc.StockLeft <= 10);
-                var totalRevenue = await _context.OrderItems
-                    .Where(oi => oi.Order != null && oi.Order.OrderStatus == "COMPLETED")
-                    .SumAsync(oi => oi.Quantity * oi.PriceAtPurchase);
-
-                // ✅ THÊM: Statistics by category
-                var concessionsByCategory = await _context.Concessions
-                    .GroupBy(c => c.Category)
-                    .Select(g => new { Category = g.Key, Count = g.Count() })
-                    .ToListAsync();
-
-                return Json(new
-                {
-                    success = true,
-                    data = new
-                    {
-                        totalConcessions,
-                        activeConcessions,
-                        availableConcessions,
-                        lowStockItems,
-                        totalRevenue,
-                        concessionsByCategory
-                    }
-                });
-            }
-            catch (Exception ex)
-            {
-                return Json(new { success = false, message = ex.Message });
-            }
-        }
-
-        // ✅ API: Toggle Concession Active Status
+        // API: Toggle Active Status
         [HttpPost]
         public async Task<JsonResult> ToggleActiveStatus([FromBody] ToggleActiveStatusRequest request)
         {
@@ -474,130 +341,14 @@ namespace DKMovies.Controllers
             }
         }
 
-        // ✅ API: Toggle Theater Concession Availability
-        [HttpPost]
-        public async Task<JsonResult> ToggleTheaterConcessionAvailability([FromBody] ToggleTheaterAvailabilityRequest request)
-        {
-            try
-            {
-                var theaterConcession = await _context.TheaterConcessions
-                    .FindAsync(request.TheaterConcessionId);
-
-                if (theaterConcession == null)
-                {
-                    return Json(new { success = false, message = "Không tìm thấy sản phẩm tại rạp" });
-                }
-
-                theaterConcession.IsAvailable = !theaterConcession.IsAvailable;
-                await _context.SaveChangesAsync();
-
-                return Json(new
-                {
-                    success = true,
-                    newStatus = theaterConcession.IsAvailable,
-                    message = theaterConcession.IsAvailable ? "Đã bật bán tại rạp" : "Đã tắt bán tại rạp"
-                });
-            }
-            catch (Exception ex)
-            {
-                return Json(new { success = false, message = ex.Message });
-            }
-        }
-
-        // ✅ API: Update Stock for Theater Concession
-        [HttpPost]
-        public async Task<JsonResult> UpdateTheaterStock([FromBody] UpdateTheaterStockRequest request)
-        {
-            try
-            {
-                var theaterConcession = await _context.TheaterConcessions
-                    .FindAsync(request.TheaterConcessionId);
-
-                if (theaterConcession == null)
-                {
-                    return Json(new { success = false, message = "Không tìm thấy sản phẩm tại rạp" });
-                }
-
-                theaterConcession.StockLeft = request.NewStock;
-                await _context.SaveChangesAsync();
-
-                return Json(new
-                {
-                    success = true,
-                    newStock = theaterConcession.StockLeft,
-                    message = "Đã cập nhật tồn kho"
-                });
-            }
-            catch (Exception ex)
-            {
-                return Json(new { success = false, message = ex.Message });
-            }
-        }
-
-        // ✅ API: Get Theater Concessions for a specific concession
-        [HttpGet]
-        public async Task<JsonResult> GetTheaterConcessions(int concessionId)
-        {
-            try
-            {
-                var theaterConcessions = await _context.TheaterConcessions
-                    .Include(tc => tc.Theater)
-                    .Where(tc => tc.ConcessionID == concessionId)
-                    .Select(tc => new
-                    {
-                        tc.ID,
-                        tc.TheaterID,
-                        TheaterName = tc.Theater.Name,
-                        tc.Price,
-                        tc.StockLeft,
-                        tc.IsAvailable
-                    })
-                    .ToListAsync();
-
-                return Json(new { success = true, data = theaterConcessions });
-            }
-            catch (Exception ex)
-            {
-                return Json(new { success = false, message = ex.Message });
-            }
-        }
-
         private bool ConcessionExists(int id)
         {
             return _context.Concessions.Any(c => c.ID == id);
         }
 
-        // ✅ Request classes for API endpoints
-        public class AddConcessionToTheaterRequest
-        {
-            public int TheaterID { get; set; }
-            public int ConcessionID { get; set; }
-            public decimal Price { get; set; }
-            public int StockLeft { get; set; }
-        }
-
-        public class UpdateTheaterConcessionRequest
-        {
-            public int TheaterConcessionID { get; set; }
-            public decimal Price { get; set; }
-            public int StockLeft { get; set; }
-            public bool IsAvailable { get; set; }
-        }
-
         public class ToggleActiveStatusRequest
         {
             public int ConcessionId { get; set; }
-        }
-
-        public class ToggleTheaterAvailabilityRequest
-        {
-            public int TheaterConcessionId { get; set; }
-        }
-
-        public class UpdateTheaterStockRequest
-        {
-            public int TheaterConcessionId { get; set; }
-            public int NewStock { get; set; }
         }
     }
 }

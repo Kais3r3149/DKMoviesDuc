@@ -68,11 +68,11 @@
                         <div class="col-12">
                             <label class="form-label fw-medium">Hình ảnh sản phẩm</label>
                             <div class="upload-area border-2 border-dashed rounded p-4 text-center" id="uploadArea">
-                                <input type="file" id="imageUpload" name="ImageFile" accept="image/*" class="d-none">
+                                <input type="file" id="imageUpload" name="imageFile" accept="image/*" class="d-none">
                                 <div id="uploadContent">
                                     <i class="fas fa-cloud-upload-alt text-muted mb-3" style="font-size: 3rem;"></i>
                                     <p class="text-muted mb-2">Kéo thả hình ảnh vào đây hoặc</p>
-                                    <button type="button" class="btn btn-outline-primary" onclick="$('#imageUpload').click()">
+                                    <button type="button" class="btn btn-outline-primary" onclick="document.getElementById('imageUpload').click()">
                                         <i class="fas fa-folder-open me-2"></i>Chọn file
                                     </button>
                                     <div class="form-text mt-2">Chấp nhận: JPG, PNG, GIF. Tối đa 5MB</div>
@@ -111,7 +111,7 @@
                                     Trạng thái hoạt động
                                 </label>
                             </div>
-                            <small class="text-muted">Sản phẩm có thể được bán tại các rạp</small>
+                            <small class="text-muted">Sản phẩm có thể được sử dụng trong hệ thống</small>
                         </div>
 
                         <!-- Category Preview -->
@@ -234,152 +234,152 @@
         await Html.RenderPartialAsync("_ValidationScriptsPartial");
     }
 
-        <script>
-            $(document).ready(function() {
-                // Form validation
-                $('#concessionForm').submit(function(e) {
-                    if (!validateForm()) {
-                        e.preventDefault();
-                        return false;
-                    }
-
-                    // Show loading state
-                    $('#submitBtn').html('<i class="fas fa-spinner fa-spin me-2"></i>Đang tạo...');
-                    $('#submitBtn').prop('disabled', true);
-                });
-
-                // Image upload handling
-                $('#imageUpload').change(function(e) {
-                    handleImageUpload(e.target.files[0]);
-                });
-
-                // Drag and drop functionality
-                $('#uploadArea').on('dragover', function(e) {
+    <script>
+        $(document).ready(function() {
+            // Form validation
+            $('#concessionForm').submit(function(e) {
+                if (!validateForm()) {
                     e.preventDefault();
-                    $(this).addClass('border-primary bg-light');
-                });
+                    return false;
+                }
 
-                $('#uploadArea').on('dragleave', function(e) {
-                    e.preventDefault();
-                    $(this).removeClass('border-primary bg-light');
-                });
+                // Show loading state
+                $('#submitBtn').html('<i class="fas fa-spinner fa-spin me-2"></i>Đang tạo...');
+                $('#submitBtn').prop('disabled', true);
+            });
 
-                $('#uploadArea').on('drop', function(e) {
-                    e.preventDefault();
-                    $(this).removeClass('border-primary bg-light');
+            // Image upload handling
+            $('#imageUpload').change(function(e) {
+                handleImageUpload(e.target.files[0]);
+            });
 
-                    var files = e.originalEvent.dataTransfer.files;
-                    if (files.length > 0) {
-                        handleImageUpload(files[0]);
-                    }
-                });
+            // Drag and drop functionality
+            $('#uploadArea').on('dragover', function(e) {
+                e.preventDefault();
+                $(this).addClass('border-primary bg-light');
+            });
 
-                // Category change handling
-                $('#categorySelect').change(function() {
-                    updateCategoryPreview();
-                });
+            $('#uploadArea').on('dragleave', function(e) {
+                e.preventDefault();
+                $(this).removeClass('border-primary bg-light');
+            });
 
-                // Initialize
+            $('#uploadArea').on('drop', function(e) {
+                e.preventDefault();
+                $(this).removeClass('border-primary bg-light');
+
+                var files = e.originalEvent.dataTransfer.files;
+                if (files.length > 0) {
+                    handleImageUpload(files[0]);
+                }
+            });
+
+            // Category change handling
+            $('#categorySelect').change(function() {
                 updateCategoryPreview();
             });
 
-            function handleImageUpload(file) {
-                if (file) {
-                    if (!file.type.startsWith('image/')) {
-                        alert('Vui lòng chọn file hình ảnh!');
-                        return;
-                    }
+            // Initialize
+            updateCategoryPreview();
+        });
 
-                    if (file.size > 5 * 1024 * 1024) {
-                        alert('File không được vượt quá 5MB!');
-                        return;
-                    }
-
-                    var reader = new FileReader();
-                    reader.onload = function(e) {
-                        $('#previewImg').attr('src', e.target.result);
-                        $('#uploadContent').addClass('d-none');
-                        $('#imagePreview').removeClass('d-none');
-                    };
-                    reader.readAsDataURL(file);
-                }
-            }
-
-            function removeImage() {
-                $('#imageUpload').val('');
-                $('#imagePath').val('');
-                $('#uploadContent').removeClass('d-none');
-                $('#imagePreview').addClass('d-none');
-            }
-
-            function updateCategoryPreview() {
-                const category = $('#categorySelect').val();
-                const categoryText = $('#categorySelect option:selected').text();
-
-                if (category) {
-                    const badges = {
-                        'Food': '<span class="badge bg-danger"><i class="fas fa-utensils me-1"></i>Đồ ăn</span>',
-                        'Drink': '<span class="badge bg-info"><i class="fas fa-glass-whiskey me-1"></i>Đồ uống</span>',
-                        'Combo': '<span class="badge bg-success"><i class="fas fa-gift me-1"></i>Combo</span>',
-                        'Snack': '<span class="badge bg-warning text-dark"><i class="fas fa-cookie me-1"></i>Snack</span>',
-                        'Dessert': '<span class="badge bg-pink text-white"><i class="fas fa-ice-cream me-1"></i>Tráng miệng</span>',
-                        'Other': '<span class="badge bg-secondary"><i class="fas fa-ellipsis-h me-1"></i>Khác</span>'
-                    };
-                    $('#categoryPreview').html(badges[category] || '<span class="badge bg-light text-dark">Khác</span>');
-                } else {
-                    $('#categoryPreview').html('<span class="badge bg-secondary">Chưa chọn danh mục</span>');
-                }
-            }
-
-            function validateForm() {
-                let isValid = true;
-                const requiredFields = ['Name', 'Category'];
-
-                requiredFields.forEach(field => {
-                    const element = $(`[name="${field}"]`);
-                    if (!element.val()) {
-                        element.addClass('is-invalid');
-                        isValid = false;
-                    } else {
-                        element.removeClass('is-invalid');
-                    }
-                });
-
-                return isValid;
-            }
-
-            function previewConcession() {
-                if (!validateForm()) {
+        function handleImageUpload(file) {
+            if (file) {
+                if (!file.type.startsWith('image/')) {
+                    alert('Vui lòng chọn file hình ảnh!');
                     return;
                 }
 
-                // Populate preview modal
-                $('#previewName').text($('#Name').val());
-                $('#previewCategory').text($('#categorySelect option:selected').text());
-                $('#previewDescription').text($('#Description').val() || 'Chưa có mô tả');
-                $('#previewStatus').text($('#IsActive').is(':checked') ? 'Hoạt động' : 'Không hoạt động');
-
-                // Update preview image
-                const previewImg = $('#previewImg').attr('src');
-                if (previewImg && previewImg !== '') {
-                    $('#previewModalImage').attr('src', previewImg);
-                } else {
-                    $('#previewModalImage').attr('src', '/assets/images/placeholder.jpg');
+                if (file.size > 5 * 1024 * 1024) {
+                    alert('File không được vượt quá 5MB!');
+                    return;
                 }
 
-                new bootstrap.Modal(document.getElementById('previewModal')).show();
+                var reader = new FileReader();
+                reader.onload = function(e) {
+                    $('#previewImg').attr('src', e.target.result);
+                    $('#uploadContent').addClass('d-none');
+                    $('#imagePreview').removeClass('d-none');
+                };
+                reader.readAsDataURL(file);
             }
+        }
 
-            function submitForm() {
-                $('#previewModal .btn-close').click();
-                $('#concessionForm').submit();
+        function removeImage() {
+            $('#imageUpload').val('');
+            $('#imagePath').val('');
+            $('#uploadContent').removeClass('d-none');
+            $('#imagePreview').addClass('d-none');
+        }
+
+        function updateCategoryPreview() {
+            const category = $('#categorySelect').val();
+            const categoryText = $('#categorySelect option:selected').text();
+
+            if (category) {
+                const badges = {
+                    'Food': '<span class="badge bg-danger"><i class="fas fa-utensils me-1"></i>Đồ ăn</span>',
+                    'Drink': '<span class="badge bg-info"><i class="fas fa-coffee me-1"></i>Đồ uống</span>',
+                    'Combo': '<span class="badge bg-success"><i class="fas fa-box-open me-1"></i>Combo</span>',
+                    'Snack': '<span class="badge bg-warning text-dark"><i class="fas fa-cookie me-1"></i>Snack</span>',
+                    'Dessert': '<span class="badge bg-pink text-white"><i class="fas fa-ice-cream me-1"></i>Tráng miệng</span>',
+                    'Other': '<span class="badge bg-secondary"><i class="fas fa-ellipsis-h me-1"></i>Khác</span>'
+                };
+                $('#categoryPreview').html(badges[category] || '<span class="badge bg-light text-dark">Khác</span>');
+            } else {
+                $('#categoryPreview').html('<span class="badge bg-secondary">Chưa chọn danh mục</span>');
             }
+        }
 
-            // Auto-focus first input
-            document.addEventListener('DOMContentLoaded', function() {
-                document.querySelector('input[name="Name"]').focus();
+        function validateForm() {
+            let isValid = true;
+            const requiredFields = ['Name', 'Category'];
+
+            requiredFields.forEach(field => {
+                const element = $(`[name="${field}"]`);
+                if (!element.val()) {
+                    element.addClass('is-invalid');
+                    isValid = false;
+                } else {
+                    element.removeClass('is-invalid');
+                }
             });
-        </script>
+
+            return isValid;
+        }
+
+        function previewConcession() {
+            if (!validateForm()) {
+                return;
+            }
+
+            // Populate preview modal
+            $('#previewName').text($('#Name').val());
+            $('#previewCategory').text($('#categorySelect option:selected').text());
+            $('#previewDescription').text($('#Description').val() || 'Chưa có mô tả');
+            $('#previewStatus').text($('#IsActive').is(':checked') ? 'Hoạt động' : 'Không hoạt động');
+
+            // Update preview image
+            const previewImg = $('#previewImg').attr('src');
+            if (previewImg && previewImg !== '') {
+                $('#previewModalImage').attr('src', previewImg);
+            } else {
+                $('#previewModalImage').attr('src', '/assets/images/placeholder.jpg');
+            }
+
+            new bootstrap.Modal(document.getElementById('previewModal')).show();
+        }
+
+        function submitForm() {
+            $('#previewModal .btn-close').click();
+            $('#concessionForm').submit();
+        }
+
+        // Auto-focus first input
+        document.addEventListener('DOMContentLoaded', function() {
+            document.querySelector('input[name="Name"]').focus();
+        });
+    </script>
 }
 
 <style>
@@ -387,10 +387,10 @@
         transition: all 0.3s ease;
     }
 
-    .card:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 8px 25px rgba(0,0,0,0.1) !important;
-    }
+        .card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.1) !important;
+        }
 
     .form-control:focus,
     .form-select:focus {
@@ -402,9 +402,9 @@
         transition: all 0.3s ease;
     }
 
-    .btn:hover {
-        transform: translateY(-1px);
-    }
+        .btn:hover {
+            transform: translateY(-1px);
+        }
 
     .bg-pink {
         background-color: #e83e8c !important;
@@ -415,40 +415,39 @@
         cursor: pointer;
     }
 
-    .upload-area:hover {
-        border-color: #0d6efd !important;
-        background-color: #f8f9fa;
-    }
+        .upload-area:hover {
+            border-color: #0d6efd !important;
+            background-color: #f8f9fa;
+        }
 
-    .upload-area.border-primary {
-        border-color: #0d6efd !important;
-    }
+        .upload-area.border-primary {
+            border-color: #0d6efd !important;
+        }
 
     #imagePreview img {
         border: 2px solid #dee2e6;
     }
 
-    @keyframes fadeIn {
-        from { opacity: 0; transform: translateY(-10px); }
-        to { opacity: 1; transform: translateY(0); }
-    }
+
 
     .category-preview {
         animation: fadeIn 0.3s ease;
     }
 
-    @media (max-width: 768px) {
-        .d-flex.justify-content-between {
-            flex-direction: column;
-            gap: 1rem;
-        }
+    
 
-        .d-flex.justify-content-between .d-flex {
-            justify-content: center;
-        }
+    {
+        flex-direction: column;
+        gap: 1rem;
+    }
 
-        .upload-area {
-            padding: 2rem 1rem !important;
-        }
+    .d-flex.justify-content-between .d-flex {
+        justify-content: center;
+    }
+
+    .upload-area {
+        padding: 2rem 1rem !important;
+    }
+
     }
 </style>

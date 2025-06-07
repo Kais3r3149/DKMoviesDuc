@@ -32,7 +32,7 @@
                 <div class="d-flex align-items-center">
                     <div class="flex-grow-1">
                         <h6 class="text-white-50 mb-1">Tổng sản phẩm</h6>
-                        <h4 class="mb-0" id="totalConcessions">@ViewBag.TotalConcessions</h4>
+                        <h4 class="mb-0">@ViewBag.TotalConcessions</h4>
                     </div>
                     <div class="ms-3">
                         <i class="fas fa-box fa-2x opacity-75"></i>
@@ -47,11 +47,11 @@
             <div class="card-body p-3">
                 <div class="d-flex align-items-center">
                     <div class="flex-grow-1">
-                        <h6 class="text-white-50 mb-1">Đang bán</h6>
-                        <h4 class="mb-0" id="availableConcessions">@ViewBag.AvailableConcessions</h4>
+                        <h6 class="text-white-50 mb-1">Đang hoạt động</h6>
+                        <h4 class="mb-0">@ViewBag.ActiveConcessions</h4>
                     </div>
                     <div class="ms-3">
-                        <i class="fas fa-store fa-2x opacity-75"></i>
+                        <i class="fas fa-check fa-2x opacity-75"></i>
                     </div>
                 </div>
             </div>
@@ -63,11 +63,11 @@
             <div class="card-body p-3">
                 <div class="d-flex align-items-center">
                     <div class="flex-grow-1">
-                        <h6 class="text-white-50 mb-1">Sắp hết hàng</h6>
-                        <h4 class="mb-0" id="lowStockItems">@ViewBag.LowStockItems</h4>
+                        <h6 class="text-white-50 mb-1">Đang bán</h6>
+                        <h4 class="mb-0">@ViewBag.AvailableConcessions</h4>
                     </div>
                     <div class="ms-3">
-                        <i class="fas fa-exclamation-triangle fa-2x opacity-75"></i>
+                        <i class="fas fa-store fa-2x opacity-75"></i>
                     </div>
                 </div>
             </div>
@@ -75,15 +75,15 @@
     </div>
 
     <div class="col-xl-3 col-md-6">
-        <div class="card border-0 bg-info text-white shadow-sm">
+        <div class="card border-0 bg-danger text-white shadow-sm">
             <div class="card-body p-3">
                 <div class="d-flex align-items-center">
                     <div class="flex-grow-1">
-                        <h6 class="text-white-50 mb-1">Doanh thu</h6>
-                        <h4 class="mb-0" id="totalRevenue">0</h4>
+                        <h6 class="text-white-50 mb-1">Sắp hết hàng</h6>
+                        <h4 class="mb-0">@ViewBag.LowStockItems</h4>
                     </div>
                     <div class="ms-3">
-                        <i class="fas fa-chart-line fa-2x opacity-75"></i>
+                        <i class="fas fa-exclamation-triangle fa-2x opacity-75"></i>
                     </div>
                 </div>
             </div>
@@ -109,22 +109,25 @@
                 <label class="form-label fw-medium">Danh mục</label>
                 <select name="category" class="form-select">
                     <option value="">Tất cả</option>
-                    <option value="Đồ uống" selected="@(ViewData["CurrentCategory"]?.ToString() == "Đồ uống" ? "selected" : null)">Đồ uống</option>
-                    <option value="Bắp rang" selected="@(ViewData["CurrentCategory"]?.ToString() == "Bắp rang" ? "selected" : null)">Bắp rang</option>
-                    <option value="Kẹo" selected="@(ViewData["CurrentCategory"]?.ToString() == "Kẹo" ? "selected" : null)">Kẹo</option>
-                    <option value="Combo" selected="@(ViewData["CurrentCategory"]?.ToString() == "Combo" ? "selected" : null)">Combo</option>
-                    <option value="Đồ ăn nhanh" selected="@(ViewData["CurrentCategory"]?.ToString() == "Đồ ăn nhanh" ? "selected" : null)">Đồ ăn nhanh</option>
-                    <option value="Khác" selected="@(ViewData["CurrentCategory"]?.ToString() == "Khác" ? "selected" : null)">Khác</option>
+                    <option value="Food" selected="@(ViewData["CurrentCategory"]?.ToString() == "Food")">Đồ ăn</option>
+                    <option value="Drink" selected="@(ViewData["CurrentCategory"]?.ToString() == "Drink")">Đồ uống</option>
+                    <option value="Combo" selected="@(ViewData["CurrentCategory"]?.ToString() == "Combo")">Combo</option>
+                    <option value="Snack" selected="@(ViewData["CurrentCategory"]?.ToString() == "Snack")">Snack</option>
+                    <option value="Dessert" selected="@(ViewData["CurrentCategory"]?.ToString() == "Dessert")">Tráng miệng</option>
+                    <option value="Other" selected="@(ViewData["CurrentCategory"]?.ToString() == "Other")">Khác</option>
                 </select>
+
             </div>
             <div class="col-md-2">
                 <label class="form-label fw-medium">Trạng thái</label>
                 <select name="status" class="form-select">
                     <option value="">Tất cả</option>
-                    <option value="available" selected="@(ViewData["CurrentStatus"]?.ToString() == "available" ? "selected" : null)">Đang bán</option>
-                    <option value="unavailable" selected="@(ViewData["CurrentStatus"]?.ToString() == "unavailable" ? "selected" : null)">Ngưng bán</option>
-                    <option value="low_stock" selected="@(ViewData["CurrentStatus"]?.ToString() == "low_stock" ? "selected" : null)">Sắp hết</option>
+                    <option value="active" selected="@(ViewData["CurrentStatus"]?.ToString() == "active")">Hoạt động</option>
+                    <option value="inactive" selected="@(ViewData["CurrentStatus"]?.ToString() == "inactive")">Ngưng hoạt động</option>
+                    <option value="available" selected="@(ViewData["CurrentStatus"]?.ToString() == "available")">Đang bán</option>
+                    <option value="low_stock" selected="@(ViewData["CurrentStatus"]?.ToString() == "low_stock")">Sắp hết</option>
                 </select>
+
             </div>
             <div class="col-md-2">
                 <label class="form-label fw-medium">Sắp xếp theo</label>
@@ -132,13 +135,12 @@
                     var currentSort = ViewData["CurrentSort"]?.ToString() ?? "";
                 }
                 <select name="sortOrder" class="form-select">
-                    <option value="" selected="@(currentSort == "" ? "selected" : null)">Tên (A-Z)</option>
-                    <option value="name_desc" selected="@(currentSort == "name_desc" ? "selected" : null)">Tên (Z-A)</option>
-                    <option value="Price" selected="@(currentSort == "Price" ? "selected" : null)">Giá (Thấp-Cao)</option>
-                    <option value="price_desc" selected="@(currentSort == "price_desc" ? "selected" : null)">Giá (Cao-Thấp)</option>
-                    <option value="Stock" selected="@(currentSort == "Stock" ? "selected" : null)">Tồn kho (Ít-Nhiều)</option>
-                    <option value="stock_desc" selected="@(currentSort == "stock_desc" ? "selected" : null)">Tồn kho (Nhiều-Ít)</option>
+                    <option value="" selected="@(currentSort == "")">Tên (A-Z)</option>
+                    <option value="name_desc" selected="@(currentSort == "name_desc")">Tên (Z-A)</option>
+                    <option value="Category" selected="@(currentSort == "Category")">Danh mục (A-Z)</option>
+                    <option value="category_desc" selected="@(currentSort == "category_desc")">Danh mục (Z-A)</option>
                 </select>
+
             </div>
             <div class="col-md-2 d-flex align-items-end">
                 <button type="submit" class="btn btn-primary w-100">
@@ -166,7 +168,7 @@
                 @foreach (var concession in Model)
                 {
                     <div class="col-xl-3 col-lg-4 col-md-6">
-                        <div class="card border-0 shadow-sm h-100 concession-card @(!concession.IsAvailable ? "unavailable" : "")">
+                        <div class="card border-0 shadow-sm h-100 concession-card @(!concession.IsActive ? "inactive" : "")">
                             <div class="position-relative">
                                 <img src="@(!string.IsNullOrEmpty(concession.ImagePath) ? concession.ImagePath : "/images/default-concession.jpg")"
                                      alt="@concession.Name"
@@ -176,17 +178,13 @@
 
                                 <!-- Status Badge -->
                                 <div class="position-absolute top-0 start-0 m-2">
-                                    @if (!concession.IsAvailable)
+                                    @if (!concession.IsActive)
                                     {
-                                        <span class="badge bg-danger">Ngưng bán</span>
-                                    }
-                                    else if (concession.StockQuantity <= 10)
-                                    {
-                                        <span class="badge bg-warning text-dark">Sắp hết</span>
+                                        <span class="badge bg-danger">Ngưng hoạt động</span>
                                     }
                                     else
                                     {
-                                        <span class="badge bg-success">Đang bán</span>
+                                        <span class="badge bg-success">Hoạt động</span>
                                     }
                                 </div>
 
@@ -194,14 +192,14 @@
                                 <div class="position-absolute top-0 end-0 m-2">
                                     <span class="badge @GetCategoryBadgeClass(concession.Category)">
                                         <i class="@GetCategoryIcon(concession.Category) me-1"></i>
-                                        @concession.Category
+                                        @GetCategoryDisplayName(concession.Category)
                                     </span>
                                 </div>
 
-                                <!-- Stock Badge -->
+                                <!-- Theater Count Badge -->
                                 <div class="position-absolute bottom-0 end-0 m-2">
                                     <span class="badge bg-dark">
-                                        <i class="fas fa-boxes me-1"></i>@concession.StockQuantity
+                                        <i class="fas fa-building me-1"></i>@concession.TheaterConcessions.Count()
                                     </span>
                                 </div>
                             </div>
@@ -214,22 +212,15 @@
                                 </p>
 
                                 <div class="d-flex justify-content-between align-items-center mb-3">
-                                    <div class="fw-bold text-success fs-5">
-                                        @String.Format("{0:N0} ₫", concession.Price)
+                                    <div class="fw-bold text-info fs-5">
+                                        @(concession.TheaterConcessions.Any() ? concession.TheaterConcessions.Average(tc => tc.Price).ToString("N0") + " ₫" : "Chưa có giá")
                                     </div>
                                     <div class="d-flex gap-1">
-                                        <!-- Quick Stock Update -->
-                                        <button class="btn btn-sm btn-outline-secondary"
-                                                onclick="showStockModal(@concession.ID, '@concession.Name', @concession.StockQuantity)"
-                                                title="Cập nhật tồn kho">
-                                            <i class="fas fa-boxes"></i>
-                                        </button>
-
-                                        <!-- Toggle Availability -->
-                                        <button class="btn btn-sm @(concession.IsAvailable ? "btn-success" : "btn-outline-danger")"
-                                                onclick="toggleAvailability(@concession.ID, this)"
-                                                title="@(concession.IsAvailable ? "Ngưng bán" : "Bắt đầu bán")">
-                                            <i class="fas @(concession.IsAvailable ? "fa-eye" : "fa-eye-slash")"></i>
+                                        <!-- Toggle Active Status -->
+                                        <button class="btn btn-sm @(concession.IsActive ? "btn-success" : "btn-outline-secondary")"
+                                                onclick="toggleActiveStatus(@concession.ID, this)"
+                                                title="@(concession.IsActive ? "Ngưng hoạt động" : "Kích hoạt")">
+                                            <i class="fas @(concession.IsActive ? "fa-check" : "fa-times")"></i>
                                         </button>
                                     </div>
                                 </div>
@@ -325,50 +316,16 @@
     }
 </div>
 
-<!-- Stock Update Modal -->
-<div class="modal fade" id="stockModal" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">
-                    <i class="fas fa-boxes text-primary me-2"></i>Cập nhật tồn kho
-                </h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body">
-                <div class="mb-3">
-                    <label class="form-label fw-medium">Sản phẩm:</label>
-                    <div class="fw-bold" id="stockProductName"></div>
-                </div>
-                <div class="mb-3">
-                    <label class="form-label fw-medium">Tồn kho hiện tại:</label>
-                    <div class="fw-bold text-info" id="currentStock"></div>
-                </div>
-                <div class="mb-3">
-                    <label for="newStock" class="form-label fw-medium">Tồn kho mới:</label>
-                    <input type="number" class="form-control" id="newStock" min="0" placeholder="Nhập số lượng mới">
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
-                <button type="button" class="btn btn-primary" onclick="updateStock()">
-                    <i class="fas fa-save me-1"></i>Cập nhật
-                </button>
-            </div>
-        </div>
-    </div>
-</div>
-
 @functions {
     private string GetCategoryBadgeClass(string category)
     {
         return category switch
         {
-            "Đồ uống" => "bg-info text-white",
-            "Bắp rang" => "bg-warning text-dark",
-            "Kẹo" => "bg-danger text-white",
+            "Food" => "bg-danger text-white",
+            "Drink" => "bg-info text-white", 
             "Combo" => "bg-success text-white",
-            "Đồ ăn nhanh" => "bg-primary text-white",
+            "Snack" => "bg-warning text-dark",
+            "Dessert" => "bg-pink text-white",
             _ => "bg-secondary text-white"
         };
     }
@@ -377,12 +334,25 @@
     {
         return category switch
         {
-            "Đồ uống" => "fas fa-coffee",
-            "Bắp rang" => "fas fa-seedling",
-            "Kẹo" => "fas fa-candy-cane",
-            "Combo" => "fas fa-box-open",
-            "Đồ ăn nhanh" => "fas fa-hamburger",
-            _ => "fas fa-utensils"
+            "Food" => "fas fa-utensils",
+            "Drink" => "fas fa-coffee",
+            "Combo" => "fas fa-box-open", 
+            "Snack" => "fas fa-cookie",
+            "Dessert" => "fas fa-ice-cream",
+            _ => "fas fa-question"
+        };
+    }
+
+    private string GetCategoryDisplayName(string category)
+    {
+        return category switch
+        {
+            "Food" => "Đồ ăn",
+            "Drink" => "Đồ uống",
+            "Combo" => "Combo",
+            "Snack" => "Snack", 
+            "Dessert" => "Tráng miệng",
+            _ => "Khác"
         };
     }
 }
@@ -397,7 +367,7 @@
             box-shadow: 0 10px 30px rgba(0,0,0,0.15) !important;
         }
 
-        .concession-card.unavailable {
+        .concession-card.inactive {
             opacity: 0.7;
             filter: grayscale(50%);
         }
@@ -418,52 +388,22 @@
             transform: translateY(-1px);
         }
 
-    @media (max-width: 768px) {
-        .btn-group .btn
-
-    {
-        font-size: 0.75rem;
-        padding: 0.25rem 0.5rem;
+    .bg-pink {
+        background-color: #e83e8c !important;
     }
 
-    }
+
 </style>
 
 @section Scripts {
     <script>
-        let currentConcessionId = 0;
-
-        // Auto-refresh statistics every 30 seconds
-        setInterval(loadConcessionStatistics, 30000);
-
-        // Load statistics on page load
-        document.addEventListener('DOMContentLoaded', function() {
-            loadConcessionStatistics();
-        });
-
-        async function loadConcessionStatistics() {
-            try {
-                const response = await fetch('@Url.Action("GetConcessionStatistics", "AdminConcession")');
-                const result = await response.json();
-
-                if (result.success) {
-                    document.getElementById('totalConcessions').textContent = result.data.totalConcessions.toLocaleString();
-                    document.getElementById('availableConcessions').textContent = result.data.availableConcessions.toLocaleString();
-                    document.getElementById('lowStockItems').textContent = result.data.lowStockItems.toLocaleString();
-                    document.getElementById('totalRevenue').textContent = result.data.totalRevenue.toLocaleString() + ' ₫';
-                }
-            } catch (error) {
-                console.error('Error loading statistics:', error);
-            }
-        }
-
-        async function toggleAvailability(concessionId, button) {
+        async function toggleActiveStatus(concessionId, button) {
             const originalText = button.innerHTML;
             button.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
             button.disabled = true;
 
             try {
-                const response = await fetch('@Url.Action("ToggleAvailability", "AdminConcession")', {
+                const response = await fetch('@Url.Action("ToggleActiveStatus", "AdminConcession")', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -480,18 +420,18 @@
 
                     if (result.newStatus) {
                         button.className = 'btn btn-sm btn-success';
-                        button.innerHTML = '<i class="fas fa-eye"></i>';
-                        button.title = 'Ngưng bán';
+                        button.innerHTML = '<i class="fas fa-check"></i>';
+                        button.title = 'Ngưng hoạt động';
                         statusBadge.className = 'badge bg-success';
-                        statusBadge.textContent = 'Đang bán';
-                        card.classList.remove('unavailable');
+                        statusBadge.textContent = 'Hoạt động';
+                        card.classList.remove('inactive');
                     } else {
-                        button.className = 'btn btn-sm btn-outline-danger';
-                        button.innerHTML = '<i class="fas fa-eye-slash"></i>';
-                        button.title = 'Bắt đầu bán';
+                        button.className = 'btn btn-sm btn-outline-secondary';
+                        button.innerHTML = '<i class="fas fa-times"></i>';
+                        button.title = 'Kích hoạt';
                         statusBadge.className = 'badge bg-danger';
-                        statusBadge.textContent = 'Ngưng bán';
-                        card.classList.add('unavailable');
+                        statusBadge.textContent = 'Ngưng hoạt động';
+                        card.classList.add('inactive');
                     }
                     showToast(result.message, 'success');
                 } else {
@@ -504,71 +444,6 @@
                 console.error('Error:', error);
             } finally {
                 button.disabled = false;
-            }
-        }
-
-        function showStockModal(concessionId, productName, currentStockValue) {
-            currentConcessionId = concessionId;
-            document.getElementById('stockProductName').textContent = productName;
-            document.getElementById('currentStock').textContent = currentStockValue + ' sản phẩm';
-            document.getElementById('newStock').value = currentStockValue;
-
-            new bootstrap.Modal(document.getElementById('stockModal')).show();
-        }
-
-        async function updateStock() {
-            const newStock = parseInt(document.getElementById('newStock').value);
-
-            if (isNaN(newStock) || newStock < 0) {
-                showToast('Vui lòng nhập số lượng hợp lệ', 'error');
-                return;
-            }
-
-            try {
-                const response = await fetch('@Url.Action("UpdateStock", "AdminConcession")', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'RequestVerificationToken': document.querySelector('[name="__RequestVerificationToken"]')?.value
-                    },
-                    body: JSON.stringify({
-                        concessionId: currentConcessionId,
-                        newStock: newStock
-                    })
-                });
-
-                const result = await response.json();
-
-                if (result.success) {
-                    // Update the stock badge on the card
-                    const stockBadges = document.querySelectorAll('.badge.bg-dark');
-                    stockBadges.forEach(badge => {
-                        const card = badge.closest('.concession-card');
-                        const detailsLink = card.querySelector('a[href*="Details"]');
-                        if (detailsLink && detailsLink.href.includes(currentConcessionId)) {
-                            badge.innerHTML = `<i class="fas fa-boxes me-1"></i>${newStock}`;
-
-                            // Update status badge if needed
-                            const statusBadge = card.querySelector('.badge:first-child');
-                            if (newStock <= 10 && !statusBadge.textContent.includes('Ngưng')) {
-                                statusBadge.className = 'badge bg-warning text-dark';
-                                statusBadge.textContent = 'Sắp hết';
-                            } else if (newStock > 10 && statusBadge.textContent === 'Sắp hết') {
-                                statusBadge.className = 'badge bg-success';
-                                statusBadge.textContent = 'Đang bán';
-                            }
-                        }
-                    });
-
-                    bootstrap.Modal.getInstance(document.getElementById('stockModal')).hide();
-                    showToast(result.message, 'success');
-                    loadConcessionStatistics(); // Refresh statistics
-                } else {
-                    showToast(result.message || 'Có lỗi xảy ra', 'error');
-                }
-            } catch (error) {
-                showToast('Có lỗi xảy ra khi cập nhật tồn kho', 'error');
-                console.error('Error:', error);
             }
         }
 
@@ -590,17 +465,6 @@
                 }
             }, 3000);
         }
-
-        // Handle image loading errors
-        document.addEventListener('DOMContentLoaded', function() {
-            document.querySelectorAll('img').forEach(img => {
-                img.addEventListener('error', function() {
-                    if (this.src.includes('default-concession.jpg')) return;
-                    this.src = '/images/default-concession.jpg';
-                    this.alt = 'Hình ảnh không khả dụng';
-                });
-            });
-        });
     </script>
 }
 

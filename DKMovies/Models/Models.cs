@@ -604,7 +604,7 @@ namespace DKMovies.Models
         public DateTime PurchaseTime { get; set; }
 
         [Display(Name = "Status")]
-        public string Status { get; set; } = "PENDING"; // PENDING, CONFIRMED, CANCELLED
+        public TicketStatus Status { get; set; }
 
         // ✅ THÊM: Payment fields theo database
         [MaxLength(50)]

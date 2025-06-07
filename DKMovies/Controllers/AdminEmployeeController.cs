@@ -26,10 +26,9 @@ namespace DKMovies.Controllers
             ViewData["RoleSortParm"] = sortOrder == "Role" ? "role_desc" : "Role";
             ViewData["SalarySortParm"] = sortOrder == "Salary" ? "salary_desc" : "Salary";
 
-            // ✅ SỬA: Include Role và Theater theo database schema
             var employees = from e in _context.Employees
                             .Include(e => e.Theater)
-                            .Include(e => e.Role) // ✅ THÊM: Include Role
+                            .Include(e => e.Role)
                             select e;
 
             // Search
@@ -37,8 +36,8 @@ namespace DKMovies.Controllers
             {
                 employees = employees.Where(e => e.FullName.Contains(searchString)
                                               || e.Email.Contains(searchString)
-                                              || e.Phone.Contains(searchString)
-                                              || e.CitizenID.Contains(searchString)); // ✅ SỬA: Thêm CitizenID
+                                              || (e.Phone != null && e.Phone.Contains(searchString))
+                                              || (e.CitizenID != null && e.CitizenID.Contains(searchString)));
             }
 
             // Filter by role
@@ -63,7 +62,7 @@ namespace DKMovies.Controllers
                     employees = employees.OrderByDescending(e => e.HireDate);
                     break;
                 case "Role":
-                    employees = employees.OrderBy(e => e.Role.Name); // ✅ SỬA: Sort by Role.Name
+                    employees = employees.OrderBy(e => e.Role.Name);
                     break;
                 case "role_desc":
                     employees = employees.OrderByDescending(e => e.Role.Name);
@@ -91,11 +90,13 @@ namespace DKMovies.Controllers
             ViewBag.TotalPages = (int)Math.Ceiling((double)totalEmployees / pageSize);
             ViewBag.TotalEmployees = totalEmployees;
 
-            // Statistics for ViewBag - ✅ SỬA: Bỏ IsActive (không có trong database)
-            ViewBag.TotalEmployees = totalEmployees;
+            // Statistics
             ViewBag.NewEmployeesThisMonth = await _context.Employees
                 .CountAsync(e => e.HireDate.Month == DateTime.Now.Month && e.HireDate.Year == DateTime.Now.Year);
             ViewBag.TotalSalaryExpense = await _context.Employees.SumAsync(e => e.Salary);
+
+            // Load roles for filter dropdown
+            ViewBag.EmployeeRoles = await _context.EmployeeRoles.ToListAsync();
 
             return View(employeeList);
         }
@@ -107,8 +108,8 @@ namespace DKMovies.Controllers
 
             var employee = await _context.Employees
                 .Include(e => e.Theater)
-                .Include(e => e.Role) // ✅ THÊM: Include Role
-                .Include(e => e.Admins) // ✅ THÊM: Include Admins if exists
+                .Include(e => e.Role)
+                .Include(e => e.Admins)
                 .FirstOrDefaultAsync(e => e.ID == id);
 
             if (employee == null) return NotFound();
@@ -120,8 +121,6 @@ namespace DKMovies.Controllers
         public async Task<IActionResult> Create()
         {
             ViewData["TheaterID"] = new SelectList(_context.Theaters, "ID", "Name");
-
-            // ✅ SỬA: Load EmployeeRoles từ database
             ViewData["RoleID"] = new SelectList(_context.EmployeeRoles, "ID", "Name");
 
             return View();
@@ -136,7 +135,7 @@ namespace DKMovies.Controllers
             {
                 try
                 {
-                    // ✅ SỬA: HireDate sẽ được set default trong database
+                    // Set default hire date if not provided
                     if (employee.HireDate == default(DateTime))
                     {
                         employee.HireDate = DateTime.Now;
@@ -257,7 +256,6 @@ namespace DKMovies.Controllers
                     .CountAsync(e => e.HireDate.Month == DateTime.Now.Month && e.HireDate.Year == DateTime.Now.Year);
                 var totalSalaryExpense = await _context.Employees.SumAsync(e => e.Salary);
 
-                // ✅ THÊM: Statistics by role
                 var employeesByRole = await _context.Employees
                     .Include(e => e.Role)
                     .GroupBy(e => e.Role.Name)
@@ -282,7 +280,7 @@ namespace DKMovies.Controllers
             }
         }
 
-        // ✅ API: Get Employee Roles
+        // API: Get Employee Roles
         [HttpGet]
         public async Task<JsonResult> GetEmployeeRoles()
         {
@@ -300,7 +298,7 @@ namespace DKMovies.Controllers
             }
         }
 
-        // ✅ API: Validate Employee Data
+        // API: Validate Employee Data
         [HttpPost]
         public async Task<JsonResult> ValidateEmployeeData([FromBody] ValidateEmployeeRequest request)
         {

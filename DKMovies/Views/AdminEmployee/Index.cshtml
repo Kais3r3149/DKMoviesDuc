@@ -102,7 +102,8 @@
                     <option value="">Tất cả chức vụ</option>
                     @foreach (var role in ViewBag.EmployeeRoles as IEnumerable<DKMovies.Models.EmployeeRole> ?? new List<DKMovies.Models.EmployeeRole>())
                     {
-                        <option value="@role.ID" selected="@(ViewData["CurrentRole"]?.ToString() == role.ID.ToString())">
+                        var isSelected = ViewData["CurrentRole"]?.ToString() == role.ID.ToString();
+                        <option value="@role.ID" selected="@(isSelected)">
                             @role.Name
                         </option>
                     }
@@ -111,15 +112,19 @@
 
             <div class="col-md-3">
                 <label class="form-label fw-medium">Sắp xếp</label>
+                @{
+                    var currentSort = ViewData["CurrentSort"]?.ToString() ?? "";
+                }
                 <select name="sortOrder" class="form-select">
-                    <option value="" selected="@(ViewData["CurrentSort"] == "")">Tên A-Z</option>
-                    <option value="name_desc" selected="@(ViewData["CurrentSort"] == "name_desc")">Tên Z-A</option>
-                    <option value="Date" selected="@(ViewData["CurrentSort"] == "Date")">Ngày vào làm (cũ → mới)</option>
-                    <option value="date_desc" selected="@(ViewData["CurrentSort"] == "date_desc")">Ngày vào làm (mới → cũ)</option>
-                    <option value="Salary" selected="@(ViewData["CurrentSort"] == "Salary")">Lương thấp → cao</option>
-                    <option value="salary_desc" selected="@(ViewData["CurrentSort"] == "salary_desc")">Lương cao → thấp</option>
+                    <option value="" selected="@(currentSort == "")">Tên A-Z</option>
+                    <option value="name_desc" selected="@(currentSort == "name_desc")">Tên Z-A</option>
+                    <option value="Date" selected="@(currentSort == "Date")">Ngày vào làm (cũ → mới)</option>
+                    <option value="date_desc" selected="@(currentSort == "date_desc")">Ngày vào làm (mới → cũ)</option>
+                    <option value="Salary" selected="@(currentSort == "Salary")">Lương thấp → cao</option>
+                    <option value="salary_desc" selected="@(currentSort == "salary_desc")">Lương cao → thấp</option>
                 </select>
             </div>
+
 
             <div class="col-md-2 d-flex align-items-end">
                 <button type="submit" class="btn btn-primary me-2">
@@ -280,8 +285,8 @@
             "Manager" => "danger",
             "Cashier" => "success",
             "Usher" => "info",
-            "Projectionist" => "primary",
-            "Concession Staff" => "warning",
+            "Cleaner" => "secondary",
+            "Technician" => "primary",
             _ => "secondary"
         };
     }
