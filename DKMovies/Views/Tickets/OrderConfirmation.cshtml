@@ -16,6 +16,7 @@
     {
         TicketStatus.PENDING => "Chờ xác nhận",
         TicketStatus.CONFIRMED => "Đã xác nhận",
+        TicketStatus.PAID => "Đã thanh toán",
         TicketStatus.CANCELLED => "Đã hủy",
         _ => "Không xác định"
     };
@@ -24,6 +25,7 @@
     {
         TicketStatus.PENDING => "warning",
         TicketStatus.CONFIRMED => "success",
+        TicketStatus.PAID => "success",
         TicketStatus.CANCELLED => "danger",
         _ => "secondary"
     };
@@ -61,20 +63,6 @@
         animation: bounce 2s infinite;
     }
 
-
-    {
-        transform: translateY(0);
-    }
-
-    40% {
-        transform: translateY(-30px);
-    }
-
-    60% {
-        transform: translateY(-15px);
-    }
-
-    }
 
     .ticket-container {
         max-width: 800px;
@@ -368,20 +356,6 @@
         }
 
 
-    {
-        box-shadow: 0 4px 15px rgba(40,167,69,0.3);
-    }
-
-    50% {
-        box-shadow: 0 4px 25px rgba(40,167,69,0.5);
-    }
-
-    100% {
-        box-shadow: 0 4px 15px rgba(40,167,69,0.3);
-    }
-
-    }
-
     .countdown {
         background: linear-gradient(135deg, #17a2b8 0%, #138496 100%);
         color: white;
@@ -442,7 +416,7 @@
 
     }</style>
 
-@if (Model.Status == TicketStatus.CONFIRMED)
+@if (Model.Status == TicketStatus.CONFIRMED || Model.Status == TicketStatus.PAID)
 {
     <div class="success-header">
         <div class="container">
@@ -479,7 +453,7 @@ else if (Model.Status == TicketStatus.PENDING)
                         {
                             <i class="bi bi-clock"></i>
                         }
-                        else if (Model.Status == TicketStatus.CONFIRMED)
+                        else if (Model.Status == TicketStatus.CONFIRMED || Model.Status == TicketStatus.PAID)
                         {
                             <i class="bi bi-check-circle"></i>
                         }
@@ -509,21 +483,13 @@ else if (Model.Status == TicketStatus.PENDING)
                         </div>
 
                         <div class="payment-methods">
-                            <a href="@Url.Action("ProcessPayment", new { ticketId = Model.ID, method = "vnpay" })" class="payment-method">
-                                <i class="bi bi-credit-card"></i>
-                                <span>VNPay</span>
-                            </a>
-                            <a href="@Url.Action("ProcessPayment", new { ticketId = Model.ID, method = "momo" })" class="payment-method">
-                                <i class="bi bi-phone"></i>
-                                <span>MoMo</span>
-                            </a>
-                            <a href="@Url.Action("ProcessPayment", new { ticketId = Model.ID, method = "banking" })" class="payment-method">
-                                <i class="bi bi-bank"></i>
-                                <span>Banking</span>
-                            </a>
-                            <a href="@Url.Action("ProcessPayment", new { ticketId = Model.ID, method = "cash" })" class="payment-method">
+                            <a href="@Url.Action("ProcessPayment", new { ticketId = Model.ID, paymentMethod = "cash" })" class="payment-method">
                                 <i class="bi bi-cash"></i>
                                 <span>Tại quầy</span>
+                            </a>
+                            <a href="@Url.Action("ProcessPayment", new { ticketId = Model.ID, paymentMethod = "stripe" })" class="payment-method">
+                                <i class="bi bi-credit-card-2-front"></i>
+                                <span>Thẻ quốc tế</span>
                             </a>
                         </div>
                     </div>
@@ -637,7 +603,7 @@ else if (Model.Status == TicketStatus.PENDING)
                     <div class="label">Tổng tiền (@seatLabels.Count ghế × @Model.ShowTime.Price.ToString("N0")₫)</div>
                 </div>
 
-                @if (Model.Status == TicketStatus.CONFIRMED)
+                @if (Model.Status == TicketStatus.CONFIRMED || Model.Status == TicketStatus.PAID)
                 {
                     <!-- QR Code Section -->
                     <div class="qr-code-section">
@@ -672,10 +638,10 @@ else if (Model.Status == TicketStatus.PENDING)
                 <div class="action-buttons">
                     @if (Model.Status == TicketStatus.PENDING && canPayNow)
                     {
-                        <button class="btn-action btn-success-action" onclick="window.location.reload()">
-                            <i class="bi bi-arrow-clockwise me-2"></i>
-                            Làm mới trang
-                        </button>
+                        <a href="@Url.Action("PaymentSelection", new { ticketId = Model.ID })" class="btn-action btn-success-action">
+                            <i class="bi bi-credit-card me-2"></i>
+                            Thanh toán ngay
+                        </a>
                     }
 
                     <a href="@Url.Action("UserTickets", "Tickets")" class="btn-action btn-secondary-action">
@@ -780,19 +746,20 @@ else if (Model.Status == TicketStatus.PENDING)
         @if (Model.Status == TicketStatus.PENDING && canPayNow)
         {
             <text>
-                    // Check payment status every 30 seconds
-                    setInterval(function() {
-                        fetch('@Url.Action("CheckPaymentStatus", new { ticketId = Model.ID })')
-                            .then(response => response.json())
-                            .then(data => {
-                                if (data.status === 'CONFIRMED') {
-                                    window.location.reload();
-                                }
-                            })
-                            .catch(error => console.log('Payment check error:', error));
-                    }, 30000);
+                        // Check payment status every 30 seconds
+                        setInterval(function() {
+                            fetch('@Url.Action("CheckPaymentStatus", new { ticketId = Model.ID })')
+                                .then(response => response.json())
+                                .then(data => {
+                                    if (data.status === 'CONFIRMED' || data.status === 'PAID') {
+                                        window.location.reload();
+                                    }
+                                })
+                                .catch(error => console.log('Payment check error:', error));
+                        }, 30000);
             </text>
         }
+ 
 
             // Add payment method click tracking
             const paymentMethods = document.querySelectorAll('.payment-method');
@@ -807,12 +774,5 @@ else if (Model.Status == TicketStatus.PENDING)
                     this.appendChild(loadingSpinner);
                 });
             });
-
-            // Add spinning animation
-            const style = document.createElement('style');
-            style.textContent = `
-
-            `;
-            document.head.appendChild(style);
         });
     </script>

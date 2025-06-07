@@ -47,6 +47,7 @@
     }
 
 
+
     .timer-countdown {
         font-size: 2.5rem;
         font-weight: 700;
@@ -206,6 +207,7 @@
             box-shadow: none;
         }
 
+ 
 
     .btn-secondary-payment {
         background: #f8f9fa;
@@ -237,6 +239,12 @@
     }
 
  
+
+    .spinning {
+        animation: spin 1s linear infinite;
+    }
+
+
 
     {
         padding: 2rem 0;
@@ -351,7 +359,6 @@
                 <input type="hidden" name="ticketId" value="@Model.ID" />
                 <input type="hidden" name="paymentMethod" id="selectedMethod" />
 
-
                 <div class="payment-methods">
                     <!-- Cash -->
                     <div class="payment-method" data-method="cash" onclick="selectPaymentMethod('cash')">
@@ -379,7 +386,6 @@
                         </ul>
                     </div>
                 </div>
-
 
                 <!-- Action Buttons -->
                 <div class="action-buttons">
@@ -482,9 +488,6 @@
 
         function getPaymentButtonText(method) {
             const texts = {
-                vnpay: '<i class="bi bi-credit-card me-2"></i>Thanh toán với VNPay',
-                momo: '<i class="bi bi-phone me-2"></i>Thanh toán với MoMo',
-                banking: '<i class="bi bi-bank me-2"></i>Chuyển khoản ngân hàng',
                 cash: '<i class="bi bi-cash me-2"></i>Thanh toán tại quầy',
                 stripe: '<i class="bi bi-credit-card-2-front me-2"></i>Thanh toán thẻ quốc tế'
             };
@@ -522,12 +525,5 @@
                 })
                 .catch(error => console.log('Payment check error:', error));
         }, 30000);
-
-        // Add spinning animation
-        const style = document.createElement('style');
-        style.textContent = `
-
-        `;
-        document.head.appendChild(style);
     });
 </script>

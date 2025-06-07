@@ -1,0 +1,471 @@
+﻿@model DKMovies.Models.Employee
+@{
+    ViewData["Title"] = "Thêm nhân viên mới";
+    Layout = "~/Views/Shared/_AdminLayout.cshtml";
+}
+
+<div class="mb-4">
+    <div class="d-flex align-items-center justify-content-between">
+        <div>
+            <h2 class="fw-bold text-dark mb-1">
+                <i class="fas fa-user-plus me-2 text-primary"></i>Thêm nhân viên mới
+            </h2>
+            <p class="text-muted mb-0">Tạo hồ sơ cho nhân viên mới trong hệ thống</p>
+        </div>
+        <a asp-action="Index" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-left me-2"></i>Quay lại
+        </a>
+    </div>
+</div>
+
+<form asp-action="Create" method="post" id="employeeForm">
+    <div class="row g-4">
+        <!-- Personal Information -->
+        <div class="col-lg-8">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white border-bottom py-3">
+                    <h6 class="card-title mb-0 fw-semibold">
+                        <i class="fas fa-user me-2 text-secondary"></i>Thông tin cá nhân
+                    </h6>
+                </div>
+                <div class="card-body p-4">
+                    <div class="row g-3">
+                        <!-- Full Name -->
+                        <div class="col-md-6">
+                            <label asp-for="FullName" class="form-label fw-medium">
+                                Họ và tên <span class="text-danger">*</span>
+                            </label>
+                            <input asp-for="FullName" class="form-control" placeholder="Nhập họ và tên đầy đủ">
+                            <span asp-validation-for="FullName" class="text-danger small"></span>
+                        </div>
+
+                        <!-- Email -->
+                        <div class="col-md-6">
+                            <label asp-for="Email" class="form-label fw-medium">
+                                Email <span class="text-danger">*</span>
+                            </label>
+                            <input asp-for="Email" type="email" class="form-control" placeholder="employee@example.com">
+                            <span asp-validation-for="Email" class="text-danger small"></span>
+                        </div>
+
+                        <!-- Phone -->
+                        <div class="col-md-6">
+                            <label asp-for="Phone" class="form-label fw-medium">
+                                Số điện thoại <span class="text-danger">*</span>
+                            </label>
+                            <input asp-for="Phone" class="form-control" placeholder="0123456789">
+                            <span asp-validation-for="Phone" class="text-danger small"></span>
+                        </div>
+
+                        <!-- Gender -->
+                        <div class="col-md-6">
+                            <label asp-for="Gender" class="form-label fw-medium">Giới tính</label>
+                            <select asp-for="Gender" class="form-select">
+                                <option value="">Chọn giới tính</option>
+                                <option value="Nam">Nam</option>
+                                <option value="Nữ">Nữ</option>
+                                <option value="Khác">Khác</option>
+                            </select>
+                            <span asp-validation-for="Gender" class="text-danger small"></span>
+                        </div>
+
+                        <!-- Birth Date -->
+                        <div class="col-md-6">
+                            <label asp-for="BirthDate" class="form-label fw-medium">Ngày sinh</label>
+                            <input asp-for="BirthDate" type="date" class="form-control">
+                            <span asp-validation-for="BirthDate" class="text-danger small"></span>
+                        </div>
+
+                        <!-- Address -->
+                        <div class="col-md-6">
+                            <label asp-for="Address" class="form-label fw-medium">Địa chỉ</label>
+                            <input asp-for="Address" class="form-control" placeholder="Nhập địa chỉ">
+                            <span asp-validation-for="Address" class="text-danger small"></span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Work Information -->
+        <div class="col-lg-4">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white border-bottom py-3">
+                    <h6 class="card-title mb-0 fw-semibold">
+                        <i class="fas fa-briefcase me-2 text-secondary"></i>Thông tin công việc
+                    </h6>
+                </div>
+                <div class="card-body p-4">
+                    <div class="row g-3">
+                        <!-- Position -->
+                        <div class="col-12">
+                            <label asp-for="Position" class="form-label fw-medium">
+                                Chức vụ <span class="text-danger">*</span>
+                            </label>
+                            <select asp-for="Position" class="form-select" asp-items="ViewBag.Positions">
+                                <option value="">-- Chọn chức vụ --</option>
+                            </select>
+                            <span asp-validation-for="Position" class="text-danger small"></span>
+                        </div>
+
+                        <!-- Theater -->
+                        <div class="col-12">
+                            <label asp-for="TheaterID" class="form-label fw-medium">
+                                Rạp chiếu phim <span class="text-danger">*</span>
+                            </label>
+                            <select asp-for="TheaterID" class="form-select" asp-items="ViewBag.TheaterID">
+                                <option value="">-- Chọn rạp --</option>
+                            </select>
+                            <span asp-validation-for="TheaterID" class="text-danger small"></span>
+                        </div>
+
+                        <!-- Salary -->
+                        <div class="col-12">
+                            <label asp-for="Salary" class="form-label fw-medium">
+                                Lương (VND) <span class="text-danger">*</span>
+                            </label>
+                            <div class="input-group">
+                                <input asp-for="Salary" type="number" class="form-control" min="0" step="100000" placeholder="5000000">
+                                <span class="input-group-text">₫</span>
+                            </div>
+                            <span asp-validation-for="Salary" class="text-danger small"></span>
+                            <div class="form-text">Lương cơ bản hàng tháng</div>
+                        </div>
+
+                        <!-- Hire Date -->
+                        <div class="col-12">
+                            <label asp-for="HireDate" class="form-label fw-medium">
+                                Ngày vào làm <span class="text-danger">*</span>
+                            </label>
+                            <input asp-for="HireDate" type="date" class="form-control">
+                            <span asp-validation-for="HireDate" class="text-danger small"></span>
+                        </div>
+
+                        <!-- Status -->
+                        <div class="col-12">
+                            <div class="form-check form-switch">
+                                <input asp-for="IsActive" class="form-check-input" type="checkbox" checked>
+                                <label asp-for="IsActive" class="form-check-label fw-medium">
+                                    Trạng thái hoạt động
+                                </label>
+                            </div>
+                            <small class="text-muted">Nhân viên có thể đăng nhập và làm việc</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Salary Preview Card -->
+            <div class="card border-0 shadow-sm mt-4">
+                <div class="card-header bg-light border-bottom py-3">
+                    <h6 class="card-title mb-0 fw-semibold">
+                        <i class="fas fa-calculator me-2 text-info"></i>Xem trước lương
+                    </h6>
+                </div>
+                <div class="card-body p-4">
+                    <div class="row g-2 text-center">
+                        <div class="col-6">
+                            <div class="bg-primary text-white rounded p-2">
+                                <div class="fw-bold" id="monthlySalary">0 ₫</div>
+                                <small>Lương tháng</small>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="bg-success text-white rounded p-2">
+                                <div class="fw-bold" id="dailySalary">0 ₫</div>
+                                <small>Lương ngày</small>
+                            </div>
+                        </div>
+                        <div class="col-12 mt-2">
+                            <div class="bg-info text-white rounded p-2">
+                                <div class="fw-bold" id="hourlySalary">0 ₫</div>
+                                <small>Lương giờ (8h/ngày)</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Form Actions -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <a asp-action="Index" class="btn btn-outline-secondary">
+                    <i class="fas fa-times me-2"></i>Hủy bỏ
+                </a>
+                <div class="d-flex gap-2">
+                    <button type="button" class="btn btn-outline-primary" onclick="previewEmployee()">
+                        <i class="fas fa-eye me-2"></i>Xem trước
+                    </button>
+                    <button type="submit" class="btn btn-primary" id="submitBtn">
+                        <i class="fas fa-save me-2"></i>Tạo nhân viên
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</form>
+
+<!-- Preview Modal -->
+<div class="modal fade" id="previewModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-eye me-2 text-primary"></i>Xem trước thông tin nhân viên
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6 class="fw-bold mb-3 text-primary">Thông tin cá nhân</h6>
+                        <div class="mb-2">
+                            <strong>Họ tên:</strong> <span id="previewFullName"></span>
+                        </div>
+                        <div class="mb-2">
+                            <strong>Email:</strong> <span id="previewEmail"></span>
+                        </div>
+                        <div class="mb-2">
+                            <strong>Điện thoại:</strong> <span id="previewPhone"></span>
+                        </div>
+                        <div class="mb-2">
+                            <strong>Giới tính:</strong> <span id="previewGender"></span>
+                        </div>
+                        <div class="mb-2">
+                            <strong>Ngày sinh:</strong> <span id="previewBirthDate"></span>
+                        </div>
+                        <div class="mb-2">
+                            <strong>Địa chỉ:</strong> <span id="previewAddress"></span>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <h6 class="fw-bold mb-3 text-success">Thông tin công việc</h6>
+                        <div class="mb-2">
+                            <strong>Chức vụ:</strong> <span id="previewPosition"></span>
+                        </div>
+                        <div class="mb-2">
+                            <strong>Rạp:</strong> <span id="previewTheater"></span>
+                        </div>
+                        <div class="mb-2">
+                            <strong>Lương:</strong> <span id="previewSalary"></span>
+                        </div>
+                        <div class="mb-2">
+                            <strong>Ngày vào làm:</strong> <span id="previewHireDate"></span>
+                        </div>
+                        <div class="mb-2">
+                            <strong>Trạng thái:</strong> <span id="previewStatus"></span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Đóng</button>
+                <button type="button" class="btn btn-primary" onclick="submitForm()">
+                    <i class="fas fa-save me-2"></i>Xác nhận tạo
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+
+    <script>
+        $(document).ready(function() {
+            // Set default hire date to today
+            const today = new Date().toISOString().split('T')[0];
+            $('#HireDate').val(today);
+
+            // Real-time salary calculation
+            $('#Salary').on('input', function() {
+                updateSalaryPreview();
+            });
+
+            // Form validation
+            $('#employeeForm').submit(function(e) {
+                if (!validateForm()) {
+                    e.preventDefault();
+                    return false;
+                }
+
+                // Show loading state
+                $('#submitBtn').html('<i class="fas fa-spinner fa-spin me-2"></i>Đang tạo...');
+                $('#submitBtn').prop('disabled', true);
+            });
+
+            // Initialize salary preview
+            updateSalaryPreview();
+        });
+
+        function updateSalaryPreview() {
+            const salary = parseFloat($('#Salary').val()) || 0;
+            const dailySalary = salary / 30;
+            const hourlySalary = dailySalary / 8;
+
+            $('#monthlySalary').text(salary.toLocaleString('vi-VN') + ' ₫');
+            $('#dailySalary').text(Math.round(dailySalary).toLocaleString('vi-VN') + ' ₫');
+            $('#hourlySalary').text(Math.round(hourlySalary).toLocaleString('vi-VN') + ' ₫');
+
+            // Update input group text
+            const inputGroupText = $('#Salary').next('.input-group-text');
+            if (salary > 0) {
+                inputGroupText.text(salary.toLocaleString('vi-VN') + ' ₫');
+            } else {
+                inputGroupText.text('₫');
+            }
+        }
+
+        function validateForm() {
+            let isValid = true;
+            const requiredFields = ['FullName', 'Email', 'Phone', 'Position', 'TheaterID', 'Salary', 'HireDate'];
+
+            requiredFields.forEach(field => {
+                const element = $(`[name="${field}"]`);
+                if (!element.val()) {
+                    element.addClass('is-invalid');
+                    isValid = false;
+                } else {
+                    element.removeClass('is-invalid');
+                }
+            });
+
+            // Validate salary
+            const salary = parseFloat($('#Salary').val());
+            if (salary <= 0) {
+                $('#Salary').addClass('is-invalid');
+                isValid = false;
+            }
+
+            // Validate hire date (not in future)
+            const hireDate = new Date($('#HireDate').val());
+            const today = new Date();
+            if (hireDate > today) {
+                $('#HireDate').addClass('is-invalid');
+                alert('Ngày vào làm không thể là ngày trong tương lai!');
+                isValid = false;
+            }
+
+            // Validate email format
+            const email = $('#Email').val();
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            if (email && !emailRegex.test(email)) {
+                $('#Email').addClass('is-invalid');
+                alert('Định dạng email không hợp lệ!');
+                isValid = false;
+            }
+
+            return isValid;
+        }
+
+        function previewEmployee() {
+            if (!validateForm()) {
+                return;
+            }
+
+            // Populate preview modal
+            $('#previewFullName').text($('#FullName').val());
+            $('#previewEmail').text($('#Email').val());
+            $('#previewPhone').text($('#Phone').val());
+            $('#previewGender').text($('#Gender').val() || 'Chưa cập nhật');
+            $('#previewBirthDate').text($('#BirthDate').val() ? new Date($('#BirthDate').val()).toLocaleDateString('vi-VN') : 'Chưa cập nhật');
+            $('#previewAddress').text($('#Address').val() || 'Chưa cập nhật');
+            $('#previewPosition').text($('#Position option:selected').text());
+            $('#previewTheater').text($('#TheaterID option:selected').text());
+            $('#previewSalary').text(parseFloat($('#Salary').val()).toLocaleString('vi-VN') + ' ₫');
+            $('#previewHireDate').text(new Date($('#HireDate').val()).toLocaleDateString('vi-VN'));
+            $('#previewStatus').text($('#IsActive').is(':checked') ? 'Hoạt động' : 'Không hoạt động');
+
+            new bootstrap.Modal(document.getElementById('previewModal')).show();
+        }
+
+        function submitForm() {
+            $('#previewModal .btn-close').click();
+            $('#employeeForm').submit();
+        }
+
+        // Auto-focus first input
+        document.addEventListener('DOMContentLoaded', function() {
+            document.querySelector('input[name="FullName"]').focus();
+        });
+
+        // Position badge preview
+        $('#Position').change(function() {
+            const position = $(this).val();
+            if (position) {
+                const badge = getPositionBadge(position);
+                $(this).after(`<div class="position-badge mt-1">${badge}</div>`);
+                $('.position-badge').not(':last').remove();
+            } else {
+                $('.position-badge').remove();
+            }
+        });
+
+        function getPositionBadge(position) {
+            const badges = {
+                'Quản lý': '<span class="badge bg-danger"><i class="fas fa-user-tie me-1"></i>Quản lý</span>',
+                'Thu ngân': '<span class="badge bg-success"><i class="fas fa-cash-register me-1"></i>Thu ngân</span>',
+                'Kiểm vé': '<span class="badge bg-info"><i class="fas fa-ticket-alt me-1"></i>Kiểm vé</span>',
+                'Bảo vệ': '<span class="badge bg-warning text-dark"><i class="fas fa-shield-alt me-1"></i>Bảo vệ</span>',
+                'Kỹ thuật viên': '<span class="badge bg-primary"><i class="fas fa-tools me-1"></i>Kỹ thuật viên</span>',
+                'Làm sạch': '<span class="badge bg-secondary"><i class="fas fa-broom me-1"></i>Làm sạch</span>',
+                'Bán hàng': '<span class="badge bg-purple text-white"><i class="fas fa-shopping-cart me-1"></i>Bán hàng</span>'
+            };
+            return badges[position] || '<span class="badge bg-light text-dark">Khác</span>';
+        }
+    </script>
+}
+
+<style>
+    .card {
+        transition: all 0.3s ease;
+    }
+
+    .card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 25px rgba(0,0,0,0.1) !important;
+    }
+
+    .form-control:focus,
+    .form-select:focus {
+        border-color: #0d6efd;
+        box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25);
+    }
+
+    .btn {
+        transition: all 0.3s ease;
+    }
+
+    .btn:hover {
+        transform: translateY(-1px);
+    }
+
+    .bg-purple {
+        background-color: #6f42c1 !important;
+    }
+
+    .position-badge {
+        animation: fadeIn 0.3s ease;
+    }
+
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(-10px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+
+    @media (max-width: 768px) {
+        .d-flex.justify-content-between {
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .d-flex.justify-content-between .d-flex {
+            justify-content: center;
+        }
+    }
+</style>

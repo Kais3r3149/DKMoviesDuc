@@ -35,6 +35,7 @@ namespace DKMovies.Models
         public DbSet<TheaterConcession> TheaterConcessions { get; set; }
         public DbSet<Admin> Admins { get; set; }
         public DbSet<Order> Orders { get; set; }
+        public DbSet<Order> Role { get; set; }
         public DbSet<OrderItem> OrderItems { get; set; }
         public DbSet<OrderPayment> OrderPayments { get; set; }
         public DbSet<Review> Reviews { get; set; }
@@ -48,6 +49,7 @@ namespace DKMovies.Models
 
             // ===== TABLE NAMES =====
             modelBuilder.Entity<User>().ToTable("Users");
+            modelBuilder.Entity<Role>().ToTable("Roles");
             modelBuilder.Entity<Theater>().ToTable("Theaters");
             modelBuilder.Entity<Employee>().ToTable("Employees");
             modelBuilder.Entity<EmployeeRole>().ToTable("EmployeeRoles");
@@ -91,11 +93,11 @@ namespace DKMovies.Models
 
             modelBuilder.Entity<TheaterConcession>()
                 .Property(tc => tc.Price)
-                .HasColumnType("decimal(8,2)");
+                .HasColumnType("decimal(6,2)"); // ✅ SỬA: decimal(6,2) theo database
 
             modelBuilder.Entity<OrderItem>()
                 .Property(oi => oi.PriceAtPurchase)
-                .HasColumnType("decimal(8,2)");
+                .HasColumnType("decimal(6,2)");
 
             modelBuilder.Entity<ShowTime>()
                 .Property(st => st.Price)
@@ -107,7 +109,7 @@ namespace DKMovies.Models
 
             modelBuilder.Entity<Order>()
                 .Property(o => o.TotalAmount)
-                .HasColumnType("decimal(10,2)");
+                .HasColumnType("decimal(18,2)");
 
             modelBuilder.Entity<TicketPayment>()
                 .Property(tp => tp.PaidAmount)
@@ -119,10 +121,11 @@ namespace DKMovies.Models
 
             modelBuilder.Entity<SaleDetail>()
                 .Property(sd => sd.UnitPrice)
-                .HasColumnType("decimal(8,2)");
+                .HasColumnType("decimal(18,2)");
 
             // ===== PRIMARY KEYS =====
             modelBuilder.Entity<Country>().HasKey(c => c.ID);
+            modelBuilder.Entity<Role>().HasKey(r => r.ID);
             modelBuilder.Entity<Genre>().HasKey(g => g.ID);
             modelBuilder.Entity<Rating>().HasKey(r => r.ID);
             modelBuilder.Entity<Language>().HasKey(l => l.ID);
@@ -191,45 +194,45 @@ namespace DKMovies.Models
 
             // ===== FOREIGN KEY RELATIONSHIPS =====
 
+            // ✅ THÊM: User -> Role relationship
+            modelBuilder.Entity<User>()
+                .HasOne(u => u.Role)
+                .WithMany(r => r.Users)
+                .HasForeignKey(u => u.RoleID)
+                .OnDelete(DeleteBehavior.Restrict);
+
             // Countries
             modelBuilder.Entity<Country>()
-                .HasMany(c => c.Directors)
+                .HasMany<Director>()
                 .WithOne(d => d.Country)
                 .HasForeignKey(d => d.CountryID)
-                .OnDelete(DeleteBehavior.SetNull);
+                .OnDelete(DeleteBehavior.Cascade); // ✅ SỬA: CASCADE theo database
 
             modelBuilder.Entity<Country>()
-                .HasMany(c => c.Movies)
+                .HasMany<Movie>()
                 .WithOne(m => m.Country)
                 .HasForeignKey(m => m.CountryID)
-                .OnDelete(DeleteBehavior.SetNull);
-
-            // Genres
-            modelBuilder.Entity<Genre>()
-                .HasMany(g => g.MovieGenres)
-                .WithOne(mg => mg.Genre)
-                .HasForeignKey(mg => mg.GenreID)
-                .OnDelete(DeleteBehavior.Cascade);
+                .OnDelete(DeleteBehavior.NoAction); // ✅ SỬA: NO ACTION theo database
 
             // Ratings
             modelBuilder.Entity<Rating>()
                 .HasMany(r => r.Movies)
                 .WithOne(m => m.Rating)
                 .HasForeignKey(m => m.RatingID)
-                .OnDelete(DeleteBehavior.Restrict);
+                .OnDelete(DeleteBehavior.Cascade); // ✅ SỬA: CASCADE theo database
 
             // Languages
             modelBuilder.Entity<Language>()
                 .HasMany(l => l.Movies)
                 .WithOne(m => m.Language)
                 .HasForeignKey(m => m.LanguageID)
-                .OnDelete(DeleteBehavior.SetNull);
+                .OnDelete(DeleteBehavior.Cascade); // ✅ SỬA: CASCADE theo database
 
             modelBuilder.Entity<Language>()
                 .HasMany(l => l.ShowTimes)
                 .WithOne(st => st.SubtitleLanguage)
                 .HasForeignKey(st => st.SubtitleLanguageID)
-                .OnDelete(DeleteBehavior.SetNull);
+                .OnDelete(DeleteBehavior.NoAction);
 
             // Directors
             modelBuilder.Entity<Director>()
@@ -276,11 +279,36 @@ namespace DKMovies.Models
                 .HasForeignKey(e => e.TheaterID)
                 .OnDelete(DeleteBehavior.Cascade);
 
-            // ✅ NEW: Theater -> TheaterConcessions
-            modelBuilder.Entity<Theater>()
-                .HasMany<TheaterConcession>()
-                .WithOne(tc => tc.Theater)
-                .HasForeignKey(tc => tc.TheaterID)
+            // TheaterConcessions
+            modelBuilder.Entity<TheaterConcession>()
+                .HasMany(tc => tc.OrderItems)
+                .WithOne(oi => oi.TheaterConcession)
+                .HasForeignKey(oi => oi.TheaterConcessionID)
+                .OnDelete(DeleteBehavior.NoAction); // ✅ SỬA: NO ACTION theo database
+
+            modelBuilder.Entity<TheaterConcession>()
+                .HasMany(tc => tc.CartItems)
+                .WithOne(ci => ci.TheaterConcession)
+                .HasForeignKey(ci => ci.TheaterConcessionID)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<TheaterConcession>()
+                .HasMany(tc => tc.SaleDetails)
+                .WithOne(sd => sd.TheaterConcession)
+                .HasForeignKey(sd => sd.TheaterConcessionID)
+                .OnDelete(DeleteBehavior.NoAction); // ✅ SỬA: NO ACTION theo database
+
+            modelBuilder.Entity<Order>()
+                .HasMany(o => o.OrderItems)
+                .WithOne(oi => oi.Order)
+                .HasForeignKey(oi => oi.OrderID)
+                .OnDelete(DeleteBehavior.Cascade)
+                .IsRequired(false); // ✅ Optional relationship
+
+            modelBuilder.Entity<Order>()
+                .HasMany(o => o.OrderPayments)
+                .WithOne(op => op.Order)
+                .HasForeignKey(op => op.OrderID)
                 .OnDelete(DeleteBehavior.Cascade);
 
             // Auditoriums
@@ -296,12 +324,13 @@ namespace DKMovies.Models
                 .HasForeignKey(st => st.AuditoriumID)
                 .OnDelete(DeleteBehavior.Cascade);
 
+
             // Seats -> TicketSeats
             modelBuilder.Entity<Seat>()
                 .HasMany(s => s.TicketSeats)
                 .WithOne(ts => ts.Seat)
                 .HasForeignKey(ts => ts.SeatID)
-                .OnDelete(DeleteBehavior.Cascade);
+                .OnDelete(DeleteBehavior.NoAction);
 
             // Movies
             modelBuilder.Entity<Movie>()
@@ -329,7 +358,6 @@ namespace DKMovies.Models
                 .HasForeignKey(t => t.ShowTimeID)
                 .OnDelete(DeleteBehavior.Cascade);
 
-            // Tickets
             modelBuilder.Entity<Ticket>()
                 .HasMany(t => t.TicketPayments)
                 .WithOne(tp => tp.Ticket)
@@ -342,12 +370,13 @@ namespace DKMovies.Models
                 .HasForeignKey(ts => ts.TicketID)
                 .OnDelete(DeleteBehavior.Cascade);
 
-            // ✅ NEW: Ticket -> OrderItems (for concessions with tickets)
             modelBuilder.Entity<Ticket>()
                 .HasMany(t => t.OrderItems)
                 .WithOne(oi => oi.Ticket)
                 .HasForeignKey(oi => oi.TicketID)
-                .OnDelete(DeleteBehavior.Cascade);
+                .OnDelete(DeleteBehavior.Cascade)
+                .IsRequired(false); // ✅ Optional relationship
+
 
             // PaymentMethods
             modelBuilder.Entity<PaymentMethod>()
@@ -486,117 +515,7 @@ namespace DKMovies.Models
                 }
             );
 
-            // ✅ Seed Countries
-            modelBuilder.Entity<Country>().HasData(
-                new Country { ID = 1, Name = "Việt Nam", Description = "Cộng hòa Xã hội Chủ nghĩa Việt Nam" },
-                new Country { ID = 2, Name = "United States", Description = "United States of America" },
-                new Country { ID = 3, Name = "South Korea", Description = "Republic of Korea" },
-                new Country { ID = 4, Name = "Japan", Description = "Japan" },
-                new Country { ID = 5, Name = "United Kingdom", Description = "United Kingdom" }
-            );
-
-            // ✅ Seed Languages
-            modelBuilder.Entity<Language>().HasData(
-                new Language { ID = 1, Name = "Tiếng Việt", Description = "Vietnamese" },
-                new Language { ID = 2, Name = "English", Description = "English" },
-                new Language { ID = 3, Name = "Korean", Description = "Korean" },
-                new Language { ID = 4, Name = "Japanese", Description = "Japanese" },
-                new Language { ID = 5, Name = "Chinese", Description = "Chinese" }
-            );
-
-            // ✅ Seed Ratings
-            modelBuilder.Entity<Rating>().HasData(
-                new Rating { ID = 1, Value = "G", Description = "General Audiences" },
-                new Rating { ID = 2, Value = "PG", Description = "Parental Guidance Suggested" },
-                new Rating { ID = 3, Value = "PG-13", Description = "Parents Strongly Cautioned" },
-                new Rating { ID = 4, Value = "R", Description = "Restricted" },
-                new Rating { ID = 5, Value = "T13", Description = "Phim dành cho khán giả từ 13 tuổi trở lên" },
-                new Rating { ID = 6, Value = "T16", Description = "Phim dành cho khán giả từ 16 tuổi trở lên" },
-                new Rating { ID = 7, Value = "T18", Description = "Phim dành cho khán giả từ 18 tuổi trở lên" }
-            );
-
-            // ✅ Seed Genres
-            modelBuilder.Entity<Genre>().HasData(
-                new Genre { ID = 1, Name = "Action", Description = "Action movies" },
-                new Genre { ID = 2, Name = "Comedy", Description = "Comedy movies" },
-                new Genre { ID = 3, Name = "Drama", Description = "Drama movies" },
-                new Genre { ID = 4, Name = "Horror", Description = "Horror movies" },
-                new Genre { ID = 5, Name = "Romance", Description = "Romance movies" },
-                new Genre { ID = 6, Name = "Sci-Fi", Description = "Science Fiction movies" },
-                new Genre { ID = 7, Name = "Thriller", Description = "Thriller movies" },
-                new Genre { ID = 8, Name = "Adventure", Description = "Adventure movies" },
-                new Genre { ID = 9, Name = "Animation", Description = "Animated movies" },
-                new Genre { ID = 10, Name = "Documentary", Description = "Documentary films" }
-            );
-
-            // ✅ Seed Employee Roles
-            modelBuilder.Entity<EmployeeRole>().HasData(
-                new EmployeeRole { ID = 1, Name = "Manager", Description = "Theater Manager" },
-                new EmployeeRole { ID = 2, Name = "Cashier", Description = "Ticket Cashier" },
-                new EmployeeRole { ID = 3, Name = "Usher", Description = "Theater Usher" },
-                new EmployeeRole { ID = 4, Name = "Projectionist", Description = "Movie Projectionist" },
-                new EmployeeRole { ID = 5, Name = "Concession Staff", Description = "Concession Stand Staff" }
-            );
-
-            // ✅ Seed Concessions
-            modelBuilder.Entity<Concession>().HasData(
-                new Concession
-                {
-                    ID = 1,
-                    Name = "Bắp rang bơ (Lớn)",
-                    Description = "Bắp rang bơ thơm ngon size lớn",
-                    Category = "Food",
-                    IsActive = true
-                },
-                new Concession
-                {
-                    ID = 2,
-                    Name = "Bắp rang bơ (Vừa)",
-                    Description = "Bắp rang bơ thơm ngon size vừa",
-                    Category = "Food",
-                    IsActive = true
-                },
-                new Concession
-                {
-                    ID = 3,
-                    Name = "Coca Cola (Lớn)",
-                    Description = "Nước ngọt Coca Cola size lớn",
-                    Category = "Drink",
-                    IsActive = true
-                },
-                new Concession
-                {
-                    ID = 4,
-                    Name = "Coca Cola (Vừa)",
-                    Description = "Nước ngọt Coca Cola size vừa",
-                    Category = "Drink",
-                    IsActive = true
-                },
-                new Concession
-                {
-                    ID = 5,
-                    Name = "Combo Couple",
-                    Description = "2 Bắp rang + 2 Nước ngọt",
-                    Category = "Combo",
-                    IsActive = true
-                },
-                new Concession
-                {
-                    ID = 6,
-                    Name = "Kẹo gấu Haribo",
-                    Description = "Kẹo dẻo hình gấu thơm ngon",
-                    Category = "Food",
-                    IsActive = true
-                },
-                new Concession
-                {
-                    ID = 7,
-                    Name = "Nước suối",
-                    Description = "Nước suối tinh khiết",
-                    Category = "Drink",
-                    IsActive = true
-                }
-            );
         }
     }
-}
+}   
+

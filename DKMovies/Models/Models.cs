@@ -604,25 +604,24 @@ namespace DKMovies.Models
         public DateTime PurchaseTime { get; set; }
 
         [Display(Name = "Status")]
-        public TicketStatus Status { get; set; }
+        public string Status { get; set; } = "PENDING"; // PENDING, CONFIRMED, CANCELLED
 
-        // ✅ NEW: Store calculated total price
+        // ✅ THÊM: Payment fields theo database
+        [MaxLength(50)]
+        [Display(Name = "Payment Method")]
+        public string? PaymentMethod { get; set; }
+
+        [Display(Name = "Payment Time")]
+        public DateTime? PaymentTime { get; set; }
+
+        [MaxLength(255)]
+        [Display(Name = "Stripe Session ID")]
+        public string? StripeSessionId { get; set; }
+
         [Required]
         [Column(TypeName = "decimal(10,2)")]
         [Display(Name = "Total Price")]
         public decimal TotalPrice { get; set; }
-
-        // ✅ NEW: Payment tracking fields
-        [Display(Name = "Payment Time")]
-        public DateTime? PaymentTime { get; set; }
-
-        [MaxLength(100)]
-        [Display(Name = "Stripe Session ID")]
-        public string? StripeSessionId { get; set; }
-
-        [MaxLength(50)]
-        [Display(Name = "Payment Method")]
-        public string? PaymentMethod { get; set; } // "stripe", "cash", etc.
 
         // Navigation properties
         public ICollection<TicketPayment> TicketPayments { get; set; } = new List<TicketPayment>();
@@ -728,6 +727,7 @@ namespace DKMovies.Models
         [ForeignKey("TheaterID")]
         public Theater Theater { get; set; }
 
+        // ✅ SỬA: Giữ RoleID để phù hợp với database
         [Display(Name = "Role ID")]
         public int RoleID { get; set; }
 
@@ -750,6 +750,7 @@ namespace DKMovies.Models
         [Display(Name = "Gender")]
         public string Gender { get; set; }
 
+        // ✅ SỬA: Giữ DateOfBirth để phù hợp với database
         [Display(Name = "Date of Birth")]
         public DateTime? DateOfBirth { get; set; }
 
@@ -771,6 +772,24 @@ namespace DKMovies.Models
         [Display(Name = "Profile Image Path")]
         public string? ProfileImagePath { get; set; }
 
+        // ✅ THÊM: Thuộc tính không có trong database hiện tại nhưng cần cho logic
+        [NotMapped]
+        [Display(Name = "Employee Code")]
+        public string EmployeeCode => $"EMP{ID:D4}"; // Auto-generated: EMP0001, EMP0002...
+
+        [NotMapped]
+        [Display(Name = "Is Active")]
+        public bool IsActive => true; // Default true, có thể thêm vào DB sau
+
+        [NotMapped]
+        [Display(Name = "Created At")]
+        public DateTime CreatedAt => HireDate; // Sử dụng HireDate làm Created date
+
+        // ✅ THÊM: Helper property để display role name
+        [NotMapped]
+        [Display(Name = "Position")]
+        public string Position => Role?.Name ?? "Unknown";
+
         public ICollection<Admin> Admins { get; set; }
     }
 
@@ -791,19 +810,40 @@ namespace DKMovies.Models
         [Display(Name = "Description")]
         public string? Description { get; set; }
 
-        [MaxLength(50)]
-        [Display(Name = "Category")]
-        public string? Category { get; set; } // "Food", "Drink", "Combo", etc.
-
         [MaxLength(255)]
         [Display(Name = "Image Path")]
         public string? ImagePath { get; set; }
 
+        // ✅ SỬA: Giữ IsActive để phù hợp với database
         [Display(Name = "Is Active")]
         public bool IsActive { get; set; } = true;
 
+        // ✅ THÊM: Category để phù hợp với database
+        [MaxLength(50)]
+        [Display(Name = "Category")]
+        public string? Category { get; set; } = "Khác";
+
+        // ✅ KHÔNG CÓ: Price và StockQuantity (được quản lý qua TheaterConcession)
+        // Database không có trường Price và StockQuantity trực tiếp trong Concessions
+        // Chúng được quản lý thông qua bảng TheaterConcessions
+
         // Navigation properties
         public ICollection<TheaterConcession> TheaterConcessions { get; set; } = new List<TheaterConcession>();
+
+        // ✅ THÊM: Helper properties để hiển thị
+        [NotMapped]
+        [Display(Name = "Average Price")]
+        public decimal AveragePrice => TheaterConcessions?.Any() == true
+            ? TheaterConcessions.Average(tc => tc.Price)
+            : 0;
+
+        [NotMapped]
+        [Display(Name = "Total Stock")]
+        public int TotalStock => TheaterConcessions?.Sum(tc => tc.StockLeft) ?? 0;
+
+        [NotMapped]
+        [Display(Name = "Available Theaters")]
+        public int AvailableTheaters => TheaterConcessions?.Count(tc => tc.IsAvailable) ?? 0;
     }
 
 
@@ -824,7 +864,9 @@ namespace DKMovies.Models
         [Column(TypeName = "decimal(8,2)")]
         public decimal Price { get; set; }
 
+        // ✅ SỬA: Giữ StockLeft để phù hợp với database
         [Required]
+        [Display(Name = "Stock Left")]
         public int StockLeft { get; set; }
 
         public bool IsAvailable { get; set; } = true;
@@ -838,7 +880,9 @@ namespace DKMovies.Models
 
         public virtual ICollection<OrderItem> OrderItems { get; set; } = new List<OrderItem>();
         public virtual ICollection<CartItem> CartItems { get; set; } = new List<CartItem>();
+        public virtual ICollection<SaleDetail> SaleDetails { get; set; } = new List<SaleDetail>();
     }
+
 
     public class CartItem
     {
@@ -901,16 +945,20 @@ namespace DKMovies.Models
         [Display(Name = "Order Item ID")]
         public int ID { get; set; }
 
-        // ✅ UPDATED: Link to Ticket instead of Order for movie tickets
+        // ✅ SỬA: Có thể thuộc về Order hoặc Ticket
+        [Display(Name = "Order ID")]
+        public int? OrderID { get; set; }
+
+        [ForeignKey("OrderID")]
+        public Order? Order { get; set; }
+
         [Display(Name = "Ticket ID")]
         public int? TicketID { get; set; }
 
         [ForeignKey("TicketID")]
         public Ticket? Ticket { get; set; }
 
-
-
-        // ✅ UPDATED: Link to TheaterConcession instead of Concession
+        // ✅ SỬA: Link với TheaterConcession theo database
         [Display(Name = "Theater Concession ID")]
         public int TheaterConcessionID { get; set; }
 
@@ -925,7 +973,7 @@ namespace DKMovies.Models
         [Required]
         [Column(TypeName = "decimal(8,2)")]
         [Display(Name = "Price At Purchase")]
-        public decimal PriceAtPurchase { get; set; } // Store price at time of purchase
+        public decimal PriceAtPurchase { get; set; }
     }
 
     // 23. ORDER PAYMENTS

@@ -1,0 +1,774 @@
+﻿@model DKMovies.Models.Concession
+@{
+    ViewData["Title"] = "Chỉnh sửa sản phẩm - " + Model.Name;
+    Layout = "~/Views/Shared/_AdminLayout.cshtml";
+}
+
+<div class="mb-4">
+    <div class="d-flex align-items-center justify-content-between">
+        <div>
+            <h2 class="fw-bold text-dark mb-1">
+                <i class="fas fa-edit me-2 text-warning"></i>Chỉnh sửa sản phẩm
+            </h2>
+            <p class="text-muted mb-0">Cập nhật thông tin sản phẩm @Model.Name</p>
+        </div>
+        <div class="d-flex gap-2">
+            <a asp-action="Details" asp-route-id="@Model.ID" class="btn btn-outline-info btn-sm">
+                <i class="fas fa-eye me-1"></i>Xem chi tiết
+            </a>
+            <a asp-action="Index" class="btn btn-outline-secondary btn-sm">
+                <i class="fas fa-arrow-left me-1"></i>Quay lại
+            </a>
+        </div>
+    </div>
+</div>
+
+<form asp-action="Edit" method="post" enctype="multipart/form-data" id="concessionForm">
+    @Html.HiddenFor(model => model.ID)
+    @Html.HiddenFor(model => model.CreatedAt)
+
+    <div class="row g-4">
+        <!-- Product Image Upload -->
+        <div class="col-lg-4">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-header bg-white border-bottom py-3">
+                    <h6 class="card-title mb-0 fw-semibold">
+                        <i class="fas fa-image me-2 text-primary"></i>Hình ảnh sản phẩm
+                    </h6>
+                </div>
+                <div class="card-body text-center">
+                    <!-- Current Image Info -->
+                    <div class="alert alert-light mb-3">
+                        <div class="row align-items-center">
+                            <div class="col-auto">
+                                <i class="fas fa-info-circle text-primary fs-4"></i>
+                            </div>
+                            <div class="col">
+                                <div class="fw-bold">Hình ảnh hiện tại</div>
+                                <small class="text-muted">Tạo ngày @Model.CreatedAt.ToString("dd/MM/yyyy")</small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <img id="imagePreview"
+                             src="@(!string.IsNullOrEmpty(Model.ImagePath) ? Model.ImagePath : "/images/default-concession.jpg")"
+                             alt="@Model.Name"
+                             class="img-fluid rounded shadow"
+                             style="max-height: 300px; object-fit: cover; width: 100%;">
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="imageFile" class="btn btn-outline-primary">
+                            <i class="fas fa-upload me-2"></i>Thay đổi hình ảnh
+                        </label>
+                        <input type="file" id="imageFile" name="imageFile"
+                               accept="image/*" style="display: none;" onchange="previewImage(this)">
+                    </div>
+
+                    @if (!string.IsNullOrEmpty(Model.ImagePath))
+                    {
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="removeImage">
+                            <label class="form-check-label text-danger" for="removeImage">
+                                <i class="fas fa-trash me-1"></i>Xóa hình ảnh hiện tại
+                            </label>
+                        </div>
+                    }
+
+                    <small class="text-muted d-block mt-2">
+                        Định dạng: JPG, PNG, GIF<br>
+                        Kích thước tối đa: 5MB
+                    </small>
+                </div>
+            </div>
+        </div>
+
+        <!-- Product Information -->
+        <div class="col-lg-8">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white border-bottom py-3">
+                    <h6 class="card-title mb-0 fw-semibold">
+                        <i class="fas fa-info-circle me-2 text-secondary"></i>Thông tin sản phẩm
+                    </h6>
+                </div>
+                <div class="card-body p-4">
+                    <div class="row g-3">
+                        <!-- Product Name -->
+                        <div class="col-md-8">
+                            <label asp-for="Name" class="form-label fw-medium">
+                                Tên sản phẩm <span class="text-danger">*</span>
+                            </label>
+                            <input asp-for="Name" class="form-control" placeholder="Nhập tên sản phẩm">
+                            <span asp-validation-for="Name" class="text-danger small"></span>
+                        </div>
+
+                        <!-- Category -->
+                        <div class="col-md-4">
+                            <label asp-for="Category" class="form-label fw-medium">
+                                Danh mục <span class="text-danger">*</span>
+                            </label>
+                            <select asp-for="Category" class="form-select" asp-items="ViewBag.Categories" id="categorySelect">
+                                <option value="">-- Chọn danh mục --</option>
+                            </select>
+                            <span asp-validation-for="Category" class="text-danger small"></span>
+                        </div>
+
+                        <!-- Description -->
+                        <div class="col-12">
+                            <label asp-for="Description" class="form-label fw-medium">
+                                Mô tả sản phẩm
+                            </label>
+                            <textarea asp-for="Description" class="form-control" rows="3"
+                                      placeholder="Nhập mô tả chi tiết về sản phẩm..."
+                                      maxlength="500"></textarea>
+                            <span asp-validation-for="Description" class="text-danger small"></span>
+                            <div class="form-text">
+                                <span id="charCount">@(Model.Description?.Length ?? 0)</span>/500 ký tự
+                            </div>
+                        </div>
+
+                        <!-- Price -->
+                        <div class="col-md-4">
+                            <label asp-for="Price" class="form-label fw-medium">
+                                Giá bán (VND) <span class="text-danger">*</span>
+                            </label>
+                            <div class="input-group">
+                                <input asp-for="Price" type="number" class="form-control" min="0" step="1000">
+                                <span class="input-group-text">₫</span>
+                            </div>
+                            <span asp-validation-for="Price" class="text-danger small"></span>
+                            <div id="priceChangeIndicator" class="form-text" style="display: none;">
+                                <i class="fas fa-info-circle text-warning me-1"></i>
+                                Giá đã thay đổi từ <span id="originalPrice">@String.Format("{0:N0} ₫", Model.Price)</span>
+                            </div>
+                        </div>
+
+                        <!-- Stock Quantity -->
+                        <div class="col-md-4">
+                            <label asp-for="StockQuantity" class="form-label fw-medium">
+                                Số lượng tồn kho <span class="text-danger">*</span>
+                            </label>
+                            <div class="input-group">
+                                <input asp-for="StockQuantity" type="number" class="form-control" min="0">
+                                <button type="button" class="btn btn-outline-secondary" onclick="quickStockUpdate()">
+                                    <i class="fas fa-plus"></i>
+                                </button>
+                            </div>
+                            <span asp-validation-for="StockQuantity" class="text-danger small"></span>
+                            <div id="stockChangeIndicator" class="form-text" style="display: none;">
+                                <i class="fas fa-info-circle text-info me-1"></i>
+                                Tồn kho đã thay đổi từ <span id="originalStock">@Model.StockQuantity</span>
+                            </div>
+                        </div>
+
+                        <!-- Availability -->
+                        <div class="col-md-4 d-flex align-items-center">
+                            <div class="form-check form-switch">
+                                <input asp-for="IsAvailable" class="form-check-input" type="checkbox">
+                                <label asp-for="IsAvailable" class="form-check-label fw-medium">
+                                    Sẵn sàng bán
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Current Status Card -->
+            <div class="card border-0 shadow-sm mt-4">
+                <div class="card-header bg-light border-bottom py-3">
+                    <h6 class="card-title mb-0 fw-semibold">
+                        <i class="fas fa-chart-bar me-2 text-info"></i>Trạng thái hiện tại
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-md-3">
+                            <div class="border rounded p-3 text-center">
+                                <div class="text-muted small">ID Sản phẩm</div>
+                                <div class="fw-bold text-primary">#@Model.ID</div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="border rounded p-3 text-center">
+                                <div class="text-muted small">Trạng thái</div>
+                                <span class="badge @(Model.IsAvailable ? "bg-success" : "bg-danger")">
+                                    @(Model.IsAvailable ? "Đang bán" : "Ngưng bán")
+                                </span>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="border rounded p-3 text-center">
+                                <div class="text-muted small">Tồn kho</div>
+                                <div class="fw-bold @(Model.StockQuantity <= 10 ? "text-warning" : "text-success")">
+                                    @Model.StockQuantity
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="border rounded p-3 text-center">
+                                <div class="text-muted small">Đã bán</div>
+                                <div class="fw-bold text-info">@GetSoldQuantity()</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Product Preview Card -->
+            <div class="card border-0 shadow-sm mt-4" id="productPreview">
+                <div class="card-header bg-white border-bottom py-3">
+                    <h6 class="card-title mb-0 fw-semibold">
+                        <i class="fas fa-eye me-2 text-success"></i>Xem trước thay đổi
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="row align-items-center">
+                        <div class="col-auto">
+                            <img id="previewImage" src="@(!string.IsNullOrEmpty(Model.ImagePath) ? Model.ImagePath : "/images/default-concession.jpg")"
+                                 alt="Preview" class="rounded shadow-sm" style="width: 80px; height: 80px; object-fit: cover;">
+                        </div>
+                        <div class="col">
+                            <div class="fw-bold text-dark mb-1" id="previewName">@Model.Name</div>
+                            <div class="text-muted small mb-2" id="previewDescription">@Model.Description</div>
+                            <div class="d-flex gap-2">
+                                <span class="badge" id="previewCategory">@Model.Category</span>
+                                <span class="badge bg-success" id="previewPrice">@String.Format("{0:N0} ₫", Model.Price)</span>
+                                <span class="badge bg-info" id="previewStock">@Model.StockQuantity sản phẩm</span>
+                                <span class="badge" id="previewStatus">@(Model.IsAvailable ? "Đang bán" : "Ngưng bán")</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Form Actions -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <a asp-action="Index" class="btn btn-outline-secondary">
+                    <i class="fas fa-times me-2"></i>Hủy bỏ
+                </a>
+                <div class="d-flex gap-2">
+                    <button type="button" class="btn btn-outline-primary" onclick="previewChanges()">
+                        <i class="fas fa-eye me-2"></i>Xem trước thay đổi
+                    </button>
+                    <button type="submit" class="btn btn-warning" id="submitBtn">
+                        <i class="fas fa-save me-2"></i>Cập nhật sản phẩm
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</form>
+
+<!-- Quick Stock Update Modal -->
+<div class="modal fade" id="quickStockModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-boxes text-primary me-2"></i>Cập nhật nhanh tồn kho
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label class="form-label fw-medium">Thao tác:</label>
+                    <div class="btn-group w-100" role="group">
+                        <input type="radio" class="btn-check" name="stockAction" id="addStock" value="add" checked>
+                        <label class="btn btn-outline-success" for="addStock">
+                            <i class="fas fa-plus me-1"></i>Thêm
+                        </label>
+
+                        <input type="radio" class="btn-check" name="stockAction" id="subtractStock" value="subtract">
+                        <label class="btn btn-outline-warning" for="subtractStock">
+                            <i class="fas fa-minus me-1"></i>Trừ
+                        </label>
+
+                        <input type="radio" class="btn-check" name="stockAction" id="setStock" value="set">
+                        <label class="btn btn-outline-info" for="setStock">
+                            <i class="fas fa-equals me-1"></i>Đặt
+                        </label>
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <label for="stockAmount" class="form-label fw-medium">Số lượng:</label>
+                    <input type="number" class="form-control" id="stockAmount" min="1" placeholder="Nhập số lượng">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+                <button type="button" class="btn btn-primary" onclick="applyStockUpdate()">
+                    <i class="fas fa-check me-1"></i>Áp dụng
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@functions {
+    private int GetSoldQuantity()
+    {
+        // This would normally calculate from OrderItems
+        // For demo purposes, return a placeholder
+        return 0;
+    }
+}
+
+@section Scripts {
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+
+    <script>
+        // Store original values for comparison
+        const originalValues = {
+            name: '@Model.Name',
+            description: '@Model.Description',
+            category: '@Model.Category',
+            price: @Model.Price,
+            stockQuantity: @Model.StockQuantity,
+            isAvailable: @Model.IsAvailable.ToString().ToLower()
+        };
+
+        $(document).ready(function() {
+            // Real-time updates
+            $('#Name, #Description, #Category, #StockQuantity').on('input change', function() {
+                updatePreview();
+                checkChanges();
+            });
+
+            $('#Price').on('input', function() {
+                updatePriceDisplay();
+                updatePreview();
+                checkPriceChange();
+            });
+
+            $('#IsAvailable').on('change', function() {
+                updatePreview();
+            });
+
+            // Character count for description
+            $('#Description').on('input', function() {
+                const length = $(this).val().length;
+                $('#charCount').text(length);
+
+                if (length > 500) {
+                    $(this).addClass('is-invalid');
+                    $('#charCount').addClass('text-danger');
+                } else {
+                    $(this).removeClass('is-invalid');
+                    $('#charCount').removeClass('text-danger');
+                }
+            });
+
+            // Form validation
+            $('#concessionForm').submit(function(e) {
+                if (!validateForm()) {
+                    e.preventDefault();
+                    return false;
+                }
+
+                // Show loading state
+                $('#submitBtn').html('<i class="fas fa-spinner fa-spin me-2"></i>Đang cập nhật...');
+                $('#submitBtn').prop('disabled', true);
+            });
+
+            // Initialize
+            updatePreview();
+            updatePriceDisplay();
+        });
+
+        function previewImage(input) {
+            if (input.files && input.files[0]) {
+                // Validate file size (5MB)
+                if (input.files[0].size > 5 * 1024 * 1024) {
+                    alert('Kích thước file quá lớn. Vui lòng chọn file nhỏ hơn 5MB.');
+                    input.value = '';
+                    return;
+                }
+
+                // Validate file type
+                const allowedTypes = ['image/jpeg', 'image/png', 'image/gif'];
+                if (!allowedTypes.includes(input.files[0].type)) {
+                    alert('Định dạng file không được hỗ trợ. Vui lòng chọn file JPG, PNG hoặc GIF.');
+                    input.value = '';
+                    return;
+                }
+
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    document.getElementById('imagePreview').src = e.target.result;
+                    document.getElementById('previewImage').src = e.target.result;
+                }
+                reader.readAsDataURL(input.files[0]);
+            }
+        }
+
+        function updatePriceDisplay() {
+            const price = parseFloat($('#Price').val()) || 0;
+            const inputGroupText = $('#Price').next('.input-group-text');
+            if (price > 0) {
+                inputGroupText.text(price.toLocaleString('vi-VN') + ' ₫');
+            } else {
+                inputGroupText.text('₫');
+            }
+        }
+
+        function checkPriceChange() {
+            const currentPrice = parseFloat($('#Price').val()) || 0;
+            const originalPrice = originalValues.price;
+
+            if (currentPrice !== originalPrice) {
+                $('#priceChangeIndicator').show();
+                $('#originalPrice').text(originalPrice.toLocaleString('vi-VN') + ' ₫');
+            } else {
+                $('#priceChangeIndicator').hide();
+            }
+        }
+
+        function checkChanges() {
+            const currentStock = parseInt($('#StockQuantity').val()) || 0;
+            const originalStock = originalValues.stockQuantity;
+
+            if (currentStock !== originalStock) {
+                $('#stockChangeIndicator').show();
+                $('#originalStock').text(originalStock);
+            } else {
+                $('#stockChangeIndicator').hide();
+            }
+        }
+
+        function updatePreview() {
+            const name = $('#Name').val() || 'Tên sản phẩm';
+            const description = $('#Description').val() || 'Mô tả sản phẩm...';
+            const category = $('#Category').val() || 'Danh mục';
+            const price = parseFloat($('#Price').val()) || 0;
+            const stock = parseInt($('#StockQuantity').val()) || 0;
+            const isAvailable = $('#IsAvailable').is(':checked');
+
+            $('#previewName').text(name);
+            $('#previewDescription').text(description.length > 50 ? description.substring(0, 50) + '...' : description);
+            $('#previewPrice').text(price.toLocaleString('vi-VN') + ' ₫');
+            $('#previewStock').text(stock + ' sản phẩm');
+
+            // Update category badge
+            const categoryBadge = getCategoryBadge(category);
+            $('#previewCategory').attr('class', `badge ${categoryBadge.class}`);
+            $('#previewCategory').html(`<i class="${categoryBadge.icon} me-1"></i>${category}`);
+
+            // Update status badge
+            const statusBadge = $('#previewStatus');
+            if (isAvailable) {
+                statusBadge.attr('class', 'badge bg-success');
+                statusBadge.html('<i class="fas fa-check me-1"></i>Đang bán');
+            } else {
+                statusBadge.attr('class', 'badge bg-danger');
+                statusBadge.html('<i class="fas fa-times me-1"></i>Ngưng bán');
+            }
+        }
+
+        function getCategoryBadge(category) {
+            const badges = {
+                'Đồ uống': { class: 'bg-info text-white', icon: 'fas fa-coffee' },
+                'Bắp rang': { class: 'bg-warning text-dark', icon: 'fas fa-seedling' },
+                'Kẹo': { class: 'bg-danger text-white', icon: 'fas fa-candy-cane' },
+                'Combo': { class: 'bg-success text-white', icon: 'fas fa-box-open' },
+                'Đồ ăn nhanh': { class: 'bg-primary text-white', icon: 'fas fa-hamburger' },
+                'Khác': { class: 'bg-secondary text-white', icon: 'fas fa-utensils' }
+            };
+            return badges[category] || { class: 'bg-light text-dark', icon: 'fas fa-question' };
+        }
+
+        function validateForm() {
+            let isValid = true;
+            const requiredFields = ['Name', 'Category', 'Price', 'StockQuantity'];
+
+            requiredFields.forEach(field => {
+                const element = $(`[name="${field}"]`);
+                if (!element.val() || (field === 'Price' && parseFloat(element.val()) <= 0) ||
+                    (field === 'StockQuantity' && parseInt(element.val()) < 0)) {
+                    element.addClass('is-invalid');
+                    isValid = false;
+                } else {
+                    element.removeClass('is-invalid');
+                }
+            });
+
+            if (!isValid) {
+                alert('Vui lòng điền đầy đủ thông tin bắt buộc và kiểm tra các giá trị hợp lệ!');
+            }
+
+            return isValid;
+        }
+
+        function quickStockUpdate() {
+            new bootstrap.Modal(document.getElementById('quickStockModal')).show();
+        }
+
+        function applyStockUpdate() {
+            const action = $('input[name="stockAction"]:checked').val();
+            const amount = parseInt($('#stockAmount').val());
+            const currentStock = parseInt($('#StockQuantity').val()) || 0;
+
+            if (!amount || amount <= 0) {
+                alert('Vui lòng nhập số lượng hợp lệ!');
+                return;
+            }
+
+            let newStock = currentStock;
+
+            switch(action) {
+                case 'add':
+                    newStock = currentStock + amount;
+                    break;
+                case 'subtract':
+                    newStock = Math.max(0, currentStock - amount);
+                    break;
+                case 'set':
+                    newStock = amount;
+                    break;
+            }
+
+            $('#StockQuantity').val(newStock);
+            updatePreview();
+            checkChanges();
+
+            bootstrap.Modal.getInstance(document.getElementById('quickStockModal')).hide();
+
+            // Show success message
+            showToast(`Đã ${action === 'add' ? 'thêm' : action === 'subtract' ? 'trừ' : 'đặt'} ${amount} sản phẩm. Tồn kho mới: ${newStock}`, 'success');
+        }
+
+        function previewChanges() {
+            if (!validateForm()) {
+                return;
+            }
+
+            // Get current values
+            const currentValues = {
+                name: $('#Name').val(),
+                description: $('#Description').val(),
+                category: $('#Category').val(),
+                price: parseFloat($('#Price').val()),
+                stockQuantity: parseInt($('#StockQuantity').val()),
+                isAvailable: $('#IsAvailable').is(':checked')
+            };
+
+            // Compare and show changes
+            const changes = [];
+
+            if (currentValues.name !== originalValues.name) {
+                changes.push(['Tên sản phẩm', originalValues.name, currentValues.name]);
+            }
+            if (currentValues.description !== originalValues.description) {
+                changes.push(['Mô tả', originalValues.description || 'Trống', currentValues.description || 'Trống']);
+            }
+            if (currentValues.category !== originalValues.category) {
+                changes.push(['Danh mục', originalValues.category, currentValues.category]);
+            }
+            if (currentValues.price !== originalValues.price) {
+                changes.push(['Giá', originalValues.price.toLocaleString('vi-VN') + ' ₫', currentValues.price.toLocaleString('vi-VN') + ' ₫']);
+            }
+            if (currentValues.stockQuantity !== originalValues.stockQuantity) {
+                changes.push(['Tồn kho', originalValues.stockQuantity + ' sản phẩm', currentValues.stockQuantity + ' sản phẩm']);
+            }
+            if (currentValues.isAvailable !== originalValues.isAvailable) {
+                changes.push(['Trạng thái', originalValues.isAvailable ? 'Đang bán' : 'Ngưng bán', currentValues.isAvailable ? 'Đang bán' : 'Ngưng bán']);
+            }
+
+            if (changes.length === 0) {
+                alert('Không có thay đổi nào để xem trước.');
+                return;
+            }
+
+            // Create changes preview
+            let changesHtml = '<div class="table-responsive"><table class="table table-sm">';
+            changesHtml += '<thead><tr><th>Thông tin</th><th class="text-muted">Trước</th><th class="text-primary">Sau</th></tr></thead><tbody>';
+
+            changes.forEach(change => {
+                changesHtml += `<tr><td class="fw-medium">${change[0]}</td><td class="text-muted">${change[1]}</td><td class="text-primary fw-bold">${change[2]}</td></tr>`;
+            });
+
+            changesHtml += '</tbody></table></div>';
+
+            // Show preview in a modal (using SweetAlert2 if available, or alert)
+            if (typeof Swal !== 'undefined') {
+                Swal.fire({
+                    title: 'Xem trước thay đổi',
+                    html: changesHtml,
+                    width: '600px',
+                    showCancelButton: true,
+                    confirmButtonText: 'Lưu thay đổi',
+                    cancelButtonText: 'Đóng',
+                    confirmButtonColor: '#ffc107'
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        $('#concessionForm').submit();
+                    }
+                });
+            } else {
+                // Fallback to alert
+                alert('Có ' + changes.length + ' thay đổi. Nhấn OK để tiếp tục lưu.');
+            }
+        }
+
+        function showToast(message, type) {
+            const toast = document.createElement('div');
+            toast.className = `alert alert-${type === 'success' ? 'success' : 'danger'} position-fixed`;
+            toast.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
+            toast.innerHTML = `
+                <i class="fas fa-${type === 'success' ? 'check' : 'exclamation-triangle'} me-2"></i>
+                ${message}
+                <button type="button" class="btn-close ms-2" onclick="this.parentElement.remove()"></button>
+            `;
+
+            document.body.appendChild(toast);
+
+            setTimeout(() => {
+                if (toast.parentElement) {
+                    toast.remove();
+                }
+            }, 3000);
+        }
+
+        // Category change handler with suggestions
+        $('#categorySelect').change(function() {
+            updatePreview();
+
+            const category = $(this).val();
+            const suggestions = {
+                'Đồ uống': { price: 25000, description: 'Nước giải khát mát lạnh, phù hợp xem phim' },
+                'Bắp rang': { price: 45000, description: 'Bắp rang bơ thơm ngon, giòn tan' },
+                'Kẹo': { price: 15000, description: 'Kẹo ngọt các loại, snack nhẹ' },
+                'Combo': { price: 120000, description: 'Combo tiết kiệm gồm nhiều món ăn' },
+                'Đồ ăn nhanh': { price: 60000, description: 'Thức ăn nhanh tiện lợi' }
+            };
+
+            if (suggestions[category] && !$('#Description').val()) {
+                $('#Description').val(suggestions[category].description);
+                updatePreview();
+            }
+        });
+    </script>
+}
+
+<style>
+    .card {
+        transition: all 0.3s ease;
+    }
+
+        .card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.1) !important;
+        }
+
+    .form-control:focus,
+    .form-select:focus {
+        border-color: #ffc107;
+        box-shadow: 0 0 0 0.2rem rgba(255, 193, 7, 0.25);
+    }
+
+    .btn {
+        transition: all 0.3s ease;
+    }
+
+        .btn:hover {
+            transform: translateY(-1px);
+        }
+
+    #imagePreview {
+        transition: all 0.3s ease;
+        cursor: pointer;
+    }
+
+        #imagePreview:hover {
+            transform: scale(1.02);
+        }
+
+    .border:hover {
+        border-color: #ffc107 !important;
+        transform: translateY(-1px);
+        transition: all 0.3s ease;
+    }
+
+    /* Stock quantity color coding */
+    input[name="StockQuantity"] {
+        transition: border-color 0.3s ease;
+    }
+
+        input[name="StockQuantity"]:focus {
+            border-color: #0d6efd;
+        }
+
+    /* Price change indicator */
+    #priceChangeIndicator,
+    #stockChangeIndicator {
+        animation: slideIn 0.3s ease;
+    }
+
+    @keyframes slideIn {
+        from
+
+    {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+
+    }
+
+    /* Character count styling */
+    #charCount {
+        font-weight: 600;
+        transition: color 0.3s ease;
+    }
+
+        #charCount.text-danger {
+            animation: pulse 1s infinite;
+        }
+
+    @keyframes pulse {
+        0%, 100%
+
+    {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: 0.7;
+    }
+
+    }
+
+    /* Modal enhancements */
+    .btn-check:checked + .btn {
+        box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+    }
+
+    @media (max-width: 768px) {
+        .d-flex.justify-content-between
+
+    {
+        flex-direction: column;
+        gap: 1rem;
+    }
+
+    .d-flex.justify-content-between .d-flex {
+        justify-content: center;
+    }
+
+    #imagePreview {
+        max-height: 200px;
+    }
+
+    }
+</style>

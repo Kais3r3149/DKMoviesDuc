@@ -6,6 +6,24 @@
     Layout = "~/Views/Shared/_AdminLayout.cshtml";
 }
 
+@if (TempData["Error"] != null)
+{
+    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+        <i class="fas fa-exclamation-triangle me-2"></i>
+        @TempData["Error"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+
+@if (TempData["Success"] != null)
+{
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+        <i class="fas fa-check me-2"></i>
+        @TempData["Success"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+
 <div class="mb-4">
     <div class="d-flex align-items-center justify-content-between">
         <div>
@@ -20,8 +38,18 @@
     </div>
 </div>
 
+<div asp-validation-summary="ModelOnly" class="alert alert-danger" style="display: @(ViewData.ModelState.IsValid ? "none" : "block")"></div>
+
 <form asp-action="Edit" method="post" enctype="multipart/form-data" id="userForm">
     <input asp-for="ID" type="hidden" />
+    <input type="hidden" asp-for="CreatedAt" />
+    <input type="hidden" asp-for="PasswordHash" />
+    <input type="hidden" asp-for="ProfileImagePath" />
+    <input type="hidden" asp-for="ConfirmationCode" />
+    <input type="hidden" asp-for="TwoFactorCode" />
+    <input type="hidden" asp-for="TwoFactorExpiry" />
+    <input type="hidden" asp-for="RoleID" />
+    <input type="hidden" asp-for="LastLoginAt" />
 
     <div class="row g-4">
         <!-- Profile Image Upload -->
@@ -217,40 +245,24 @@
     .card {
         transition: all 0.3s ease;
     }
-
-        .card:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 25px rgba(0,0,0,0.1) !important;
-        }
-
+    .card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 25px rgba(0,0,0,0.1) !important;
+    }
     .form-control:focus,
     .form-select:focus {
         border-color: #0d6efd;
         box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25);
     }
-
     .btn {
         transition: all 0.3s ease;
     }
-
-        .btn:hover {
-            transform: translateY(-1px);
-        }
-
+    .btn:hover {
+        transform: translateY(-1px);
+    }
     .form-check-input:checked {
         background-color: #0d6efd;
         border-color: #0d6efd;
-    }
-
-    {
-        flex-direction: column;
-        gap: 1rem;
-    }
-
-    .d-flex.justify-content-between .d-flex {
-        justify-content: center;
-    }
-
     }
 </style>
 
@@ -258,105 +270,157 @@
     @{
         await Html.RenderPartialAsync("_ValidationScriptsPartial");
     }
-
     <script>
         function previewImage(input) {
-            if (input.files && input.files[0]) {
-                const reader = new FileReader();
-
-                reader.onload = function(e) {
-                    document.getElementById('profilePreview').src = e.target.result;
-                }
-
+            if (input && input.files && input.files[0]) {
+                var reader = new FileReader();
+                reader.onload = function(event) {
+                    var preview = document.getElementById('profilePreview');
+                    if (preview) {
+                        preview.src = event.target.result;
+                    }
+                };
                 reader.readAsDataURL(input.files[0]);
             }
         }
 
         function resetForm() {
             if (confirm('Bạn có chắc muốn reset form? Tất cả thay đổi sẽ bị mất.')) {
-                location.reload();
+                window.location.reload();
             }
         }
 
-        // Password confirmation validation
-        document.getElementById('confirmPassword').addEventListener('input', function() {
-            const password = document.getElementById('newPassword').value;
-            const confirmPassword = this.value;
+        function validatePasswords() {
+            var password = document.getElementById('newPassword');
+            var confirmPassword = document.getElementById('confirmPassword');
 
-            if (password && confirmPassword && password !== confirmPassword) {
-                this.setCustomValidity('Mật khẩu xác nhận không khớp');
-                this.classList.add('is-invalid');
+            if (!password || !confirmPassword) return true;
+
+            if (password.value && confirmPassword.value && password.value !== confirmPassword.value) {
+                confirmPassword.setCustomValidity('Mật khẩu xác nhận không khớp');
+                confirmPassword.classList.add('is-invalid');
+                return false;
             } else {
-                this.setCustomValidity('');
-                this.classList.remove('is-invalid');
+                confirmPassword.setCustomValidity('');
+                confirmPassword.classList.remove('is-invalid');
+                return true;
             }
-        });
+        }
 
-        document.getElementById('newPassword').addEventListener('input', function() {
-            const confirmPassword = document.getElementById('confirmPassword');
-            if (confirmPassword.value) {
-                confirmPassword.dispatchEvent(new Event('input'));
-            }
-        });
-
-        // Form validation and submission
-        document.getElementById('userForm').addEventListener('submit', function(e) {
-            const password = document.getElementById('newPassword').value;
-            const confirmPassword = document.getElementById('confirmPassword').value;
-
-            if (password && confirmPassword && password !== confirmPassword) {
-                e.preventDefault();
-                alert('Mật khẩu xác nhận không khớp');
-                return;
-            }
-
-            const submitBtn = document.getElementById('submitBtn');
-
-            // Add loading state
-            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Đang cập nhật...';
-            submitBtn.disabled = true;
-
-            // Re-enable button after 3 seconds in case of error
-            setTimeout(() => {
-                submitBtn.innerHTML = '<i class="fas fa-save me-2"></i>Cập nhật';
-                submitBtn.disabled = false;
-            }, 3000);
-        });
-
-        // Auto-focus first input
         document.addEventListener('DOMContentLoaded', function() {
-            document.querySelector('input[name="Username"]').focus();
-        });
+            // Password validation
+            var confirmPasswordField = document.getElementById('confirmPassword');
+            var newPasswordField = document.getElementById('newPassword');
 
-        // Handle image upload errors
-        document.getElementById('profileImage').addEventListener('change', function(e) {
-            const file = e.target.files[0];
-            if (file) {
-                // Check file size (5MB)
-                if (file.size > 5 * 1024 * 1024) {
-                    alert('Kích thước file quá lớn. Vui lòng chọn file nhỏ hơn 5MB.');
-                    e.target.value = '';
-                    return;
-                }
-
-                // Check file type
-                const allowedTypes = ['image/jpeg', 'image/png', 'image/gif'];
-                if (!allowedTypes.includes(file.type)) {
-                    alert('Định dạng file không được hỗ trợ. Vui lòng chọn file JPG, PNG hoặc GIF.');
-                    e.target.value = '';
-                    return;
-                }
+            if (confirmPasswordField) {
+                confirmPasswordField.addEventListener('input', validatePasswords);
             }
-        });
 
-        // Handle image loading errors
-        document.addEventListener('DOMContentLoaded', function() {
-            document.querySelectorAll('img').forEach(img => {
-                img.addEventListener('error', function() {
-                    if (this.src.includes('default-avatar.png')) return;
-                    this.src = '/images/default-avatar.png';
-                    this.alt = 'Ảnh đại diện không khả dụng';
+            if (newPasswordField) {
+                newPasswordField.addEventListener('input', function() {
+                    if (confirmPasswordField && confirmPasswordField.value) {
+                        validatePasswords();
+                    }
                 });
+            }
+
+            // Form submission
+            var userForm = document.getElementById('userForm');
+            if (userForm) {
+                userForm.addEventListener('submit', function(e) {
+                    console.log('Form submission started');
+
+                    if (!validatePasswords()) {
+                        e.preventDefault();
+                        alert('Mật khẩu xác nhận không khớp');
+                        return false;
+                    }
+
+                    var requiredFields = ['Username', 'Email'];
+                    for (var i = 0; i < requiredFields.length; i++) {
+                        var field = requiredFields[i];
+                        var input = document.querySelector('input[name="' + field + '"]');
+                        if (!input || !input.value.trim()) {
+                            e.preventDefault();
+                            alert('Vui lòng nhập ' + field);
+                            if (input) input.focus();
+                            return false;
+                        }
+                    }
+
+                    var emailInput = document.querySelector('input[name="Email"]');
+                    var emailRegex = /^[^\s@@]+@@[^\s@@]+\.[^\s@@]+$/;
+                    if (emailInput && !emailRegex.test(emailInput.value)) {
+                        e.preventDefault();
+                        alert('Định dạng email không hợp lệ');
+                        emailInput.focus();
+                        return false;
+                    }
+
+                    var submitBtn = document.getElementById('submitBtn');
+                    if (submitBtn) {
+                        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Đang cập nhật...';
+                        submitBtn.disabled = true;
+                    }
+
+                    return true;
+                });
+            }
+
+            // Auto-focus
+            var usernameField = document.querySelector('input[name="Username"]');
+            if (usernameField) {
+                usernameField.focus();
+            }
+
+            // Image upload validation
+            var profileImageField = document.getElementById('profileImage');
+            if (profileImageField) {
+                profileImageField.addEventListener('change', function(e) {
+                    var file = e.target.files[0];
+                    if (file) {
+                        if (file.size > 5 * 1024 * 1024) {
+                            alert('Kích thước file quá lớn. Vui lòng chọn file nhỏ hơn 5MB.');
+                            e.target.value = '';
+                            return;
+                        }
+
+                        var allowedTypes = ['image/jpeg', 'image/png', 'image/gif'];
+                        if (allowedTypes.indexOf(file.type) === -1) {
+                            alert('Định dạng file không được hỗ trợ. Vui lòng chọn file JPG, PNG hoặc GIF.');
+                            e.target.value = '';
+                            return;
+                        }
+                    }
+                });
+            }
+
+            // Handle image errors
+            var images = document.querySelectorAll('img');
+            for (var i = 0; i < images.length; i++) {
+                images[i].addEventListener('error', function() {
+                    if (this.src.indexOf('default-avatar.png') === -1) {
+                        this.src = '/images/default-avatar.png';
+                        this.alt = 'Ảnh đại diện không khả dụng';
+                    }
+                });
+            }
+
+            // Track form changes
+            var formChanged = false;
+            var formInputs = document.querySelectorAll('#userForm input, #userForm select');
+            for (var i = 0; i < formInputs.length; i++) {
+                formInputs[i].addEventListener('change', function() {
+                    formChanged = true;
+                });
+            }
+
+            // Warn before leaving
+            window.addEventListener('beforeunload', function(e) {
+                if (formChanged) {
+                    e.preventDefault();
+                    e.returnValue = '';
+                }
             });
         });
     </script>

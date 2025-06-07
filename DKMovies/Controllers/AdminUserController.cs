@@ -47,7 +47,7 @@ namespace DKMovies.Controllers
             var users = _context.Users
                 .Include(u => u.Tickets)
                 .Include(u => u.Reviews)
-                //.Include(u => u.Orders)
+                .Include(u => u.Orders)
                 .AsQueryable();
 
             // Search functionality
@@ -118,8 +118,8 @@ namespace DKMovies.Controllers
                         .ThenInclude(ts => ts.Seat)
                 .Include(u => u.Reviews)
                     .ThenInclude(r => r.Movie)
-                //.Include(u => u.Orders)
-                    //.ThenInclude(o => o.OrderItems)
+                .Include(u => u.Orders)
+                    .ThenInclude(o => o.OrderItems)
                 .Include(u => u.WatchlistItems)
                     .ThenInclude(w => w.Movie)
                 .FirstOrDefaultAsync(m => m.ID == id);
@@ -192,7 +192,6 @@ namespace DKMovies.Controllers
             return View(user);
         }
 
-        // GET: AdminUsers/Edit/5
         public async Task<IActionResult> Edit(int? id)
         {
             if (id == null)
@@ -200,23 +199,37 @@ namespace DKMovies.Controllers
                 return NotFound();
             }
 
-            var user = await _context.Users.FindAsync(id);
-            if (user == null)
+            try
             {
-                return NotFound();
+                var user = await _context.Users.FindAsync(id);
+                if (user == null)
+                {
+                    return NotFound();
+                }
+
+                return View(user);
             }
-            return View(user);
+            catch (Exception ex)
+            {
+                TempData["Error"] = "Có lỗi xảy ra khi tải thông tin người dùng.";
+                return RedirectToAction(nameof(Index));
+            }
         }
 
         // POST: AdminUsers/Edit/5
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Edit(int id, [Bind("ID,Username,Email,FullName,Phone,BirthDate,Gender,EmailConfirmed,TwoFactorEnabled")] User user, IFormFile? profileImage, string? newPassword)
+        public async Task<IActionResult> Edit(int id, [Bind("ID,Username,Email,FullName,Phone,BirthDate,Gender,EmailConfirmed,TwoFactorEnabled,IsActive")] User user, IFormFile? profileImage, string? newPassword)
         {
             if (id != user.ID)
             {
                 return NotFound();
             }
+
+            // Remove model state errors for fields we don't validate
+            ModelState.Remove("PasswordHash");
+            ModelState.Remove("CreatedAt");
+            ModelState.Remove("RoleID");
 
             if (ModelState.IsValid)
             {
@@ -242,13 +255,15 @@ namespace DKMovies.Controllers
                         return View(user);
                     }
 
-                    // Keep original values
+                    // Preserve original values that shouldn't be changed
                     user.CreatedAt = existingUser.CreatedAt;
                     user.PasswordHash = existingUser.PasswordHash;
                     user.ProfileImagePath = existingUser.ProfileImagePath;
                     user.ConfirmationCode = existingUser.ConfirmationCode;
                     user.TwoFactorCode = existingUser.TwoFactorCode;
                     user.TwoFactorExpiry = existingUser.TwoFactorExpiry;
+                    user.RoleID = existingUser.RoleID;
+                    user.LastLoginAt = existingUser.LastLoginAt;
 
                     // Update password if provided
                     if (!string.IsNullOrEmpty(newPassword))
@@ -259,35 +274,44 @@ namespace DKMovies.Controllers
                     // Handle profile image upload
                     if (profileImage != null && profileImage.Length > 0)
                     {
-                        // Delete old image
-                        if (!string.IsNullOrEmpty(existingUser.ProfileImagePath))
+                        try
                         {
-                            var oldImagePath = Path.Combine(_webHostEnvironment.WebRootPath, existingUser.ProfileImagePath.TrimStart('/'));
-                            if (System.IO.File.Exists(oldImagePath))
+                            // Delete old image
+                            if (!string.IsNullOrEmpty(existingUser.ProfileImagePath))
                             {
-                                System.IO.File.Delete(oldImagePath);
+                                var oldImagePath = Path.Combine(_webHostEnvironment.WebRootPath, existingUser.ProfileImagePath.TrimStart('/'));
+                                if (System.IO.File.Exists(oldImagePath))
+                                {
+                                    System.IO.File.Delete(oldImagePath);
+                                }
                             }
+
+                            // Upload new image
+                            var uploadsFolder = Path.Combine(_webHostEnvironment.WebRootPath, "images", "users");
+                            Directory.CreateDirectory(uploadsFolder);
+
+                            var uniqueFileName = Guid.NewGuid().ToString() + "_" + profileImage.FileName;
+                            var filePath = Path.Combine(uploadsFolder, uniqueFileName);
+
+                            using (var fileStream = new FileStream(filePath, FileMode.Create))
+                            {
+                                await profileImage.CopyToAsync(fileStream);
+                            }
+
+                            user.ProfileImagePath = "/images/users/" + uniqueFileName;
                         }
-
-                        // Upload new image
-                        var uploadsFolder = Path.Combine(_webHostEnvironment.WebRootPath, "images", "users");
-                        Directory.CreateDirectory(uploadsFolder);
-
-                        var uniqueFileName = Guid.NewGuid().ToString() + "_" + profileImage.FileName;
-                        var filePath = Path.Combine(uploadsFolder, uniqueFileName);
-
-                        using (var fileStream = new FileStream(filePath, FileMode.Create))
+                        catch (Exception ex)
                         {
-                            await profileImage.CopyToAsync(fileStream);
+                            TempData["Error"] = "Có lỗi xảy ra khi upload ảnh: " + ex.Message;
+                            return View(user);
                         }
-
-                        user.ProfileImagePath = "/images/users/" + uniqueFileName;
                     }
 
                     _context.Update(user);
                     await _context.SaveChangesAsync();
 
                     TempData["Success"] = "Cập nhật người dùng thành công!";
+                    return RedirectToAction(nameof(Index));
                 }
                 catch (DbUpdateConcurrencyException)
                 {
@@ -300,8 +324,19 @@ namespace DKMovies.Controllers
                         throw;
                     }
                 }
-                return RedirectToAction(nameof(Index));
+                catch (Exception ex)
+                {
+                    TempData["Error"] = "Có lỗi xảy ra khi cập nhật: " + ex.Message;
+                    return View(user);
+                }
             }
+
+            // Log validation errors for debugging
+            foreach (var error in ModelState.Values.SelectMany(v => v.Errors))
+            {
+                Console.WriteLine($"Model validation error: {error.ErrorMessage}");
+            }
+
             return View(user);
         }
 
@@ -316,7 +351,7 @@ namespace DKMovies.Controllers
             var user = await _context.Users
                 .Include(u => u.Tickets)
                 .Include(u => u.Reviews)
-                //.Include(u => u.Orders)
+                .Include(u => u.Orders)
                 .FirstOrDefaultAsync(m => m.ID == id);
 
             if (user == null)
@@ -335,7 +370,7 @@ namespace DKMovies.Controllers
             var user = await _context.Users
                 .Include(u => u.Tickets)
                 .Include(u => u.Reviews)
-                //.Include(u => u.Orders)
+                .Include(u => u.Orders)
                 .FirstOrDefaultAsync(u => u.ID == id);
 
             if (user != null)

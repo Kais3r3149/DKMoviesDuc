@@ -1,0 +1,454 @@
+﻿@model DKMovies.Models.Concession
+@{
+    ViewData["Title"] = "Thêm sản phẩm bán kèm mới";
+    Layout = "~/Views/Shared/_AdminLayout.cshtml";
+}
+
+<div class="mb-4">
+    <div class="d-flex align-items-center justify-content-between">
+        <div>
+            <h2 class="fw-bold text-dark mb-1">
+                <i class="fas fa-plus-circle me-2 text-primary"></i>Thêm sản phẩm bán kèm mới
+            </h2>
+            <p class="text-muted mb-0">Tạo sản phẩm bán kèm mới cho hệ thống rạp chiếu phim</p>
+        </div>
+        <a asp-action="Index" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-left me-2"></i>Quay lại
+        </a>
+    </div>
+</div>
+
+<form asp-action="Create" method="post" enctype="multipart/form-data" id="concessionForm">
+    <div class="row g-4">
+        <!-- Product Information -->
+        <div class="col-lg-8">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white border-bottom py-3">
+                    <h6 class="card-title mb-0 fw-semibold">
+                        <i class="fas fa-info-circle me-2 text-secondary"></i>Thông tin sản phẩm
+                    </h6>
+                </div>
+                <div class="card-body p-4">
+                    <div class="row g-3">
+                        <!-- Product Name -->
+                        <div class="col-md-6">
+                            <label asp-for="Name" class="form-label fw-medium">
+                                Tên sản phẩm <span class="text-danger">*</span>
+                            </label>
+                            <input asp-for="Name" class="form-control" placeholder="Nhập tên sản phẩm">
+                            <span asp-validation-for="Name" class="text-danger small"></span>
+                        </div>
+
+                        <!-- Category -->
+                        <div class="col-md-6">
+                            <label asp-for="Category" class="form-label fw-medium">
+                                Danh mục <span class="text-danger">*</span>
+                            </label>
+                            <select asp-for="Category" class="form-select" id="categorySelect">
+                                <option value="">-- Chọn danh mục --</option>
+                                <option value="Food">Đồ ăn</option>
+                                <option value="Drink">Đồ uống</option>
+                                <option value="Combo">Combo</option>
+                                <option value="Snack">Snack</option>
+                                <option value="Dessert">Tráng miệng</option>
+                                <option value="Other">Khác</option>
+                            </select>
+                            <span asp-validation-for="Category" class="text-danger small"></span>
+                        </div>
+
+                        <!-- Description -->
+                        <div class="col-12">
+                            <label asp-for="Description" class="form-label fw-medium">Mô tả sản phẩm</label>
+                            <textarea asp-for="Description" class="form-control" rows="4" placeholder="Nhập mô tả chi tiết về sản phẩm"></textarea>
+                            <span asp-validation-for="Description" class="text-danger small"></span>
+                            <div class="form-text">Mô tả chi tiết giúp khách hàng hiểu rõ hơn về sản phẩm</div>
+                        </div>
+
+                        <!-- Product Image -->
+                        <div class="col-12">
+                            <label class="form-label fw-medium">Hình ảnh sản phẩm</label>
+                            <div class="upload-area border-2 border-dashed rounded p-4 text-center" id="uploadArea">
+                                <input type="file" id="imageUpload" name="ImageFile" accept="image/*" class="d-none">
+                                <div id="uploadContent">
+                                    <i class="fas fa-cloud-upload-alt text-muted mb-3" style="font-size: 3rem;"></i>
+                                    <p class="text-muted mb-2">Kéo thả hình ảnh vào đây hoặc</p>
+                                    <button type="button" class="btn btn-outline-primary" onclick="$('#imageUpload').click()">
+                                        <i class="fas fa-folder-open me-2"></i>Chọn file
+                                    </button>
+                                    <div class="form-text mt-2">Chấp nhận: JPG, PNG, GIF. Tối đa 5MB</div>
+                                </div>
+                                <div id="imagePreview" class="d-none">
+                                    <img id="previewImg" src="" alt="Preview" class="img-fluid rounded mb-2" style="max-height: 200px;">
+                                    <div>
+                                        <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeImage()">
+                                            <i class="fas fa-trash me-1"></i>Xóa hình
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                            <input asp-for="ImagePath" type="hidden" id="imagePath">
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Status & Settings -->
+        <div class="col-lg-4">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white border-bottom py-3">
+                    <h6 class="card-title mb-0 fw-semibold">
+                        <i class="fas fa-cogs me-2 text-secondary"></i>Cài đặt
+                    </h6>
+                </div>
+                <div class="card-body p-4">
+                    <div class="row g-3">
+                        <!-- Is Active -->
+                        <div class="col-12">
+                            <div class="form-check form-switch">
+                                <input asp-for="IsActive" class="form-check-input" type="checkbox" checked>
+                                <label asp-for="IsActive" class="form-check-label fw-medium">
+                                    Trạng thái hoạt động
+                                </label>
+                            </div>
+                            <small class="text-muted">Sản phẩm có thể được bán tại các rạp</small>
+                        </div>
+
+                        <!-- Category Preview -->
+                        <div class="col-12">
+                            <div class="card border-light bg-light">
+                                <div class="card-body p-3">
+                                    <h6 class="card-title small fw-bold mb-2">
+                                        <i class="fas fa-eye me-1"></i>Xem trước danh mục
+                                    </h6>
+                                    <div id="categoryPreview" class="text-center">
+                                        <span class="badge bg-secondary">Chưa chọn danh mục</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Product Stats Card -->
+            <div class="card border-0 shadow-sm mt-4">
+                <div class="card-header bg-light border-bottom py-3">
+                    <h6 class="card-title mb-0 fw-semibold">
+                        <i class="fas fa-chart-line me-2 text-info"></i>Thông tin thêm
+                    </h6>
+                </div>
+                <div class="card-body p-4">
+                    <div class="row g-2 text-center">
+                        <div class="col-12">
+                            <div class="bg-primary text-white rounded p-2 mb-2">
+                                <div class="fw-bold">Sản phẩm mới</div>
+                                <small>Trạng thái</small>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="bg-success text-white rounded p-2">
+                                <div class="fw-bold">0</div>
+                                <small>Rạp áp dụng</small>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="bg-info text-white rounded p-2">
+                                <div class="fw-bold">Chờ thiết lập</div>
+                                <small>Giá bán</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Form Actions -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <a asp-action="Index" class="btn btn-outline-secondary">
+                    <i class="fas fa-times me-2"></i>Hủy bỏ
+                </a>
+                <div class="d-flex gap-2">
+                    <button type="button" class="btn btn-outline-primary" onclick="previewConcession()">
+                        <i class="fas fa-eye me-2"></i>Xem trước
+                    </button>
+                    <button type="submit" class="btn btn-primary" id="submitBtn">
+                        <i class="fas fa-save me-2"></i>Tạo sản phẩm
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</form>
+
+<!-- Preview Modal -->
+<div class="modal fade" id="previewModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-eye me-2 text-primary"></i>Xem trước sản phẩm bán kèm
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row">
+                    <div class="col-md-4">
+                        <div id="previewImageContainer" class="text-center">
+                            <img id="previewModalImage" src="/assets/images/placeholder.jpg" alt="Preview" class="img-fluid rounded" style="max-height: 200px;">
+                        </div>
+                    </div>
+                    <div class="col-md-8">
+                        <h4 id="previewName" class="fw-bold text-primary mb-3"></h4>
+                        <div class="mb-2">
+                            <strong>Danh mục:</strong> <span id="previewCategory"></span>
+                        </div>
+                        <div class="mb-2">
+                            <strong>Mô tả:</strong> <span id="previewDescription"></span>
+                        </div>
+                        <div class="mb-2">
+                            <strong>Trạng thái:</strong> <span id="previewStatus"></span>
+                        </div>
+                        <div class="alert alert-info mt-3">
+                            <i class="fas fa-info-circle me-2"></i>
+                            <strong>Lưu ý:</strong> Sau khi tạo sản phẩm, bạn cần thiết lập giá bán và tồn kho cho từng rạp.
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Đóng</button>
+                <button type="button" class="btn btn-primary" onclick="submitForm()">
+                    <i class="fas fa-save me-2"></i>Xác nhận tạo
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+
+        <script>
+            $(document).ready(function() {
+                // Form validation
+                $('#concessionForm').submit(function(e) {
+                    if (!validateForm()) {
+                        e.preventDefault();
+                        return false;
+                    }
+
+                    // Show loading state
+                    $('#submitBtn').html('<i class="fas fa-spinner fa-spin me-2"></i>Đang tạo...');
+                    $('#submitBtn').prop('disabled', true);
+                });
+
+                // Image upload handling
+                $('#imageUpload').change(function(e) {
+                    handleImageUpload(e.target.files[0]);
+                });
+
+                // Drag and drop functionality
+                $('#uploadArea').on('dragover', function(e) {
+                    e.preventDefault();
+                    $(this).addClass('border-primary bg-light');
+                });
+
+                $('#uploadArea').on('dragleave', function(e) {
+                    e.preventDefault();
+                    $(this).removeClass('border-primary bg-light');
+                });
+
+                $('#uploadArea').on('drop', function(e) {
+                    e.preventDefault();
+                    $(this).removeClass('border-primary bg-light');
+
+                    var files = e.originalEvent.dataTransfer.files;
+                    if (files.length > 0) {
+                        handleImageUpload(files[0]);
+                    }
+                });
+
+                // Category change handling
+                $('#categorySelect').change(function() {
+                    updateCategoryPreview();
+                });
+
+                // Initialize
+                updateCategoryPreview();
+            });
+
+            function handleImageUpload(file) {
+                if (file) {
+                    if (!file.type.startsWith('image/')) {
+                        alert('Vui lòng chọn file hình ảnh!');
+                        return;
+                    }
+
+                    if (file.size > 5 * 1024 * 1024) {
+                        alert('File không được vượt quá 5MB!');
+                        return;
+                    }
+
+                    var reader = new FileReader();
+                    reader.onload = function(e) {
+                        $('#previewImg').attr('src', e.target.result);
+                        $('#uploadContent').addClass('d-none');
+                        $('#imagePreview').removeClass('d-none');
+                    };
+                    reader.readAsDataURL(file);
+                }
+            }
+
+            function removeImage() {
+                $('#imageUpload').val('');
+                $('#imagePath').val('');
+                $('#uploadContent').removeClass('d-none');
+                $('#imagePreview').addClass('d-none');
+            }
+
+            function updateCategoryPreview() {
+                const category = $('#categorySelect').val();
+                const categoryText = $('#categorySelect option:selected').text();
+
+                if (category) {
+                    const badges = {
+                        'Food': '<span class="badge bg-danger"><i class="fas fa-utensils me-1"></i>Đồ ăn</span>',
+                        'Drink': '<span class="badge bg-info"><i class="fas fa-glass-whiskey me-1"></i>Đồ uống</span>',
+                        'Combo': '<span class="badge bg-success"><i class="fas fa-gift me-1"></i>Combo</span>',
+                        'Snack': '<span class="badge bg-warning text-dark"><i class="fas fa-cookie me-1"></i>Snack</span>',
+                        'Dessert': '<span class="badge bg-pink text-white"><i class="fas fa-ice-cream me-1"></i>Tráng miệng</span>',
+                        'Other': '<span class="badge bg-secondary"><i class="fas fa-ellipsis-h me-1"></i>Khác</span>'
+                    };
+                    $('#categoryPreview').html(badges[category] || '<span class="badge bg-light text-dark">Khác</span>');
+                } else {
+                    $('#categoryPreview').html('<span class="badge bg-secondary">Chưa chọn danh mục</span>');
+                }
+            }
+
+            function validateForm() {
+                let isValid = true;
+                const requiredFields = ['Name', 'Category'];
+
+                requiredFields.forEach(field => {
+                    const element = $(`[name="${field}"]`);
+                    if (!element.val()) {
+                        element.addClass('is-invalid');
+                        isValid = false;
+                    } else {
+                        element.removeClass('is-invalid');
+                    }
+                });
+
+                return isValid;
+            }
+
+            function previewConcession() {
+                if (!validateForm()) {
+                    return;
+                }
+
+                // Populate preview modal
+                $('#previewName').text($('#Name').val());
+                $('#previewCategory').text($('#categorySelect option:selected').text());
+                $('#previewDescription').text($('#Description').val() || 'Chưa có mô tả');
+                $('#previewStatus').text($('#IsActive').is(':checked') ? 'Hoạt động' : 'Không hoạt động');
+
+                // Update preview image
+                const previewImg = $('#previewImg').attr('src');
+                if (previewImg && previewImg !== '') {
+                    $('#previewModalImage').attr('src', previewImg);
+                } else {
+                    $('#previewModalImage').attr('src', '/assets/images/placeholder.jpg');
+                }
+
+                new bootstrap.Modal(document.getElementById('previewModal')).show();
+            }
+
+            function submitForm() {
+                $('#previewModal .btn-close').click();
+                $('#concessionForm').submit();
+            }
+
+            // Auto-focus first input
+            document.addEventListener('DOMContentLoaded', function() {
+                document.querySelector('input[name="Name"]').focus();
+            });
+        </script>
+}
+
+<style>
+    .card {
+        transition: all 0.3s ease;
+    }
+
+    .card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 25px rgba(0,0,0,0.1) !important;
+    }
+
+    .form-control:focus,
+    .form-select:focus {
+        border-color: #0d6efd;
+        box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25);
+    }
+
+    .btn {
+        transition: all 0.3s ease;
+    }
+
+    .btn:hover {
+        transform: translateY(-1px);
+    }
+
+    .bg-pink {
+        background-color: #e83e8c !important;
+    }
+
+    .upload-area {
+        transition: all 0.3s ease;
+        cursor: pointer;
+    }
+
+    .upload-area:hover {
+        border-color: #0d6efd !important;
+        background-color: #f8f9fa;
+    }
+
+    .upload-area.border-primary {
+        border-color: #0d6efd !important;
+    }
+
+    #imagePreview img {
+        border: 2px solid #dee2e6;
+    }
+
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(-10px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+
+    .category-preview {
+        animation: fadeIn 0.3s ease;
+    }
+
+    @media (max-width: 768px) {
+        .d-flex.justify-content-between {
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .d-flex.justify-content-between .d-flex {
+            justify-content: center;
+        }
+
+        .upload-area {
+            padding: 2rem 1rem !important;
+        }
+    }
+</style>

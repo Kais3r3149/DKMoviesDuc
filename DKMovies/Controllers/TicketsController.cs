@@ -499,6 +499,7 @@ namespace DKMovies.Controllers
             {
                 Console.WriteLine($"🔍 Loading PaymentSelection with ticketId = {ticketId}");
 
+                // ✅ Load ticket with all necessary includes
                 var ticket = await _context.Tickets
                     .Include(t => t.ShowTime)
                         .ThenInclude(st => st.Movie)
@@ -507,20 +508,27 @@ namespace DKMovies.Controllers
                             .ThenInclude(a => a.Theater)
                     .Include(t => t.TicketSeats)
                         .ThenInclude(ts => ts.Seat)
-                    .Include(t => t.OrderItems)
-                        .ThenInclude(oi => oi.TheaterConcession)
-                            .ThenInclude(tc => tc.Concession)
                     .Include(t => t.User)
                     .FirstOrDefaultAsync(t => t.ID == ticketId.Value);
 
                 if (ticket == null)
                 {
-                    Console.WriteLine($"❌ Không tìm thấy vé với ID {ticketId}");
+                    Console.WriteLine($"❌ Ticket not found with ID {ticketId}");
                     TempData["ToastError"] = "Không tìm thấy vé.";
                     return RedirectToAction("Index", "MoviesList");
                 }
 
-                Console.WriteLine($"✅ Đã tìm thấy vé: TicketID={ticket.ID}, Status={ticket.Status}, UserID={ticket.UserID}");
+                // ✅ Load OrderItems separately with explicit query
+                var orderItems = await _context.OrderItems
+                    .Where(oi => oi.TicketID == ticketId.Value)
+                    .Include(oi => oi.TheaterConcession)
+                        .ThenInclude(tc => tc.Concession)
+                    .ToListAsync();
+
+                // ✅ Manually assign to avoid EF tracking issues
+                ticket.OrderItems = orderItems;
+
+                Console.WriteLine($"✅ Found ticket: ID={ticket.ID}, Status={ticket.Status}, OrderItems={orderItems.Count}");
 
                 // Verify ownership
                 if (User.Identity.IsAuthenticated)
@@ -530,54 +538,46 @@ namespace DKMovies.Controllers
                     {
                         if (ticket.UserID != userId && !User.IsInRole("Admin"))
                         {
-                            Console.WriteLine($"⛔ Người dùng không có quyền truy cập vé này. Ticket.UserID={ticket.UserID}, CurrentUser={userId}");
+                            Console.WriteLine($"⛔ Access denied. Ticket.UserID={ticket.UserID}, CurrentUser={userId}");
                             return Forbid("Bạn không có quyền xem vé này.");
                         }
                     }
-                    else
-                    {
-                        Console.WriteLine("❌ Không lấy được UserID từ claims.");
-                    }
                 }
 
-                // Check if ticket is still pending
+                // Check ticket status
                 if (ticket.Status != TicketStatus.PENDING)
                 {
                     TempData["ToastError"] = "Vé này không ở trạng thái chờ thanh toán.";
                     return RedirectToAction("OrderConfirmation", new { ticketId });
                 }
 
-                // Check if payment is still valid
-                if (ticket.PurchaseTime.AddMinutes(15) < DateTime.Now)
-                {
-                    await CancelExpiredTicket(ticket);
-                    TempData["ToastError"] = "Vé đã hết hạn thanh toán (15 phút). Vui lòng đặt vé lại.";
-                    return RedirectToAction("OrderTicket", new { id = ticket.ShowTime.MovieID });
-                }
 
                 return View(ticket);
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "❌ Error in PaymentSelection for ticket {TicketId}", ticketId);
-                Console.WriteLine($"❌ ERROR in PaymentSelection: {ex.Message}");
+                Console.WriteLine($"❌ ERROR: {ex.Message}");
 
-                Exception inner = ex;
-                int level = 1;
-                while (inner.InnerException != null)
+                // Log inner exceptions
+                var innerEx = ex.InnerException;
+                var level = 1;
+                while (innerEx != null)
                 {
-                    inner = inner.InnerException;
-                    Console.WriteLine($"🔍 INNER EXCEPTION LEVEL {level++}: {inner.Message}");
+                    Console.WriteLine($"   Inner {level}: {innerEx.Message}");
+                    innerEx = innerEx.InnerException;
+                    level++;
                 }
 
                 TempData["ToastError"] = "Có lỗi xảy ra khi tải thông tin thanh toán.";
                 return RedirectToAction("Index", "MoviesList");
             }
-
         }
 
 
         // ✅ Process Payment Selection
+        // ✅ FIXED ProcessPayment method in TicketsController.cs
+
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> ProcessPayment(int ticketId, string paymentMethod)
@@ -590,8 +590,8 @@ namespace DKMovies.Controllers
                     .Include(t => t.ShowTime)
                         .ThenInclude(st => st.Movie)
                     .Include(t => t.OrderItems)
+                    .Include(t => t.User)
                     .FirstOrDefaultAsync(t => t.ID == ticketId);
-
 
                 if (ticket == null)
                 {
@@ -621,7 +621,7 @@ namespace DKMovies.Controllers
                     return RedirectToAction("OrderTicket", new { id = ticket.ShowTime.MovieID });
                 }
 
-                // Store payment method
+                // Update payment method
                 ticket.PaymentMethod = paymentMethod;
                 _context.Update(ticket);
                 await _context.SaveChangesAsync();
@@ -630,7 +630,7 @@ namespace DKMovies.Controllers
                 switch (paymentMethod?.ToLower())
                 {
                     case "cash":
-                        // Cập nhật trạng thái vé
+                        // Update ticket status for cash payment
                         ticket.Status = TicketStatus.CONFIRMED;
                         ticket.PaymentMethod = "cash";
                         _context.Update(ticket);
@@ -646,7 +646,6 @@ namespace DKMovies.Controllers
                         TempData["ToastError"] = "Phương thức thanh toán không hợp lệ.";
                         return RedirectToAction("PaymentSelection", new { ticketId });
                 }
-
             }
             catch (Exception ex)
             {
@@ -655,6 +654,8 @@ namespace DKMovies.Controllers
                 return RedirectToAction("PaymentSelection", new { ticketId });
             }
         }
+
+        
 
         // ✅ Order Confirmation page
         public async Task<IActionResult> OrderConfirmation(int? ticketId)
@@ -1172,29 +1173,30 @@ namespace DKMovies.Controllers
         {
             try
             {
-                var userIdStr = User.FindFirstValue(ClaimTypes.NameIdentifier);
-                if (!int.TryParse(userIdStr, out int userId))
-                {
-                    return Json(new { error = "Unauthorized" });
-                }
-
                 var ticket = await _context.Tickets
-                    .Select(t => new {
+                    .Select(t => new
+                    {
                         t.ID,
                         t.Status,
                         t.UserID,
                         t.PaymentTime,
-                        t.PurchaseTime,
-                        t.TotalPrice
+                        t.PurchaseTime
                     })
                     .FirstOrDefaultAsync(t => t.ID == ticketId);
 
-                if (ticket == null || (ticket.UserID != userId && !User.IsInRole("Admin")))
+                if (ticket == null)
                 {
                     return Json(new { error = "Ticket not found" });
                 }
 
-                // Kiểm tra xem có hết hạn không
+                // Verify ownership
+                var userIdStr = User.FindFirstValue(ClaimTypes.NameIdentifier);
+                if (int.TryParse(userIdStr, out int userId) && ticket.UserID != userId && !User.IsInRole("Admin"))
+                {
+                    return Json(new { error = "Access denied" });
+                }
+
+                // Check if expired
                 var isExpired = ticket.PurchaseTime.AddMinutes(15) < DateTime.Now;
 
                 return Json(new
@@ -1212,10 +1214,6 @@ namespace DKMovies.Controllers
             }
         }
 
-        // ✅ Method xử lý thanh toán với các phương thức khác nhau (Enhanced version)
-        
-
-        // ✅ Xử lý thanh toán VNPay (placeholder - cần implement thực tế)
         private async Task<IActionResult> ProcessVNPayPayment(Ticket ticket)
         {
             try
@@ -1636,24 +1634,23 @@ namespace DKMovies.Controllers
         {
             try
             {
-            var paymentMethods = new[]
-            {
-                new {
-                    Code = "cash",
-                    Name = "Tiền mặt",
-                    Description = "Thanh toán tại quầy",
-                    Icon = "bi-cash",
-                    IsActive = true
-                },
-                new {
-                    Code = "stripe",
-                    Name = "Thẻ quốc tế",
-                    Description = "Thanh toán bằng thẻ",
-                    Icon = "bi-credit-card-2-front",
-                    IsActive = true
-                }
-            };
-
+                var paymentMethods = new[]
+                {
+            new {
+                Code = "cash",
+                Name = "Tiền mặt",
+                Description = "Thanh toán tại quầy rạp",
+                Icon = "bi-cash",
+                IsActive = true
+            },
+            new {
+                Code = "stripe",
+                Name = "Thẻ quốc tế",
+                Description = "Thanh toán bằng thẻ Visa/MasterCard",
+                Icon = "bi-credit-card-2-front",
+                IsActive = true
+            }
+        };
 
                 return Json(paymentMethods);
             }
@@ -1723,8 +1720,9 @@ namespace DKMovies.Controllers
         }
 
         // ✅ HELPER: Create ticket transaction
+        // ✅ FIXED TicketsController.cs - CreateTicketTransaction method
         private async Task<Ticket> CreateTicketTransaction(int userId, int showTimeID, decimal totalPrice,
-    List<Seat> validSeats, List<OrderItem> orderItems)
+            List<Seat> validSeats, List<OrderItem> orderItems)
         {
             using var transaction = await _context.Database.BeginTransactionAsync();
             try
@@ -1761,6 +1759,7 @@ namespace DKMovies.Controllers
 
                 Console.WriteLine($"✅ Pre-validation passed");
 
+                // ✅ Add default PaymentMethod to prevent NULL constraint error
                 var ticket = new Ticket
                 {
                     UserID = userId,
@@ -1768,7 +1767,7 @@ namespace DKMovies.Controllers
                     PurchaseTime = DateTime.Now,
                     Status = TicketStatus.PENDING,
                     TotalPrice = totalPrice,
-                    PaymentMethod = "stripe" // 👈 Tạm thời gán nếu cột không cho null
+                    PaymentMethod = "pending" // ✅ Default value to prevent NULL error
                 };
 
                 if (ticket.TotalPrice <= 0)
@@ -1846,7 +1845,6 @@ namespace DKMovies.Controllers
             }
         }
 
-        // Tiện ích ghi lỗi sâu nhất
         private void LogDeepException(Exception ex)
         {
             Console.WriteLine($"⚠️  TOP-LEVEL ERROR: {ex.Message}");

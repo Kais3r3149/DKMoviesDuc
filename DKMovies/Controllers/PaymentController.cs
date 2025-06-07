@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿// ✅ FIXED PaymentController.cs
+using Microsoft.AspNetCore.Mvc;
 using Stripe.Checkout;
 using Stripe;
 using DKMovies.Models;
@@ -71,35 +72,37 @@ namespace DKMovies.Controllers
                 if (ticket.PurchaseTime.AddMinutes(15) < DateTime.Now)
                 {
                     await CancelExpiredTicket(ticket);
-
                     TempData["ToastError"] = "Vé đã hết hạn thanh toán (15 phút). Vui lòng đặt vé lại.";
                     return RedirectToAction("OrderTicket", "Tickets", new { id = ticket.ShowTime.MovieID });
                 }
 
-                // ✅ Build Stripe line items - FIXED: Removed Images field completely
+                // ✅ Build Stripe line items - Convert VND to USD (1 USD = 24,000 VND)
                 var lineItems = new List<SessionLineItemOptions>();
 
-                // Add movie tickets
+                // Add movie tickets - Convert VND to USD
                 var seatNames = ticket.TicketSeats.Select(ts => $"{ts.Seat.RowLabel}{ts.Seat.SeatNumber}").ToList();
-                var seatDescription = $"Ghế: {string.Join(", ", seatNames)}";
+                var seatDescription = $"Seats: {string.Join(", ", seatNames)}";
+
+                // Convert VND to USD (1 USD = 24,000 VND)
+                var ticketPriceUSD = ticket.ShowTime.Price / 24000;
+                var ticketPriceCents = (long)(ticketPriceUSD * 100);
 
                 lineItems.Add(new SessionLineItemOptions
                 {
                     PriceData = new SessionLineItemPriceDataOptions
                     {
-                        UnitAmount = (long)(ticket.ShowTime.Price * 100), // Convert to cents
+                        UnitAmount = ticketPriceCents, // USD in cents
                         Currency = "usd",
                         ProductData = new SessionLineItemPriceDataProductDataOptions
                         {
-                            Name = $"Vé xem phim - {ticket.ShowTime.Movie.Title}",
-                            Description = $"{seatDescription}\nSuất chiếu: {ticket.ShowTime.StartTime:dd/MM/yyyy HH:mm}\nRạp: {ticket.ShowTime.Auditorium.Theater.Name} - {ticket.ShowTime.Auditorium.Name}"
-                            // ✅ REMOVED: Images field completely - this was causing the error
+                            Name = $"Movie Ticket - {ticket.ShowTime.Movie.Title}",
+                            Description = $"{seatDescription}\nShowtime: {ticket.ShowTime.StartTime:dd/MM/yyyy HH:mm}\nTheater: {ticket.ShowTime.Auditorium.Theater.Name} - {ticket.ShowTime.Auditorium.Name}"
                         }
                     },
                     Quantity = ticket.TicketSeats.Count
                 });
 
-                // ✅ Add concession items - FIXED: Removed Images field
+                // Add concession items - Convert VND to USD
                 if (ticket.OrderItems?.Any() == true)
                 {
                     var concessionGroups = ticket.OrderItems
@@ -111,17 +114,20 @@ namespace DKMovies.Controllers
                         var firstItem = group.First();
                         var totalQuantity = group.Sum(g => g.Quantity);
 
+                        // Convert concession price VND to USD
+                        var concessionPriceUSD = firstItem.PriceAtPurchase / 24000;
+                        var concessionPriceCents = (long)(concessionPriceUSD * 100);
+
                         lineItems.Add(new SessionLineItemOptions
                         {
                             PriceData = new SessionLineItemPriceDataOptions
                             {
-                                UnitAmount = (long)(firstItem.PriceAtPurchase * 100),
+                                UnitAmount = concessionPriceCents, // USD in cents
                                 Currency = "usd",
                                 ProductData = new SessionLineItemPriceDataProductDataOptions
                                 {
                                     Name = firstItem.TheaterConcession.Concession.Name,
-                                    Description = firstItem.TheaterConcession.Concession.Description ?? "Đồ ăn, thức uống"
-                                    // ✅ REMOVED: Images field completely
+                                    Description = firstItem.TheaterConcession.Concession.Description ?? "Food & Beverage"
                                 }
                             },
                             Quantity = totalQuantity
@@ -146,10 +152,10 @@ namespace DKMovies.Controllers
                         { "ticket_id", ticketId.ToString() },
                         { "user_id", ticket.UserID.ToString() }
                     },
-                    ExpiresAt = DateTime.UtcNow.AddMinutes(30), // ✅ FIXED: Minimum 30 minutes required by Stripe
+                    ExpiresAt = DateTime.UtcNow.AddMinutes(30), // Minimum 30 minutes required by Stripe
                     PaymentIntentData = new SessionPaymentIntentDataOptions
                     {
-                        Description = $"Thanh toán vé xem phim #{ticketId} - {ticket.ShowTime.Movie.Title}"
+                        Description = $"Movie ticket payment #{ticketId} - {ticket.ShowTime.Movie.Title}"
                     }
                 };
 
@@ -161,27 +167,19 @@ namespace DKMovies.Controllers
                 _context.Update(ticket);
                 await _context.SaveChangesAsync();
 
-                // Redirect to Stripe checkout
-                Response.Headers.Add("Location", session.Url);
-                return new StatusCodeResult(303);
+                // Use simple redirect
+                return Redirect(session.Url);
             }
             catch (StripeException ex)
             {
-                // ✅ Enhanced error logging for debugging
                 Console.WriteLine($"❌ Stripe Error: {ex.Message}");
-                Console.WriteLine($"   Error Type: {ex.StripeError?.Type}");
-                Console.WriteLine($"   Error Code: {ex.StripeError?.Code}");
-                Console.WriteLine($"   Error Param: {ex.StripeError?.Param}");
-
-                TempData["ToastError"] = $"Lỗi thanh toán: {ex.Message}";
+                TempData["ToastError"] = $"Payment error: {ex.Message}";
                 return RedirectToAction("PaymentSelection", "Tickets", new { ticketId });
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"❌ General Error: {ex.Message}");
-                Console.WriteLine($"   Stack Trace: {ex.StackTrace}");
-
-                TempData["ToastError"] = "Có lỗi xảy ra khi tạo phiên thanh toán. Vui lòng thử lại.";
+                TempData["ToastError"] = "An error occurred while creating payment session. Please try again.";
                 return RedirectToAction("PaymentSelection", "Tickets", new { ticketId });
             }
         }
@@ -216,7 +214,7 @@ namespace DKMovies.Controllers
 
                     if (session.PaymentStatus == "paid")
                     {
-                        // Only update if not already paid (prevent duplicate processing)
+                        // Only update if not already paid
                         if (ticket.Status == TicketStatus.PENDING)
                         {
                             // Update ticket status
@@ -300,103 +298,6 @@ namespace DKMovies.Controllers
             }
         }
 
-        // ✅ Webhook to handle Stripe events
-        [HttpPost]
-        public async Task<IActionResult> StripeWebhook()
-        {
-            var json = await new StreamReader(HttpContext.Request.Body).ReadToEndAsync();
-
-            try
-            {
-                var stripeEvent = EventUtility.ConstructEvent(
-                    json,
-                    Request.Headers["Stripe-Signature"],
-                    _configuration["Stripe:WebhookSecret"]
-                );
-
-                Console.WriteLine($"🔍 Received Stripe webhook: {stripeEvent.Type}");
-
-                // ✅ Handle checkout session completed
-                if (stripeEvent.Type == "checkout.session.completed")
-                {
-                    var session = stripeEvent.Data.Object as Session;
-
-                    if (session?.Metadata?.ContainsKey("ticket_id") == true)
-                    {
-                        var ticketId = int.Parse(session.Metadata["ticket_id"]);
-
-                        var ticket = await _context.Tickets
-                            .Include(t => t.User)
-                            .Include(t => t.ShowTime)
-                                .ThenInclude(st => st.Movie)
-                            .Include(t => t.TicketSeats)
-                                .ThenInclude(ts => ts.Seat)
-                            .Include(t => t.OrderItems)
-                                .ThenInclude(oi => oi.TheaterConcession)
-                                    .ThenInclude(tc => tc.Concession)
-                            .FirstOrDefaultAsync(t => t.ID == ticketId);
-
-                        if (ticket != null && ticket.Status == TicketStatus.PENDING)
-                        {
-                            ticket.Status = TicketStatus.PAID;
-                            ticket.PaymentTime = DateTime.Now;
-
-                            var ticketPayment = new TicketPayment
-                            {
-                                TicketID = ticket.ID,
-                                MethodID = 1, // Stripe
-                                PaymentStatus = "Completed",
-                                PaidAmount = ticket.TotalPrice,
-                                PaidAt = DateTime.Now
-                            };
-
-                            _context.TicketPayments.Add(ticketPayment);
-                            _context.Update(ticket);
-                            await _context.SaveChangesAsync();
-
-                            Console.WriteLine($"✅ Webhook: Updated ticket {ticketId} to PAID status");
-
-                            // Send confirmation email
-                            await SendConfirmationEmail(ticket);
-                        }
-                    }
-                }
-                // ✅ Handle expired sessions
-                else if (stripeEvent.Type == "checkout.session.expired")
-                {
-                    var session = stripeEvent.Data.Object as Session;
-
-                    if (session?.Metadata?.ContainsKey("ticket_id") == true)
-                    {
-                        var ticketId = int.Parse(session.Metadata["ticket_id"]);
-                        var ticket = await _context.Tickets
-                            .Include(t => t.OrderItems)
-                            .FirstOrDefaultAsync(t => t.ID == ticketId);
-
-                        if (ticket != null && ticket.Status == TicketStatus.PENDING)
-                        {
-                            await CancelExpiredTicket(ticket);
-                            Console.WriteLine($"✅ Webhook: Cancelled expired ticket {ticketId}");
-                        }
-                    }
-                }
-
-                return Ok();
-            }
-            catch (StripeException ex)
-            {
-                Console.WriteLine($"❌ Stripe webhook error: {ex.Message}");
-                return BadRequest($"Webhook error: {ex.Message}");
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"❌ Webhook internal error: {ex.Message}");
-                Console.WriteLine($"   Stack trace: {ex.StackTrace}");
-                return StatusCode(500, $"Internal error: {ex.Message}");
-            }
-        }
-
-        // ✅ Helper method to cancel expired ticket and restore stock
         private async Task CancelExpiredTicket(Ticket ticket)
         {
             using var transaction = await _context.Database.BeginTransactionAsync();
@@ -437,7 +338,6 @@ namespace DKMovies.Controllers
             }
         }
 
-        // ✅ Enhanced email confirmation with better error handling
         private async Task SendConfirmationEmail(Ticket ticket)
         {
             try
@@ -465,48 +365,30 @@ namespace DKMovies.Controllers
                 var seatNames = ticket.TicketSeats.Select(ts => $"{ts.Seat.RowLabel}{ts.Seat.SeatNumber}").ToList();
 
                 var emailBody = new StringBuilder();
-                emailBody.AppendLine($"Xin chào {ticket.User.FullName ?? ticket.User.Username},");
+                emailBody.AppendLine($"Dear {ticket.User.FullName ?? ticket.User.Username},");
                 emailBody.AppendLine();
-                emailBody.AppendLine("Cảm ơn bạn đã đặt vé tại DK Movies! Dưới đây là thông tin vé của bạn:");
+                emailBody.AppendLine("Thank you for booking with DK Movies! Here is your ticket information:");
                 emailBody.AppendLine();
-                emailBody.AppendLine("=== THÔNG TIN VÉ ===");
-                emailBody.AppendLine($"Mã vé: #{ticket.ID}");
-                emailBody.AppendLine($"Phim: {ticket.ShowTime.Movie.Title}");
-                emailBody.AppendLine($"Rạp: {ticket.ShowTime.Auditorium.Theater.Name}");
-                emailBody.AppendLine($"Phòng chiếu: {ticket.ShowTime.Auditorium.Name}");
-                emailBody.AppendLine($"Suất chiếu: {ticket.ShowTime.StartTime:dd/MM/yyyy HH:mm}");
-                emailBody.AppendLine($"Ghế: {string.Join(", ", seatNames)}");
-                emailBody.AppendLine($"Trạng thái: {(ticket.Status == TicketStatus.PAID ? "Đã thanh toán" : "Đã xác nhận")}");
-
-                if (ticket.OrderItems?.Any() == true)
-                {
-                    emailBody.AppendLine();
-                    emailBody.AppendLine("=== ĐỒ ĂN & THỨC UỐNG ===");
-                    foreach (var item in ticket.OrderItems)
-                    {
-                        emailBody.AppendLine($"- {item.TheaterConcession.Concession.Name} x{item.Quantity} = {item.Quantity * item.PriceAtPurchase:N0} VND");
-                    }
-                }
-
+                emailBody.AppendLine("=== TICKET INFORMATION ===");
+                emailBody.AppendLine($"Ticket ID: #{ticket.ID}");
+                emailBody.AppendLine($"Movie: {ticket.ShowTime.Movie.Title}");
+                emailBody.AppendLine($"Theater: {ticket.ShowTime.Auditorium.Theater.Name}");
+                emailBody.AppendLine($"Auditorium: {ticket.ShowTime.Auditorium.Name}");
+                emailBody.AppendLine($"Showtime: {ticket.ShowTime.StartTime:dd/MM/yyyy HH:mm}");
+                emailBody.AppendLine($"Seats: {string.Join(", ", seatNames)}");
+                emailBody.AppendLine($"Status: {(ticket.Status == TicketStatus.PAID ? "Paid" : "Confirmed")}");
                 emailBody.AppendLine();
-                emailBody.AppendLine($"Tổng tiền: {ticket.TotalPrice:N0} VND");
-                emailBody.AppendLine($"Thời gian đặt: {ticket.PurchaseTime:dd/MM/yyyy HH:mm}");
-
-                if (ticket.PaymentTime.HasValue)
-                {
-                    emailBody.AppendLine($"Thời gian thanh toán: {ticket.PaymentTime.Value:dd/MM/yyyy HH:mm}");
-                }
-
+                emailBody.AppendLine($"Total: {ticket.TotalPrice:N0} VND");
                 emailBody.AppendLine();
-                emailBody.AppendLine("Vui lòng đến rạp trước giờ chiếu ít nhất 15 phút để làm thủ tục vào phòng.");
+                emailBody.AppendLine("Please arrive at the theater at least 15 minutes before showtime.");
                 emailBody.AppendLine();
-                emailBody.AppendLine("Trân trọng,");
+                emailBody.AppendLine("Best regards,");
                 emailBody.AppendLine("DK Movies Team");
 
                 var mailMessage = new MailMessage
                 {
                     From = new MailAddress(fromEmail, "DK Movies"),
-                    Subject = $"Xác nhận đặt vé #{ticket.ID} - {ticket.ShowTime.Movie.Title}",
+                    Subject = $"Ticket Confirmation #{ticket.ID} - {ticket.ShowTime.Movie.Title}",
                     Body = emailBody.ToString(),
                     IsBodyHtml = false
                 };
@@ -518,9 +400,10 @@ namespace DKMovies.Controllers
             }
             catch (Exception ex)
             {
-                // Log email error but don't throw (payment should still succeed)
+                // Log email error but don't throw
                 Console.WriteLine($"⚠️ Email sending failed: {ex.Message}");
             }
         }
     }
 }
+
