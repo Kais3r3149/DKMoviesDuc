@@ -4,6 +4,12 @@
     Layout = "~/Views/Shared/_AdminLayout.cshtml";
 }
 
+<!-- Thêm CSRF Token -->
+@using (Html.BeginForm("", "", FormMethod.Post, new { id = "csrf-form", style = "display:none;" }))
+{
+    @Html.AntiForgeryToken()
+}
+
 <style>
     .admin-content {
         margin-left: 280px !important;
@@ -63,19 +69,6 @@
         animation: pulse 2s infinite;
     }
 
-    {
-        opacity: 1;
-    }
-
-    50% {
-        opacity: 0.5;
-    }
-
-    100% {
-        opacity: 1;
-    }
-
-    }
 
     .status-badge {
         font-size: 0.7rem;
@@ -214,7 +207,7 @@
         </div>
     </div>
 
-    <!-- Auto Management Control Panel -->
+    <!-- Auto Management Control Panel - ĐÃ SỬA -->
     <div class="col-xl-4">
         <div class="card border-0 shadow-sm h-100">
             <div class="card-header bg-white border-bottom-0 py-3">
@@ -226,16 +219,18 @@
                 <div class="mb-3">
                     <div class="d-flex justify-content-between align-items-center mb-2">
                         <span class="small fw-medium">Trạng thái tự động:</span>
-                        <span class="badge bg-success" id="auto-status">Đang hoạt động</span>
+                        <span class="badge bg-success" id="auto-status">Chạy mỗi 5 phút</span>
                     </div>
                     <div class="progress mb-2" style="height: 6px;">
-                        <div class="progress-bar bg-gradient" role="progressbar" style="width: 85%"></div>
+                        <div class="progress-bar bg-gradient bg-success" role="progressbar" style="width: 85%"></div>
                     </div>
-                    <small class="text-muted">Reset mỗi tuần vào Chủ nhật</small>
+                    <small class="text-muted">Tự động chạy mỗi 5 phút</small>
                 </div>
 
                 <div class="mb-3">
-                    <button class="btn btn-outline-primary w-100 mb-2" onclick="triggerAutoManagement()">
+                    <button class="btn btn-outline-primary w-100 mb-2"
+                            onclick="triggerAutoManagement()"
+                            data-original-html='<i class="fas fa-play me-2"></i>Chạy ngay'>
                         <i class="fas fa-play me-2"></i>Chạy ngay
                     </button>
                     <button class="btn btn-outline-secondary w-100" onclick="viewAutoLog()">
@@ -302,8 +297,8 @@
             initializeDashboard();
             startAutoRefresh();
 
-            // Start auto management check every hour
-            autoManagementInterval = setInterval(checkAutoManagement, 3600000);
+            // SỬA: Chạy auto management mỗi 5 phút thay vì mỗi giờ
+            autoManagementInterval = setInterval(triggerAutoManagement, 300000); // 5 phút
         });
 
         function initializeDashboard() {
@@ -317,7 +312,7 @@
         }
 
         function loadTopMovies() {
-            fetch('/Admins/GetTop5MoviesRealTime')
+            fetch('/Admin/GetTop5MoviesRealTime')
                 .then(response => response.json())
                 .then(data => {
                     if (data.success) {
@@ -374,18 +369,30 @@
         }
 
         function triggerAutoManagement() {
-            const btn = event.target.closest('button');
-            const originalHtml = btn.innerHTML;
+            const btn = event?.target?.closest('button');
 
-            btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Đang xử lý...';
-            btn.disabled = true;
+            // SỬA: Kiểm tra nếu được gọi tự động (không có event)
+            if (btn) {
+                const originalHtml = btn.innerHTML;
+                btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Đang xử lý...';
+                btn.disabled = true;
+            }
 
-            fetch('/Admins/AutoManageShowtimes', {
+            // SỬA: Lấy CSRF token đúng cách
+            const token = document.querySelector('input[name="__RequestVerificationToken"]')?.value;
+
+            const headers = {
+                'Content-Type': 'application/json'
+            };
+
+            // Thêm CSRF token nếu có
+            if (token) {
+                headers['RequestVerificationToken'] = token;
+            }
+
+            fetch('/Admin/AutoManageShowtimes', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]')?.value
-                }
+                headers: headers
             })
             .then(response => response.json())
             .then(data => {
@@ -407,17 +414,11 @@
                 showError('Lỗi kết nối');
             })
             .finally(() => {
-                btn.innerHTML = originalHtml;
-                btn.disabled = false;
+                if (btn) {
+                    btn.innerHTML = btn.getAttribute('data-original-html') || '<i class="fas fa-play me-2"></i>Chạy ngay';
+                    btn.disabled = false;
+                }
             });
-        }
-
-        function checkAutoManagement() {
-            // Check if it's Sunday (weekly reset)
-            const now = new Date();
-            if (now.getDay() === 0 && now.getHours() === 2) { // Sunday 2 AM
-                triggerAutoManagement();
-            }
         }
 
         function updateCounters(added, removed) {
@@ -425,7 +426,7 @@
             document.getElementById('removed-count').textContent = removed;
         }
 
-                function viewAutoLog() {
+        function viewAutoLog() {
             const modalElement = document.getElementById('autoLogModal');
             const content = document.getElementById('auto-log-content');
 
@@ -444,7 +445,7 @@
 
             modal.show();
 
-            // Tải dữ liệu giả lập (có thể gọi API thật)
+            // Tải dữ liệu giả lập với chu kỳ 5 phút
             setTimeout(() => {
                 const now = new Date();
                 const formatDate = (date) => date.toLocaleString('vi-VN');
@@ -466,14 +467,14 @@
                             <span class="badge bg-danger">-2 suất chiếu</span><br>
                             <small>Thêm 3 suất chiếu cho "Avatar", xóa 2 suất có doanh thu thấp</small>
                         `)}
-                        ${timelineItem('info', 'Reset tuần - Chu kỳ mới', formatDate(new Date(now - 7 * 86400000)), `
-                            <small>Khởi động lại hệ thống phân tích, bắt đầu chu kỳ mới</small>
+                        ${timelineItem('info', 'Chu kỳ 5 phút - Kiểm tra mới', formatDate(new Date(now - 5 * 60000)), `
+                            <small>Hệ thống tự động kiểm tra và điều chỉnh mỗi 5 phút</small>
                         `)}
-                        ${timelineItem('warning', 'Cảnh báo doanh thu thấp', formatDate(new Date(now - 3 * 86400000)), `
+                        ${timelineItem('warning', 'Cảnh báo doanh thu thấp', formatDate(new Date(now - 10 * 60000)), `
                             <small>5 suất chiếu có tỷ lệ lấp đầy dưới 30%</small>
                         `)}
-                        ${timelineItem('primary', 'Khởi động hệ thống tự động', formatDate(new Date(now - 14 * 86400000)), `
-                            <small>Hệ thống đã được bật</small>
+                        ${timelineItem('primary', 'Khởi động hệ thống tự động', formatDate(new Date(now - 15 * 60000)), `
+                            <small>Hệ thống đã được bật với chu kỳ 5 phút</small>
                         `)}
                     </div>
 
@@ -506,7 +507,6 @@
             }, 800);
         }
 
-
         function viewMovieDetails(movieId) {
             window.open(`/AdminMovie/Details/${movieId}`, '_blank');
         }
@@ -526,7 +526,7 @@
 
         function refreshDashboardStats() {
             // Refresh main dashboard stats
-            fetch('/Admins/GetDashboardStats')
+            fetch('/Admin/GetDashboardStats')
                 .then(response => response.json())
                 .then(data => {
                     // Update stats if API exists

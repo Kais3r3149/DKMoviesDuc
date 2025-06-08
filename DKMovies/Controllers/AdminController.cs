@@ -30,7 +30,7 @@ namespace DKMovies.Controllers
 
         // ===== DASHBOARD ACTIONS =====
 
-        // GET: Admins Dashboard
+        // GET: Admin Dashboard
         public async Task<IActionResult> Index()
         {
             try
@@ -127,6 +127,14 @@ namespace DKMovies.Controllers
                         .CountAsync()
                 };
 
+                // Pass data through ViewBag for the view
+                ViewBag.TotalUsers = model.TotalUsers;
+                ViewBag.TotalEmployees = model.TotalEmployees;
+                ViewBag.TotalMovies = model.TotalMovies;
+                ViewBag.TotalShowTimes = model.TotalShowTimes;
+                ViewBag.TotalConcessions = model.TotalConcessions;
+                ViewBag.TotalRevenue = model.TotalRevenue;
+
                 // ✅ Check if we have any tickets first
                 var hasTickets = await _context.Tickets.AnyAsync();
                 if (!hasTickets)
@@ -203,6 +211,12 @@ namespace DKMovies.Controllers
                     TopMovies = new List<MovieScoreViewModel>()
                 };
 
+                ViewBag.TotalUsers = 0;
+                ViewBag.TotalEmployees = 0;
+                ViewBag.TotalMovies = 0;
+                ViewBag.TotalShowTimes = 0;
+                ViewBag.TotalConcessions = 0;
+                ViewBag.TotalRevenue = 0;
                 ViewBag.ErrorMessage = "Có lỗi xảy ra khi tải dữ liệu thống kê phim.";
                 return View(errorModel);
             }
@@ -446,7 +460,7 @@ namespace DKMovies.Controllers
 
         // ===== API ENDPOINTS FOR DASHBOARD =====
 
-        // ===== NEW REAL-TIME TOP 5 MOVIES API =====
+        // ===== SỬA: REAL-TIME TOP 5 MOVIES API - Đã tối ưu hóa =====
         [HttpGet]
         public async Task<JsonResult> GetTop5MoviesRealTime()
         {
@@ -454,6 +468,19 @@ namespace DKMovies.Controllers
             {
                 var endDate = DateTime.Now;
                 var startDate = endDate.AddDays(-7); // Last 7 days
+
+                // SỬA: Kiểm tra có tickets trước
+                var hasTickets = await _context.Tickets.AnyAsync();
+                if (!hasTickets)
+                {
+                    return Json(new
+                    {
+                        success = true,
+                        data = new object[0],
+                        lastUpdated = DateTime.Now.ToString("HH:mm:ss dd/MM/yyyy"),
+                        message = "Chưa có dữ liệu vé"
+                    });
+                }
 
                 var movieStats = await _context.Tickets
                     .Include(t => t.ShowTime)
@@ -481,7 +508,7 @@ namespace DKMovies.Controllers
                     {
                         rank = index + 1,
                         movieId = movie.MovieID,
-                        title = movie.Title,
+                        title = movie.Title ?? "Không có tên",
                         ticketsSold = movie.TicketsSold,
                         revenue = movie.TotalRevenue,
                         revenueFormatted = string.Format("{0:N0} ₫", movie.TotalRevenue)
@@ -491,7 +518,7 @@ namespace DKMovies.Controllers
             }
             catch (Exception ex)
             {
-                return Json(new { success = false, error = "Lỗi khi tải dữ liệu top phim" });
+                return Json(new { success = false, error = "Lỗi khi tải dữ liệu top phim: " + ex.Message });
             }
         }
 
@@ -566,7 +593,7 @@ namespace DKMovies.Controllers
             }
             catch (Exception ex)
             {
-                return Json(new { error = "Lỗi khi tải dữ liệu doanh thu" });
+                return Json(new { error = "Lỗi khi tải dữ liệu doanh thu: " + ex.Message });
             }
         }
 
@@ -603,7 +630,7 @@ namespace DKMovies.Controllers
             }
             catch (Exception ex)
             {
-                return Json(new { error = "Lỗi khi tải dữ liệu phim" });
+                return Json(new { error = "Lỗi khi tải dữ liệu phim: " + ex.Message });
             }
         }
 
@@ -640,7 +667,7 @@ namespace DKMovies.Controllers
             }
             catch (Exception ex)
             {
-                return Json(new { error = "Lỗi khi tải dữ liệu rạp chiếu" });
+                return Json(new { error = "Lỗi khi tải dữ liệu rạp chiếu: " + ex.Message });
             }
         }
 
@@ -692,7 +719,7 @@ namespace DKMovies.Controllers
             }
             catch (Exception ex)
             {
-                return Json(new { error = "Lỗi khi tải hoạt động gần đây" });
+                return Json(new { error = "Lỗi khi tải hoạt động gần đây: " + ex.Message });
             }
         }
 
@@ -723,12 +750,13 @@ namespace DKMovies.Controllers
             }
             catch (Exception ex)
             {
-                return Json(new { error = "Lỗi khi tải thống kê" });
+                return Json(new { error = "Lỗi khi tải thống kê: " + ex.Message });
             }
         }
 
-        // ===== AUTO SHOWTIME MANAGEMENT =====
+        // ===== SỬA: AUTO SHOWTIME MANAGEMENT - Đã tối ưu hóa =====
         [HttpPost]
+        [ValidateAntiForgeryToken]
         public async Task<JsonResult> AutoManageShowtimes()
         {
             try
@@ -745,7 +773,7 @@ namespace DKMovies.Controllers
             }
             catch (Exception ex)
             {
-                return Json(new { success = false, error = "Lỗi khi quản lý suất chiếu tự động" });
+                return Json(new { success = false, error = "Lỗi khi quản lý suất chiếu tự động: " + ex.Message });
             }
         }
 
@@ -805,19 +833,29 @@ namespace DKMovies.Controllers
             }
         }
 
-        // Simplified auto management logic
+        // SỬA: Simplified auto management logic - Tối ưu hóa cho chu kỳ 5 phút
         private async Task<SimpleAutoResult> PerformSimpleAutoManagement()
         {
             var result = new SimpleAutoResult();
             var now = DateTime.Now;
-            var oneWeekAgo = now.AddDays(-7);
+
+            // SỬA: Thay đổi từ 7 ngày thành 24 giờ để phù hợp với chu kỳ 5 phút
+            var oneDayAgo = now.AddHours(-24);
 
             try
             {
+                // SỬA: Kiểm tra có tickets trước
+                var hasTickets = await _context.Tickets.AnyAsync();
+                if (!hasTickets)
+                {
+                    result.Details.Add("Chưa có dữ liệu vé để phân tích");
+                    return result;
+                }
+
                 var moviePerformance = await _context.Tickets
                     .Include(t => t.ShowTime)
                     .ThenInclude(st => st.Movie)
-                    .Where(t => t.PurchaseTime >= oneWeekAgo &&
+                    .Where(t => t.PurchaseTime >= oneDayAgo &&
                                t.ShowTime != null &&
                                t.ShowTime.Movie != null)
                     .GroupBy(t => t.ShowTime.MovieID)
@@ -832,51 +870,60 @@ namespace DKMovies.Controllers
 
                 if (!moviePerformance.Any())
                 {
-                    result.Details.Add("Không có dữ liệu performance để phân tích");
+                    result.Details.Add("Không có dữ liệu performance trong 24h qua để phân tích");
                     return result;
                 }
 
                 var avgRevenue = moviePerformance.Average(x => (double)x.TotalRevenue);
                 var avgTickets = moviePerformance.Average(x => x.TicketsSold);
 
+                // SỬA: Điều chỉnh threshold cho chu kỳ ngắn
                 var topPerformers = moviePerformance
-                    .Where(x => x.TotalRevenue >= (decimal)(avgRevenue * 1.2) ||
-                               x.TicketsSold >= avgTickets * 1.2)
+                    .Where(x => x.TotalRevenue >= (decimal)(avgRevenue * 1.5) ||
+                               x.TicketsSold >= avgTickets * 1.5)
                     .OrderByDescending(x => x.TotalRevenue)
                     .Take(2)
                     .ToList();
 
                 var poorPerformers = moviePerformance
-                    .Where(x => x.TotalRevenue <= (decimal)(avgRevenue * 0.5) &&
-                               x.TicketsSold <= avgTickets * 0.5)
+                    .Where(x => x.TotalRevenue <= (decimal)(avgRevenue * 0.3) &&
+                               x.TicketsSold <= avgTickets * 0.3)
                     .ToList();
 
-                foreach (var poor in poorPerformers)
+                // SỬA: Giới hạn số lượng thay đổi cho chu kỳ 5 phút
+                foreach (var poor in poorPerformers.Take(1)) // Chỉ xử lý 1 phim kém nhất
                 {
                     var removed = await RemovePoorPerformingShowtimes(poor.MovieID, poor.MovieTitle);
                     result.RemovedCount += removed;
                     if (removed > 0)
                     {
-                        result.Details.Add($"Xóa {removed} suất chiếu của '{poor.MovieTitle}' (doanh thu thấp)");
+                        result.Details.Add($"Xóa {removed} suất chiếu của '{poor.MovieTitle}' (doanh thu thấp trong 24h)");
                     }
                 }
 
-                foreach (var top in topPerformers)
+                foreach (var top in topPerformers.Take(1)) // Chỉ xử lý 1 phim tốt nhất
                 {
                     var added = await AddShowtimesForTopMovie(top.MovieID, top.MovieTitle);
                     result.AddedCount += added;
                     if (added > 0)
                     {
-                        result.Details.Add($"Thêm {added} suất chiếu cho '{top.MovieTitle}' (doanh thu cao)");
+                        result.Details.Add($"Thêm {added} suất chiếu cho '{top.MovieTitle}' (doanh thu cao trong 24h)");
                     }
                 }
 
                 await _context.SaveChangesAsync();
+
+                // SỬA: Thêm thông tin chu kỳ
+                if (result.AddedCount == 0 && result.RemovedCount == 0)
+                {
+                    result.Details.Add("Không cần điều chỉnh suất chiếu trong chu kỳ này");
+                }
+
                 return result;
             }
             catch (Exception ex)
             {
-                result.Details.Add($"Lỗi: {ex.Message}");
+                result.Details.Add($"Lỗi trong quá trình tự động quản lý: {ex.Message}");
                 return result;
             }
         }
@@ -884,13 +931,15 @@ namespace DKMovies.Controllers
         private async Task<int> RemovePoorPerformingShowtimes(int movieId, string movieTitle)
         {
             var now = DateTime.Now;
+
+            // SỬA: Chỉ xóa những suất chiếu ít nhất 6 giờ nữa và chưa có vé
             var showtimesToRemove = await _context.ShowTimes
                 .Where(st => st.MovieID == movieId &&
-                            st.StartTime > now.AddHours(3))
+                            st.StartTime > now.AddHours(6)) // Tăng từ 3 giờ lên 6 giờ
                 .Include(st => st.Tickets)
                 .Where(st => !st.Tickets.Any())
                 .OrderBy(st => st.StartTime)
-                .Take(2)
+                .Take(1) // SỬA: Giảm từ 2 xuống 1 để ít aggressive hơn
                 .ToListAsync();
 
             if (showtimesToRemove.Any())
@@ -909,13 +958,14 @@ namespace DKMovies.Controllers
             var now = DateTime.Now;
             var addedCount = 0;
 
+            // SỬA: Điều chỉnh thời gian thêm suất chiếu cho chu kỳ 5 phút
             var targetTimes = new[]
             {
-                now.AddDays(1).Date.AddHours(19),
-                now.AddDays(2).Date.AddHours(21)
+                now.AddHours(8).Date.AddHours(19),  // Ngày mai 7pm
+                now.AddHours(32).Date.AddHours(21)  // Ngày kia 9pm
             };
 
-            foreach (var targetTime in targetTimes)
+            foreach (var targetTime in targetTimes.Take(1)) // SỬA: Chỉ thêm 1 suất thay vì 2
             {
                 var bestAuditorium = await FindAvailableAuditorium(targetTime, movie.DurationMinutes);
                 if (bestAuditorium != null)
@@ -967,7 +1017,8 @@ namespace DKMovies.Controllers
                 .DefaultIfEmpty(10.0m)
                 .Average();
 
-            return Math.Max(5.0m, Math.Min(20.0m, avgPrice * 1.05m));
+            // SỬA: Giữ giá ổn định hơn cho chu kỳ ngắn
+            return Math.Max(5.0m, Math.Min(20.0m, avgPrice * 1.02m)); // Tăng chỉ 2% thay vì 5%
         }
 
         private string GetTimeAgo(DateTime dateTime)
