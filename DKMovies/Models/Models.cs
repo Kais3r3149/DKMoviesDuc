@@ -535,6 +535,7 @@ namespace DKMovies.Models
     }
 
     // 12. SHOWTIMES
+    [Table("ShowTimes")]
     public class ShowTime
     {
         [Key]

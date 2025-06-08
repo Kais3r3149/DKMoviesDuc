@@ -41,7 +41,7 @@ namespace DKMovies.Controllers
                 var totalShowTimes = await _context.ShowTimes.CountAsync();
                 var totalConcessions = await _context.Concessions.CountAsync();
 
-                // Calculate total revenue from tickets only (no Orders table)
+                // Calculate total revenue from tickets only
                 var totalRevenue = await _context.Tickets
                     .Include(t => t.ShowTime)
                     .SumAsync(t => t.ShowTime.Price);
@@ -68,7 +68,7 @@ namespace DKMovies.Controllers
             }
             catch (Exception ex)
             {
-                // Log the error and return a safe fallback
+                // Return safe fallback on error
                 var emptyModel = new DashboardViewModel
                 {
                     TotalUsers = 0,
@@ -91,7 +91,6 @@ namespace DKMovies.Controllers
             }
         }
 
-        // Add a simple Home action to handle navigation to main dashboard
         public IActionResult Home()
         {
             return RedirectToAction("Index");
@@ -101,7 +100,6 @@ namespace DKMovies.Controllers
         {
             try
             {
-                // ✅ Create DashboardViewModel with basic stats
                 var model = new DashboardViewModel
                 {
                     TotalUsers = await _context.Users.CountAsync(),
@@ -113,7 +111,6 @@ namespace DKMovies.Controllers
                         .Include(t => t.ShowTime)
                         .SumAsync(t => t.ShowTime.Price),
 
-                    // ✅ Additional metrics
                     TodayTickets = await _context.Tickets
                         .Where(t => t.PurchaseTime.Date == DateTime.Today)
                         .CountAsync(),
@@ -135,7 +132,7 @@ namespace DKMovies.Controllers
                 ViewBag.TotalConcessions = model.TotalConcessions;
                 ViewBag.TotalRevenue = model.TotalRevenue;
 
-                // ✅ Check if we have any tickets first
+                // Check if we have any tickets
                 var hasTickets = await _context.Tickets.AnyAsync();
                 if (!hasTickets)
                 {
@@ -190,13 +187,10 @@ namespace DKMovies.Controllers
                 .Take(5)
                 .ToList();
 
-                // ✅ Set TopMovies in the model
                 model.TopMovies = scored;
-
-                // ✅ Calculate average rating
                 model.AverageRating = scored.Any() ? scored.Average(m => m.AvgRating) : 0;
 
-                return View(model); // Return DashboardViewModel
+                return View(model);
             }
             catch (Exception ex)
             {
@@ -224,7 +218,6 @@ namespace DKMovies.Controllers
 
         // ===== PROFILE MANAGEMENT ACTIONS =====
 
-        // GET: Admin Profile
         [HttpGet]
         public async Task<IActionResult> Profile()
         {
@@ -274,7 +267,6 @@ namespace DKMovies.Controllers
             }
         }
 
-        // GET: Edit Admin Profile
         [HttpGet]
         public async Task<IActionResult> EditProfile()
         {
@@ -318,7 +310,6 @@ namespace DKMovies.Controllers
             }
         }
 
-        // POST: Update Admin Profile
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> EditProfile(EditAdminProfileViewModel model)
@@ -340,7 +331,7 @@ namespace DKMovies.Controllers
                     return RedirectToAction("Index");
                 }
 
-                // Check if username is already taken by another admin
+                // Check if username is already taken
                 if (admin.Username != model.Username)
                 {
                     var usernameExists = await _context.Admins
@@ -358,7 +349,7 @@ namespace DKMovies.Controllers
                     admin.Username = model.Username;
                 }
 
-                // Check if email is already taken by another employee
+                // Check if email is already taken
                 if (admin.Employee?.Email != model.Email)
                 {
                     var emailExists = await _context.Employees
@@ -377,7 +368,6 @@ namespace DKMovies.Controllers
                 {
                     profileImagePath = await SaveProfileImage(model.ProfileImage);
 
-                    // Delete old image if exists
                     if (!string.IsNullOrEmpty(admin.Employee?.ProfileImagePath))
                     {
                         DeleteOldImage(admin.Employee.ProfileImagePath);
@@ -408,14 +398,12 @@ namespace DKMovies.Controllers
             }
         }
 
-        // GET: Change Password
         [HttpGet]
         public IActionResult ChangePassword()
         {
             return View(new ChangePasswordViewModel());
         }
 
-        // POST: Change Password
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> ChangePassword(ChangePasswordViewModel model)
@@ -460,7 +448,6 @@ namespace DKMovies.Controllers
 
         // ===== API ENDPOINTS FOR DASHBOARD =====
 
-        // ===== SỬA: REAL-TIME TOP 5 MOVIES API - Đã tối ưu hóa =====
         [HttpGet]
         public async Task<JsonResult> GetTop5MoviesRealTime()
         {
@@ -469,7 +456,6 @@ namespace DKMovies.Controllers
                 var endDate = DateTime.Now;
                 var startDate = endDate.AddDays(-7); // Last 7 days
 
-                // SỬA: Kiểm tra có tickets trước
                 var hasTickets = await _context.Tickets.AnyAsync();
                 if (!hasTickets)
                 {
@@ -523,207 +509,6 @@ namespace DKMovies.Controllers
         }
 
         [HttpGet]
-        public async Task<JsonResult> GetRevenueChartData(string period = "7days")
-        {
-            try
-            {
-                var endDate = DateTime.Now;
-                var startDate = period switch
-                {
-                    "7days" => endDate.AddDays(-6),
-                    "30days" => endDate.AddDays(-29),
-                    "12months" => endDate.AddMonths(-11),
-                    _ => endDate.AddDays(-6)
-                };
-
-                // ✅ SỬA: Tách riêng query để tránh lỗi GroupBy phức tạp
-                var tickets = await _context.Tickets
-                    .Include(t => t.ShowTime)
-                    .Where(t => t.PurchaseTime >= startDate && t.PurchaseTime <= endDate)
-                    .Select(t => new
-                    {
-                        PurchaseTime = t.PurchaseTime,
-                        Price = t.ShowTime.Price
-                    })
-                    .ToListAsync();
-
-                // ✅ Group data in memory instead of database
-                IEnumerable<object> groupedData;
-
-                if (period == "12months")
-                {
-                    groupedData = tickets
-                        .GroupBy(t => new { Year = t.PurchaseTime.Year, Month = t.PurchaseTime.Month })
-                        .Select(g => new
-                        {
-                            Date = new DateTime(g.Key.Year, g.Key.Month, 1),
-                            Revenue = g.Sum(t => t.Price),
-                            TicketCount = g.Count()
-                        })
-                        .OrderBy(x => x.Date);
-                }
-                else
-                {
-                    groupedData = tickets
-                        .GroupBy(t => new { Year = t.PurchaseTime.Year, Month = t.PurchaseTime.Month, Day = t.PurchaseTime.Day })
-                        .Select(g => new
-                        {
-                            Date = new DateTime(g.Key.Year, g.Key.Month, g.Key.Day),
-                            Revenue = g.Sum(t => t.Price),
-                            TicketCount = g.Count()
-                        })
-                        .OrderBy(x => x.Date);
-                }
-
-                var revenueData = groupedData.ToList();
-
-                var labels = revenueData.Select(r => period == "12months"
-                    ? ((dynamic)r).Date.ToString("MM/yyyy")
-                    : ((dynamic)r).Date.ToString("dd/MM")).ToArray();
-
-                var revenues = revenueData.Select(r => ((dynamic)r).Revenue).ToArray();
-                var tickets_count = revenueData.Select(r => ((dynamic)r).TicketCount).ToArray();
-
-                return Json(new
-                {
-                    labels = labels,
-                    revenues = revenues,
-                    tickets = tickets_count
-                });
-            }
-            catch (Exception ex)
-            {
-                return Json(new { error = "Lỗi khi tải dữ liệu doanh thu: " + ex.Message });
-            }
-        }
-
-        [HttpGet]
-        public async Task<JsonResult> GetMoviePerformanceData()
-        {
-            try
-            {
-                var movieData = await _context.Tickets
-                    .Include(t => t.ShowTime)
-                    .ThenInclude(st => st.Movie)
-                    .Where(t => t.ShowTime != null && t.ShowTime.Movie != null)
-                    .GroupBy(t => t.ShowTime.Movie.Title)
-                    .Select(g => new
-                    {
-                        MovieTitle = g.Key,
-                        TicketsSold = g.Count(),
-                        Revenue = g.Sum(t => t.ShowTime.Price)
-                    })
-                    .OrderByDescending(x => x.TicketsSold)
-                    .Take(5)
-                    .ToListAsync();
-
-                var labels = movieData.Select(m => m.MovieTitle).ToArray();
-                var ticketCounts = movieData.Select(m => m.TicketsSold).ToArray();
-                var colors = new[] { "#0d6efd", "#198754", "#ffc107", "#dc3545", "#6c757d" };
-
-                return Json(new
-                {
-                    labels = labels,
-                    data = ticketCounts,
-                    colors = colors
-                });
-            }
-            catch (Exception ex)
-            {
-                return Json(new { error = "Lỗi khi tải dữ liệu phim: " + ex.Message });
-            }
-        }
-
-        [HttpGet]
-        public async Task<JsonResult> GetTheaterPerformanceData()
-        {
-            try
-            {
-                var theaterData = await _context.ShowTimes
-                    .Include(st => st.Auditorium)
-                    .ThenInclude(a => a.Theater)
-                    .Include(st => st.Tickets)
-                    .Where(st => st.Auditorium != null && st.Auditorium.Theater != null)
-                    .GroupBy(st => st.Auditorium.Theater.Name)
-                    .Select(g => new
-                    {
-                        TheaterName = g.Key,
-                        TotalShows = g.Count(),
-                        TicketsSold = g.SelectMany(st => st.Tickets).Count(),
-                        TotalCapacity = g.Count() * 100 // Assume 100 seats per show
-                    })
-                    .ToListAsync();
-
-                var labels = theaterData.Select(t => t.TheaterName).ToArray();
-                var performancePercentages = theaterData.Select(t =>
-                    t.TotalCapacity > 0 ? Math.Round((double)t.TicketsSold / t.TotalCapacity * 100, 1) : 0
-                ).ToArray();
-
-                return Json(new
-                {
-                    labels = labels,
-                    data = performancePercentages
-                });
-            }
-            catch (Exception ex)
-            {
-                return Json(new { error = "Lỗi khi tải dữ liệu rạp chiếu: " + ex.Message });
-            }
-        }
-
-        [HttpGet]
-        public async Task<JsonResult> GetRecentActivity()
-        {
-            try
-            {
-                var activities = new List<object>();
-
-                // Recent movies
-                var recentMovies = await _context.Movies
-                    .OrderByDescending(m => m.ID)
-                    .Take(2)
-                    .Select(m => new
-                    {
-                        Type = "movie",
-                        Icon = "fas fa-film",
-                        Color = "primary",
-                        Title = "Phim mới được thêm",
-                        Description = $"{m.Title} - {GetTimeAgo(DateTime.Now.AddHours(-new Random().Next(1, 24)))}"
-                    })
-                    .ToListAsync();
-
-                // Recent tickets
-                var recentTickets = await _context.Tickets
-                    .Include(t => t.ShowTime)
-                    .ThenInclude(st => st.Movie)
-                    .OrderByDescending(t => t.PurchaseTime)
-                    .Take(2)
-                    .Select(t => new
-                    {
-                        Type = "ticket",
-                        Icon = "fas fa-ticket-alt",
-                        Color = "success",
-                        Title = "Vé mới được đặt",
-                        Description = $"1 vé cho {t.ShowTime.Movie.Title} - {GetTimeAgo(t.PurchaseTime)}"
-                    })
-                    .ToListAsync();
-
-                activities.AddRange(recentMovies.Cast<object>());
-                activities.AddRange(recentTickets.Cast<object>());
-
-                // Shuffle and take 5
-                var random = new Random();
-                var shuffledActivities = activities.OrderBy(x => random.Next()).Take(5);
-
-                return Json(shuffledActivities);
-            }
-            catch (Exception ex)
-            {
-                return Json(new { error = "Lỗi khi tải hoạt động gần đây: " + ex.Message });
-            }
-        }
-
-        [HttpGet]
         public async Task<JsonResult> GetDashboardStats()
         {
             try
@@ -754,7 +539,8 @@ namespace DKMovies.Controllers
             }
         }
 
-        // ===== SỬA: AUTO SHOWTIME MANAGEMENT - Đã tối ưu hóa =====
+        // ===== SIMPLE AUTO SHOWTIME MANAGEMENT =====
+
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<JsonResult> AutoManageShowtimes()
@@ -762,284 +548,359 @@ namespace DKMovies.Controllers
             try
             {
                 var result = await PerformSimpleAutoManagement();
+
+                // Actually save the changes to database
+                if (result.AddedCount > 0 || result.RemovedCount > 0)
+                {
+                    await _context.SaveChangesAsync();
+                    result.Details.Add($"💾 Đã lưu {result.AddedCount + result.RemovedCount} thay đổi vào database");
+                }
+
                 return Json(new
                 {
                     success = true,
                     message = "Quản lý suất chiếu tự động hoàn thành",
                     addedCount = result.AddedCount,
                     removedCount = result.RemovedCount,
-                    details = result.Details
+                    details = result.Details,
+                    totalChanges = result.AddedCount + result.RemovedCount
                 });
             }
             catch (Exception ex)
             {
-                return Json(new { success = false, error = "Lỗi khi quản lý suất chiếu tự động: " + ex.Message });
-            }
-        }
-
-        // ===== PRIVATE HELPER METHODS =====
-
-        private string HashPassword(string password)
-        {
-            using (SHA256 sha256 = SHA256.Create())
-            {
-                byte[] bytes = sha256.ComputeHash(Encoding.UTF8.GetBytes(password));
-                return Convert.ToBase64String(bytes);
-            }
-        }
-
-        private async Task<string> SaveProfileImage(IFormFile imageFile)
-        {
-            try
-            {
-                var uploadsFolder = Path.Combine(_webHostEnvironment.WebRootPath, "uploads", "profiles");
-                if (!Directory.Exists(uploadsFolder))
+                return Json(new
                 {
-                    Directory.CreateDirectory(uploadsFolder);
-                }
-
-                var uniqueFileName = Guid.NewGuid().ToString() + "_" + imageFile.FileName;
-                var filePath = Path.Combine(uploadsFolder, uniqueFileName);
-
-                using (var fileStream = new FileStream(filePath, FileMode.Create))
-                {
-                    await imageFile.CopyToAsync(fileStream);
-                }
-
-                return "/uploads/profiles/" + uniqueFileName;
-            }
-            catch (Exception)
-            {
-                return null;
+                    success = false,
+                    error = "Lỗi khi quản lý suất chiếu tự động",
+                    details = ex.Message
+                });
             }
         }
 
-        private void DeleteOldImage(string imagePath)
-        {
-            try
-            {
-                if (!string.IsNullOrEmpty(imagePath))
-                {
-                    var fullPath = Path.Combine(_webHostEnvironment.WebRootPath, imagePath.TrimStart('/'));
-                    if (System.IO.File.Exists(fullPath))
-                    {
-                        System.IO.File.Delete(fullPath);
-                    }
-                }
-            }
-            catch (Exception)
-            {
-                // Log error but don't throw
-            }
-        }
-
-        // SỬA: Simplified auto management logic - Tối ưu hóa cho chu kỳ 5 phút
         private async Task<SimpleAutoResult> PerformSimpleAutoManagement()
         {
             var result = new SimpleAutoResult();
             var now = DateTime.Now;
 
-            // SỬA: Thay đổi từ 7 ngày thành 24 giờ để phù hợp với chu kỳ 5 phút
-            var oneDayAgo = now.AddHours(-24);
-
             try
             {
-                // SỬA: Kiểm tra có tickets trước
-                var hasTickets = await _context.Tickets.AnyAsync();
-                if (!hasTickets)
+                result.Details.Add($"Bắt đầu quản lý tự động lúc {now:HH:mm:ss dd/MM/yyyy}");
+
+                // Check basic requirements
+                var hasMovies = await _context.Movies.AnyAsync();
+                if (!hasMovies)
                 {
-                    result.Details.Add("Chưa có dữ liệu vé để phân tích");
+                    result.Details.Add("❌ Không có phim nào trong hệ thống");
                     return result;
                 }
 
-                var moviePerformance = await _context.Tickets
+                var hasAuditoriums = await _context.Auditoriums.AnyAsync();
+                if (!hasAuditoriums)
+                {
+                    result.Details.Add("❌ Không có phòng chiếu nào trong hệ thống");
+                    return result;
+                }
+
+                // Get performance data if available
+                var performanceData = await GetSimplePerformanceData();
+                result.Details.Add($"📊 Phân tích dữ liệu: {performanceData.Count} phim có dữ liệu");
+
+                // Identify top and poor performers
+                var topMovies = performanceData
+                    .OrderByDescending(p => p.TotalRevenue)
+                    .ThenByDescending(p => p.TicketsSold)
+                    .Take(3)
+                    .ToList();
+
+                var poorMovies = performanceData
+                    .Where(p => p.TotalRevenue > 0) // Only movies with some sales
+                    .OrderBy(p => p.TotalRevenue)
+                    .ThenBy(p => p.TicketsSold)
+                    .Take(2)
+                    .ToList();
+
+                // If no performance data, use all active movies
+                if (!performanceData.Any())
+                {
+                    var activeMovies = await _context.Movies
+                        .Where(m => m.ReleaseDate <= now)
+                        .Take(5)
+                        .ToListAsync();
+
+                    foreach (var movie in activeMovies)
+                    {
+                        topMovies.Add(new SimpleMoviePerformance
+                        {
+                            MovieID = movie.ID,
+                            MovieTitle = movie.Title,
+                            TicketsSold = 0,
+                            TotalRevenue = 0
+                        });
+                    }
+                    result.Details.Add("ℹ️ Sử dụng tất cả phim đang chiếu do chưa có dữ liệu bán vé");
+                }
+
+                result.Details.Add($"🏆 Top phim: {topMovies.Count} phim");
+                result.Details.Add($"📉 Phim kém: {poorMovies.Count} phim");
+
+                // Add showtimes for top movies
+                foreach (var movie in topMovies)
+                {
+                    var added = await AddSimpleShowtimes(movie.MovieID, movie.MovieTitle);
+                    result.AddedCount += added;
+                    if (added > 0)
+                    {
+                        result.Details.Add($"➕ Thêm {added} suất chiếu cho '{movie.MovieTitle}'");
+                    }
+                }
+
+                // Remove poor performing showtimes
+                foreach (var movie in poorMovies)
+                {
+                    var removed = await RemoveSimpleShowtimes(movie.MovieID, movie.MovieTitle);
+                    result.RemovedCount += removed;
+                    if (removed > 0)
+                    {
+                        result.Details.Add($"➖ Xóa {removed} suất chiếu cho '{movie.MovieTitle}'");
+                    }
+                }
+
+                result.Details.Add($"📊 Tổng kết: +{result.AddedCount} thêm, -{result.RemovedCount} xóa");
+
+                // Note: SaveChanges will be called in the main method
+                return result;
+            }
+            catch (Exception ex)
+            {
+                result.Details.Add($"❌ Lỗi: {ex.Message}");
+                throw;
+            }
+        }
+
+        private async Task<List<SimpleMoviePerformance>> GetSimplePerformanceData()
+        {
+            try
+            {
+                var oneWeekAgo = DateTime.Now.AddDays(-7);
+
+                var ticketData = await _context.Tickets
                     .Include(t => t.ShowTime)
                     .ThenInclude(st => st.Movie)
-                    .Where(t => t.PurchaseTime >= oneDayAgo &&
+                    .Where(t => t.PurchaseTime >= oneWeekAgo &&
                                t.ShowTime != null &&
                                t.ShowTime.Movie != null)
                     .GroupBy(t => t.ShowTime.MovieID)
-                    .Select(g => new
+                    .Select(g => new SimpleMoviePerformance
                     {
                         MovieID = g.Key,
-                        MovieTitle = g.First().ShowTime.Movie.Title,
+                        MovieTitle = g.First().ShowTime.Movie.Title ?? "Unknown",
                         TicketsSold = g.Count(),
                         TotalRevenue = g.Sum(t => t.ShowTime.Price)
                     })
                     .ToListAsync();
 
-                if (!moviePerformance.Any())
-                {
-                    result.Details.Add("Không có dữ liệu performance trong 24h qua để phân tích");
-                    return result;
-                }
-
-                var avgRevenue = moviePerformance.Average(x => (double)x.TotalRevenue);
-                var avgTickets = moviePerformance.Average(x => x.TicketsSold);
-
-                // SỬA: Điều chỉnh threshold cho chu kỳ ngắn
-                var topPerformers = moviePerformance
-                    .Where(x => x.TotalRevenue >= (decimal)(avgRevenue * 1.5) ||
-                               x.TicketsSold >= avgTickets * 1.5)
-                    .OrderByDescending(x => x.TotalRevenue)
-                    .Take(2)
-                    .ToList();
-
-                var poorPerformers = moviePerformance
-                    .Where(x => x.TotalRevenue <= (decimal)(avgRevenue * 0.3) &&
-                               x.TicketsSold <= avgTickets * 0.3)
-                    .ToList();
-
-                // SỬA: Giới hạn số lượng thay đổi cho chu kỳ 5 phút
-                foreach (var poor in poorPerformers.Take(1)) // Chỉ xử lý 1 phim kém nhất
-                {
-                    var removed = await RemovePoorPerformingShowtimes(poor.MovieID, poor.MovieTitle);
-                    result.RemovedCount += removed;
-                    if (removed > 0)
-                    {
-                        result.Details.Add($"Xóa {removed} suất chiếu của '{poor.MovieTitle}' (doanh thu thấp trong 24h)");
-                    }
-                }
-
-                foreach (var top in topPerformers.Take(1)) // Chỉ xử lý 1 phim tốt nhất
-                {
-                    var added = await AddShowtimesForTopMovie(top.MovieID, top.MovieTitle);
-                    result.AddedCount += added;
-                    if (added > 0)
-                    {
-                        result.Details.Add($"Thêm {added} suất chiếu cho '{top.MovieTitle}' (doanh thu cao trong 24h)");
-                    }
-                }
-
-                await _context.SaveChangesAsync();
-
-                // SỬA: Thêm thông tin chu kỳ
-                if (result.AddedCount == 0 && result.RemovedCount == 0)
-                {
-                    result.Details.Add("Không cần điều chỉnh suất chiếu trong chu kỳ này");
-                }
-
-                return result;
+                return ticketData;
             }
             catch (Exception ex)
             {
-                result.Details.Add($"Lỗi trong quá trình tự động quản lý: {ex.Message}");
-                return result;
+                return new List<SimpleMoviePerformance>();
             }
         }
 
-        private async Task<int> RemovePoorPerformingShowtimes(int movieId, string movieTitle)
+        private async Task<int> AddSimpleShowtimes(int movieId, string movieTitle)
         {
-            var now = DateTime.Now;
-
-            // SỬA: Chỉ xóa những suất chiếu ít nhất 6 giờ nữa và chưa có vé
-            var showtimesToRemove = await _context.ShowTimes
-                .Where(st => st.MovieID == movieId &&
-                            st.StartTime > now.AddHours(6)) // Tăng từ 3 giờ lên 6 giờ
-                .Include(st => st.Tickets)
-                .Where(st => !st.Tickets.Any())
-                .OrderBy(st => st.StartTime)
-                .Take(1) // SỬA: Giảm từ 2 xuống 1 để ít aggressive hơn
-                .ToListAsync();
-
-            if (showtimesToRemove.Any())
+            try
             {
-                _context.ShowTimes.RemoveRange(showtimesToRemove);
-            }
+                var movie = await _context.Movies.FindAsync(movieId);
+                if (movie == null) return 0;
 
-            return showtimesToRemove.Count;
-        }
+                var now = DateTime.Now;
+                var addedCount = 0;
 
-        private async Task<int> AddShowtimesForTopMovie(int movieId, string movieTitle)
-        {
-            var movie = await _context.Movies.FindAsync(movieId);
-            if (movie == null) return 0;
+                // Popular time slots
+                var popularHours = new[] { 14, 16, 18, 20, 22 };
 
-            var now = DateTime.Now;
-            var addedCount = 0;
-
-            // SỬA: Điều chỉnh thời gian thêm suất chiếu cho chu kỳ 5 phút
-            var targetTimes = new[]
-            {
-                now.AddHours(8).Date.AddHours(19),  // Ngày mai 7pm
-                now.AddHours(32).Date.AddHours(21)  // Ngày kia 9pm
-            };
-
-            foreach (var targetTime in targetTimes.Take(1)) // SỬA: Chỉ thêm 1 suất thay vì 2
-            {
-                var bestAuditorium = await FindAvailableAuditorium(targetTime, movie.DurationMinutes);
-                if (bestAuditorium != null)
+                // Add showtimes for next 3 days
+                for (int day = 1; day <= 3; day++)
                 {
-                    var newShowtime = new ShowTime
+                    var targetDate = now.AddDays(day).Date;
+
+                    // Try to add 2 showtimes per day
+                    foreach (var hour in popularHours.Take(2))
                     {
-                        MovieID = movieId,
-                        AuditoriumID = bestAuditorium.ID,
-                        StartTime = targetTime,
-                        DurationMinutes = movie.DurationMinutes,
-                        SubtitleLanguageID = 1,
-                        Is3D = false,
-                        Price = GetOptimalPrice(movieId)
-                    };
+                        var targetTime = targetDate.AddHours(hour);
 
-                    _context.ShowTimes.Add(newShowtime);
-                    addedCount++;
+                        // Skip if time has passed
+                        if (targetTime <= now.AddHours(2)) continue;
+
+                        // Find available auditorium
+                        var auditorium = await FindAvailableAuditorium(targetTime, movie.DurationMinutes);
+                        if (auditorium != null)
+                        {
+                            // Check if showtime already exists
+                            var exists = await _context.ShowTimes
+                                .AnyAsync(st => st.MovieID == movieId &&
+                                               st.AuditoriumID == auditorium.ID &&
+                                               st.StartTime == targetTime);
+
+                            if (!exists)
+                            {
+                                var newShowtime = new ShowTime
+                                {
+                                    MovieID = movieId,
+                                    AuditoriumID = auditorium.ID,
+                                    StartTime = targetTime,
+                                    DurationMinutes = movie.DurationMinutes,
+                                    SubtitleLanguageID = 1,
+                                    Is3D = false,
+                                    Price = GetSimplePrice(hour)
+                                };
+
+                                _context.ShowTimes.Add(newShowtime);
+                                addedCount++;
+
+                                // Limit to prevent too many showtimes
+                                if (addedCount >= 4) break;
+                            }
+                        }
+                    }
+                    if (addedCount >= 4) break;
                 }
-            }
 
-            return addedCount;
+                return addedCount;
+            }
+            catch (Exception ex)
+            {
+                return 0;
+            }
+        }
+
+        private async Task<int> RemoveSimpleShowtimes(int movieId, string movieTitle)
+        {
+            try
+            {
+                var now = DateTime.Now;
+                var cutoffTime = now.AddHours(6); // Don't remove showtimes starting within 6 hours
+
+                // Find showtimes to remove (future showtimes with no tickets sold)
+                var showtimesToRemove = await _context.ShowTimes
+                    .Include(st => st.Tickets)
+                    .Where(st => st.MovieID == movieId &&
+                                st.StartTime > cutoffTime &&
+                                st.StartTime <= now.AddDays(2) &&
+                                !st.Tickets.Any()) // No tickets sold
+                    .OrderBy(st => st.StartTime)
+                    .Take(2) // Limit removal
+                    .ToListAsync();
+
+                if (showtimesToRemove.Any())
+                {
+                    _context.ShowTimes.RemoveRange(showtimesToRemove);
+                    return showtimesToRemove.Count;
+                }
+
+                return 0;
+            }
+            catch (Exception ex)
+            {
+                return 0;
+            }
         }
 
         private async Task<Auditorium> FindAvailableAuditorium(DateTime targetTime, int duration)
         {
-            var auditoriums = await _context.Auditoriums.ToListAsync();
-
-            foreach (var auditorium in auditoriums)
+            try
             {
-                var hasConflict = await _context.ShowTimes
-                    .AnyAsync(st => st.AuditoriumID == auditorium.ID &&
-                                   targetTime < st.StartTime.AddMinutes(st.DurationMinutes + 30) &&
-                                   targetTime.AddMinutes(duration + 30) > st.StartTime);
+                var auditoriums = await _context.Auditoriums
+                    .OrderByDescending(a => a.Capacity) // Prefer larger auditoriums
+                    .ToListAsync();
 
-                if (!hasConflict)
+                foreach (var auditorium in auditoriums)
                 {
-                    return auditorium;
+                    // Check for conflicts (including buffer time)
+                    var hasConflict = await _context.ShowTimes
+                        .AnyAsync(st => st.AuditoriumID == auditorium.ID &&
+                                       targetTime < st.StartTime.AddMinutes(st.DurationMinutes + 30) &&
+                                       targetTime.AddMinutes(duration + 30) > st.StartTime);
+
+                    if (!hasConflict)
+                    {
+                        return auditorium;
+                    }
                 }
+
+                return null;
+            }
+            catch (Exception ex)
+            {
+                return null;
+            }
+        }
+
+        private decimal GetSimplePrice(int hour)
+        {
+            // Simple time-based pricing
+            return hour switch
+            {
+                >= 19 and <= 21 => 15.0m, // Prime time
+                >= 22 or <= 6 => 10.0m,   // Late/early
+                >= 14 and <= 18 => 12.0m, // Afternoon
+                _ => 11.0m                 // Default
+            };
+        }
+
+        private async Task<string> SaveProfileImage(IFormFile profileImage)
+        {
+            var uploadsFolder = Path.Combine(_webHostEnvironment.WebRootPath, "images", "profiles");
+            Directory.CreateDirectory(uploadsFolder);
+
+            var uniqueFileName = Guid.NewGuid().ToString() + "_" + profileImage.FileName;
+            var filePath = Path.Combine(uploadsFolder, uniqueFileName);
+
+            using (var fileStream = new FileStream(filePath, FileMode.Create))
+            {
+                await profileImage.CopyToAsync(fileStream);
             }
 
-            return null;
+            return "/images/profiles/" + uniqueFileName;
         }
 
-        private decimal GetOptimalPrice(int movieId)
+        private void DeleteOldImage(string imagePath)
         {
-            var avgPrice = _context.ShowTimes
-                .Where(st => st.MovieID == movieId)
-                .Select(st => st.Price)
-                .DefaultIfEmpty(10.0m)
-                .Average();
-
-            // SỬA: Giữ giá ổn định hơn cho chu kỳ ngắn
-            return Math.Max(5.0m, Math.Min(20.0m, avgPrice * 1.02m)); // Tăng chỉ 2% thay vì 5%
+            if (!string.IsNullOrEmpty(imagePath))
+            {
+                var fullPath = Path.Combine(_webHostEnvironment.WebRootPath, imagePath.TrimStart('/'));
+                if (System.IO.File.Exists(fullPath))
+                {
+                    System.IO.File.Delete(fullPath);
+                }
+            }
         }
 
-        private string GetTimeAgo(DateTime dateTime)
+        private string HashPassword(string password)
         {
-            var timeSpan = DateTime.Now - dateTime;
-
-            if (timeSpan.TotalMinutes < 60)
-                return $"{(int)timeSpan.TotalMinutes} phút trước";
-            else if (timeSpan.TotalHours < 24)
-                return $"{(int)timeSpan.TotalHours} giờ trước";
-            else if (timeSpan.TotalDays < 7)
-                return $"{(int)timeSpan.TotalDays} ngày trước";
-            else
-                return dateTime.ToString("dd/MM/yyyy");
+            using (var sha256 = SHA256.Create())
+            {
+                var hashedBytes = sha256.ComputeHash(Encoding.UTF8.GetBytes(password));
+                return Convert.ToBase64String(hashedBytes);
+            }
         }
     }
 
+    // ===== SUPPORTING CLASSES FOR SIMPLE AUTO MANAGEMENT =====
+
     public class SimpleAutoResult
     {
-        public int AddedCount { get; set; } = 0;
-        public int RemovedCount { get; set; } = 0;
+        public int AddedCount { get; set; }
+        public int RemovedCount { get; set; }
         public List<string> Details { get; set; } = new List<string>();
+    }
+
+    public class SimpleMoviePerformance
+    {
+        public int MovieID { get; set; }
+        public string MovieTitle { get; set; }
+        public int TicketsSold { get; set; }
+        public decimal TotalRevenue { get; set; }
     }
 }
